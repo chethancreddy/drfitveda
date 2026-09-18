@@ -43,8 +43,8 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     const role = (user as any)?.user_metadata?.role || (user as any)?.role
 
-    if (role && !['admin', 'super_admin', 'doctor'].includes(role)) {
-      return NextResponse.json({ error: 'Unauthorized to modify CMS biomarkers' }, { status: 403 })
+    if (role && !['admin', 'super_admin'].includes(role)) {
+      return NextResponse.json({ error: 'Unauthorized: CMS management requires Admin access only.' }, { status: 403 })
     }
 
     const body = await req.json()

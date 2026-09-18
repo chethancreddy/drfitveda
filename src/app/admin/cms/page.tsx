@@ -20,6 +20,11 @@ export default async function AdminCMSPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const role = (user as any)?.user_metadata?.role || (user as any)?.role
+  if (!['admin', 'super_admin'].includes(role)) {
+    redirect('/login')
+  }
+
   return (
     <div className="app-layout">
       <AdminSidebar />
