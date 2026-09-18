@@ -107,7 +107,7 @@ insert into public.website_pages (slug, title, meta_title, meta_desc, is_publish
   ('how-it-works',    'How It Works',      'How It Works | Dr Fit Veda',               'Step-by-step guide to your wellness journey.',        true),
   ('yoga',            'Yoga',              'Yoga Programs | Dr Fit Veda',              'Doctor-prescribed yoga for your health goals.',       true),
   ('nutrition',       'Nutrition',         'Nutrition Guidance | Dr Fit Veda',         'Personalized nutrition guidance by qualified experts.',true),
-  ('womens-wellness', "Women's Wellness",  "Women's Wellness | Dr Fit Veda",           'PCOD, stress and lifestyle support for women.',       true),
+  ('womens-wellness', 'Women''s Wellness',  'Women''s Wellness | Dr Fit Veda',           'PCOD, stress and lifestyle support for women.',       true),
   ('about',           'About',             'About Us | Dr Fit Veda',                   'Our mission, team and approach to health.',           true),
   ('contact',         'Contact',           'Contact | Dr Fit Veda',                    'Get in touch with the Dr Fit Veda team.',             true),
   ('faq',             'FAQ',               'FAQ | Dr Fit Veda',                        'Frequently asked questions about Dr Fit Veda.',       true)
