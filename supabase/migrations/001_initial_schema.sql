@@ -626,8 +626,8 @@ create table public.audit_logs (
   created_at  timestamptz not null default now()
 );
 
-create index idx_audit_logs_created at on public.audit_logs(created_at desc);
-create index idx_audit_logs_user    on public.audit_logs(user_id);
+create index idx_audit_logs_created_at on public.audit_logs(created_at desc);
+create index idx_audit_logs_user       on public.audit_logs(user_id);
 
 -- ─── Live Training (Rolling Recording) ───────────────────
 
