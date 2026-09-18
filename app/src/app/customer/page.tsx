@@ -25,11 +25,23 @@ export default async function CustomerDashboard() {
     ? await (supabase as any).from('daily_check_ins').select('id').eq('customer_id', customer.id).eq('check_in_date', today).single()
     : { data: null }
 
-  let recordingInfo: { hasRecording: boolean; session: { scheduled_at: string | null; trainer: { full_name: string } | null } | null; recordingStatus: string | null; recordingId: string | null } | null = null
-  if (customer) {
-    try { recordingInfo = await TrainingRecordingService.getLatestRecordingStatus(customer.id) }
-    catch { /* no recording */ }
-  }
+  const { data: latestTrainingSession } = customer
+    ? await (supabase as any)
+        .from('training_sessions')
+        .select('scheduled_at, status, meeting_url, recording_url, trainer:professionals(user_profiles(full_name))')
+        .eq('customer_id', customer.id)
+        .order('scheduled_at', { ascending: false })
+        .limit(1)
+        .single()
+    : { data: null }
+
+  const formattedSession = latestTrainingSession ? {
+    scheduled_at: latestTrainingSession.scheduled_at,
+    trainer: { full_name: latestTrainingSession.trainer?.user_profiles?.full_name || 'Assigned Coach' },
+    meeting_url: latestTrainingSession.meeting_url,
+    recording_url: latestTrainingSession.recording_url,
+    status: latestTrainingSession.status || 'scheduled',
+  } : null
 
   const { data: plan } = customer
     ? await (supabase as any).from('plans').select('plan_versions(id, version_number, status, plan_items(category,instruction,display_order))').eq('customer_id', customer.id).limit(1).single()
@@ -104,7 +116,7 @@ export default async function CustomerDashboard() {
             )}
           </div>
 
-          <LatestTrainingSession customerId={customer?.id ?? null} recordingInfo={recordingInfo} />
+          <LatestTrainingSession customerId={customer?.id ?? null} session={formattedSession} />
 
           <div className="card">
             <div className="text-label-md text-muted" style={{marginBottom:8}}>Membership</div>

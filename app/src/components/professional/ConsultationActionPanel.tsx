@@ -7,7 +7,8 @@ import { useRouter } from 'next/navigation'
 
 interface ConsultationActionPanelProps {
   appointmentId: string
-  currentStatus: string
+  currentStatus?: string
+  customerId?: string
   initialNotes?: string
   initialRecommendations?: string
   initialFollowUpDate?: string
@@ -15,7 +16,8 @@ interface ConsultationActionPanelProps {
 
 export default function ConsultationActionPanel({
   appointmentId,
-  currentStatus,
+  currentStatus = 'scheduled',
+  customerId,
   initialNotes = '',
   initialRecommendations = '',
   initialFollowUpDate = '',

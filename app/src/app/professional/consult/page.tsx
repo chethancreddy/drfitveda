@@ -124,7 +124,7 @@ export default async function ProfessionalConsultPage() {
                       </div>
                     </div>
 
-                    <ConsultationActionPanel appointmentId={a.id} customerId={a.customer_id} />
+                    <ConsultationActionPanel appointmentId={a.id} customerId={a.customer_id} currentStatus={a.status || 'scheduled'} initialNotes={a.notes || ''} />
                   </div>
                 )
               })}
