@@ -2,6 +2,8 @@
   "name": "drfitveda",
   "private": true,
   "scripts": {
+    "postinstall": "npm --prefix app install",
+    "prebuild": "npm --prefix app install",
     "dev": "npm --prefix app run dev",
     "build": "npm --prefix app run build",
     "start": "npm --prefix app run start"
