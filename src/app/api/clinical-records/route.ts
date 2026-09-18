@@ -64,6 +64,8 @@ export async function POST(req: NextRequest) {
       doctor_clinical_assessment,
       prescribed_diet_chart,
       doctor_notes,
+      custom_biomarkers,
+      status = 'published', // 'draft' | 'published'
     } = body
 
     if (!customer_id) {
@@ -91,8 +93,10 @@ export async function POST(req: NextRequest) {
       doctor_id: doctor?.id || 'p0000000-0000-0000-0000-000000000001',
       doctor_name: doctor?.full_name || 'Dr. Ananya Verma',
       recorded_at: new Date().toISOString(),
+      status: status === 'draft' ? 'draft' : 'published',
       vitals: computedVitals,
       blood_reports: blood_reports || {},
+      custom_biomarkers: custom_biomarkers || [],
       digestive_and_lifestyle: digestive_and_lifestyle || {},
       doctor_clinical_assessment: doctor_clinical_assessment || {},
       prescribed_diet_chart: prescribed_diet_chart || {},
@@ -128,7 +132,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Auto-update or create published plan version with the prescribed diet items
+    // Auto-update or create plan version with the prescribed diet items
     if (prescribed_diet_chart) {
       if (!mockDb.state.plans) mockDb.state.plans = []
       let plan = mockDb.state.plans.find((p: any) => p.customer_id === customer_id)
@@ -150,8 +154,8 @@ export async function POST(req: NextRequest) {
         id: `pv-${Date.now()}`,
         plan_id: plan.id,
         version_number: nextVerNum,
-        status: 'published',
-        change_reason: `Clinical Naturopathy Intake & Biomarker Assessment (v${nextVerNum})`,
+        status: status === 'draft' ? 'draft' : 'published',
+        change_reason: `Clinical Naturopathy Intake & Biomarker Assessment (v${nextVerNum}${status === 'draft' ? ' - Draft' : ''})`,
         effective_from: new Date().toISOString().split('T')[0],
         created_by: doctor?.id || 'p0000000-0000-0000-0000-000000000001',
         created_at: new Date().toISOString(),
@@ -235,12 +239,31 @@ export async function POST(req: NextRequest) {
       }
 
       mockDb.state.plan_items.push(...itemsToAdd)
+
+      // If published, notify customer and trainer
+      if (status === 'published') {
+        if (!mockDb.state.notifications) mockDb.state.notifications = []
+        const custObj = (mockDb.state.customers || []).find((c: any) => c.id === customer_id)
+        if (custObj?.user_id) {
+          mockDb.state.notifications.unshift({
+            id: `notif-${Date.now()}`,
+            user_id: custObj.user_id,
+            title: '🥗 New Naturopathy Plan Published',
+            body: `Your Doctor (${doctor?.full_name || 'Dr. Ananya Verma'}) has published your personalized clinical diet and wellness schedule.`,
+            is_read: false,
+            created_at: new Date().toISOString(),
+          })
+        }
+      }
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Clinical intake and diet prescription saved successfully.',
+      message: status === 'draft'
+        ? 'Draft clinical intake & diet saved successfully (private to doctor).'
+        : 'Clinical intake and diet prescription published to client and trainer!',
       clinical_record: newRecord,
+      is_published: status === 'published',
     }, { status: 201 })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Failed to save clinical intake' }, { status: 400 })

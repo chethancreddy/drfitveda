@@ -214,19 +214,18 @@ export default function PlanEditor({
         </div>
       </div>
 
-      <div style={{marginBottom:'var(--space-md)',display:'flex',alignItems:'center',gap:8}}>
-        <input
-          type="checkbox"
-          id="publish-toggle"
-          checked={publishImmediately}
-          onChange={e => setPublishImmediately(e.target.checked)}
-        />
-        <label htmlFor="publish-toggle" className="text-body-sm" style={{cursor:'pointer'}}>
-          <strong>Publish immediately</strong> to customer app (activates new version)
-        </label>
-      </div>
-
-      <div className="flex justify-end gap-xs">
+      <div
+        style={{
+          marginTop: 'var(--space-md)',
+          paddingTop: 'var(--space-md)',
+          borderTop: '1px solid var(--color-border)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
+        }}
+      >
         <button
           type="button"
           onClick={() => router.back()}
@@ -235,13 +234,44 @@ export default function PlanEditor({
         >
           Cancel
         </button>
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={loading}
-        >
-          {loading ? 'Saving Plan...' : publishImmediately ? 'Publish Plan Version' : 'Save as Draft'}
-        </button>
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => {
+              setPublishImmediately(false)
+              const form = document.querySelector('form')
+              if (form) form.requestSubmit()
+            }}
+            className="btn btn-ghost"
+            style={{
+              border: '1px solid #cbd5e1',
+              padding: '8px 18px',
+              fontWeight: 600,
+              background: '#f8fafc',
+            }}
+          >
+            {loading && !publishImmediately ? 'Saving Draft…' : '📝 Save as Draft'}
+          </button>
+
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => {
+              setPublishImmediately(true)
+              const form = document.querySelector('form')
+              if (form) form.requestSubmit()
+            }}
+            className="btn btn-primary"
+            style={{
+              padding: '8px 22px',
+              fontWeight: 700,
+            }}
+          >
+            {loading && publishImmediately ? 'Publishing…' : '🚀 Publish to Client & Trainer'}
+          </button>
+        </div>
       </div>
     </form>
   )

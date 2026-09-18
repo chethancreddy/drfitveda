@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 import AdminSidebar from '@/components/admin/AdminSidebar'
+import AdminBiomarkersManager from '@/components/admin/AdminBiomarkersManager'
 
 export const metadata: Metadata = { title: 'CMS — Admin' }
 
@@ -26,7 +27,7 @@ export default async function AdminCMSPage() {
       <main className="app-main">
         <div className="page-header">
           <h1 className="text-headline-md">Content Management System</h1>
-          <p className="text-body-md text-muted">Manage all editable platform content without code changes</p>
+          <p className="text-body-md text-muted">Manage all editable platform content, memberships, and clinical biomarker parameters</p>
         </div>
 
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:'var(--space-md)'}}>
@@ -43,6 +44,9 @@ export default async function AdminCMSPage() {
             </div>
           ))}
         </div>
+
+        {/* Clinical Biomarkers & Lab Parameters CMS Manager */}
+        <AdminBiomarkersManager />
       </main>
     </div>
   )

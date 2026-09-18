@@ -44,11 +44,11 @@ export default async function CustomerPlanPage() {
     .limit(1)
     .single()
 
-  const versions: any[] = plan?.plan_versions ?? []
-  // Sort versions descending by version_number
-  versions.sort((a, b) => b.version_number - a.version_number)
+  const allVersions: any[] = plan?.plan_versions ?? []
+  allVersions.sort((a, b) => b.version_number - a.version_number)
 
-  const activeVersion = versions.find(v => v.status === 'published') || versions[0]
+  const activeVersion = allVersions.find(v => v.status === 'published') || null
+  const versions = allVersions.filter(v => v.status === 'published' || v.status === 'archived')
   const items: any[] = activeVersion?.plan_items ?? []
   items.sort((a, b) => a.display_order - b.display_order)
 
