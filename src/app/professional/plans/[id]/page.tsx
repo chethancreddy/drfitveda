@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import StructuredDietEditor from '@/components/professional/StructuredDietEditor'
 import PlanEditor from '@/components/professional/PlanEditor'
 import ProfessionalSidebar from '@/components/professional/ProfessionalSidebar'
 
@@ -28,22 +29,31 @@ export default async function ProfessionalPlanEditPage({
   let customerId = id
   let planId: string | undefined = undefined
   let customerName = 'Patient'
+  let customerBmi: number | undefined = undefined
+  let customerWeight: number | undefined = undefined
+  let customerHeight: number | undefined = undefined
 
   // 1. Try finding customer by id
   const { data: cust } = await (supabase as any)
     .from('customers')
-    .select('id, user_profiles(full_name)')
+    .select('id, user_profiles(full_name), customer_profiles(height_cm, weight_kg, bmi)')
     .eq('id', id)
     .single()
 
   if (cust) {
     customerId = cust.id
     customerName = cust.user_profiles?.full_name ?? 'Patient'
+    const prof = cust.customer_profiles?.[0] || cust.customer_profiles
+    if (prof) {
+      customerBmi = prof.bmi
+      customerWeight = prof.weight_kg
+      customerHeight = prof.height_cm
+    }
   } else {
     // Try finding plan by id
     const { data: planMaster } = await (supabase as any)
       .from('plans')
-      .select('id, customer_id, customers(user_profiles(full_name))')
+      .select('id, customer_id, customers(user_profiles(full_name), customer_profiles(height_cm, weight_kg, bmi))')
       .eq('id', id)
       .single()
 
@@ -51,6 +61,12 @@ export default async function ProfessionalPlanEditPage({
       planId = planMaster.id
       customerId = planMaster.customer_id
       customerName = planMaster.customers?.user_profiles?.full_name ?? 'Patient'
+      const prof = planMaster.customers?.customer_profiles?.[0] || planMaster.customers?.customer_profiles
+      if (prof) {
+        customerBmi = prof.bmi
+        customerWeight = prof.weight_kg
+        customerHeight = prof.height_cm
+      }
     }
   }
 
@@ -109,14 +125,35 @@ export default async function ProfessionalPlanEditPage({
           </Link>
         </div>
 
-        <PlanEditor
-          customerId={customerId}
-          customerName={customerName}
-          planId={planId}
-          initialItems={initialItems}
-          currentVersionNumber={currentVersionNumber}
-        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
+          {/* Structured Diet & Nutrition Matrix */}
+          <StructuredDietEditor
+            customerId={customerId}
+            customerName={customerName}
+            customerBmi={customerBmi}
+            customerWeight={customerWeight}
+            customerHeight={customerHeight}
+          />
+
+          {/* Holistic Multidisciplinary Plan Version Controls */}
+          <div className="card" style={{ padding: 'var(--space-md)', background: '#fafafa', border: '1px dashed #cbd5e1' }}>
+            <h3 className="text-label-lg" style={{ marginBottom: 8, color: '#475569' }}>
+              🌐 Multidisciplinary Holistic Plan Elements (Workout, Sleep &amp; Water)
+            </h3>
+            <p className="text-caption text-muted" style={{ marginBottom: 12 }}>
+              Add additional multidisciplinary notes for physical trainers, yoga therapists, and sleep tracking.
+            </p>
+            <PlanEditor
+              customerId={customerId}
+              customerName={customerName}
+              planId={planId}
+              initialItems={initialItems}
+              currentVersionNumber={currentVersionNumber}
+            />
+          </div>
+        </div>
       </main>
     </div>
   )
 }
+
