@@ -99,13 +99,21 @@ export async function POST(req: NextRequest) {
     if (!mockDb.state.user_profiles) mockDb.state.user_profiles = []
     mockDb.state.user_profiles.push(newUserProfile)
 
-    // 2. Create customer record with dedicated Google Meet link
+    // 2. Automatically generate unique Zoho Meeting room for the customer
+    const cleanName = (full_name || 'care').toLowerCase().replace(/[^a-z0-9]/g, '')
+    const zohoMeetingKey = `fitveda-${cleanName}-${Math.floor(100 + Math.random() * 900)}`
+    const defaultZohoUrl = google_meet_url || `https://meet.zoho.com/${zohoMeetingKey}`
+
     const newCustomer = {
       id: customerId,
       user_id: userId,
       membership_status: membership_plan_id ? 'active' : 'inactive',
       membership_plan_id: membership_plan_id || null,
-      google_meet_url: google_meet_url || `https://meet.google.com/drfit-${(full_name || 'care').toLowerCase().replace(/[^a-z0-9]/g, '')}-${Math.floor(100 + Math.random() * 900)}`,
+      zoho_meeting_url: defaultZohoUrl,
+      zoho_meeting_key: zohoMeetingKey,
+      google_meet_url: defaultZohoUrl,
+      meeting_url: defaultZohoUrl,
+      meeting_provider: 'zoho_meeting',
       is_active: true,
       created_at: new Date().toISOString(),
     }

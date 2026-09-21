@@ -97,13 +97,17 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     if (idx === -1) return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
 
     const customer = customers[idx]
+    const newMeetingUrl = body.zoho_meeting_url || body.google_meet_url || body.meeting_url
 
-    // Update customer fields (including dedicated google_meet_url and membership_status)
+    // Update customer fields (including dedicated zoho_meeting_url and membership_status)
     customers[idx] = {
       ...customer,
       membership_status: body.membership_status !== undefined ? body.membership_status : customer.membership_status,
       membership_plan_id: body.membership_plan_id !== undefined ? body.membership_plan_id : customer.membership_plan_id,
-      google_meet_url: body.google_meet_url !== undefined ? body.google_meet_url : customer.google_meet_url,
+      zoho_meeting_url: newMeetingUrl !== undefined ? newMeetingUrl : (customer.zoho_meeting_url || customer.google_meet_url),
+      google_meet_url: newMeetingUrl !== undefined ? newMeetingUrl : (customer.google_meet_url || customer.zoho_meeting_url),
+      meeting_url: newMeetingUrl !== undefined ? newMeetingUrl : (customer.meeting_url || customer.zoho_meeting_url || customer.google_meet_url),
+      meeting_provider: newMeetingUrl?.includes('zoho.com') ? 'zoho_meeting' : (customer.meeting_provider || 'zoho_meeting'),
       is_active: body.is_active !== undefined ? body.is_active : customer.is_active,
       updated_at: new Date().toISOString(),
     }

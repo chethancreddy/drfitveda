@@ -117,10 +117,20 @@ export default function AdminCustomersPage() {
     setFormData(prev => ({
       ...prev,
       full_name: name,
-      google_meet_url: prev.google_meet_url && !prev.google_meet_url.includes('drfit-')
+      google_meet_url: prev.google_meet_url && !prev.google_meet_url.includes('fitveda-') && !prev.google_meet_url.includes('meet.zoho.com')
         ? prev.google_meet_url
-        : `https://meet.google.com/drfit-${slug || 'customer'}-${Math.floor(100 + Math.random() * 900)}`,
+        : `https://meet.zoho.com/fitveda-${slug || 'customer'}-${Math.floor(100 + Math.random() * 900)}`,
     }))
+  }
+
+  function autoGenerateZohoLink() {
+    const slug = (formData.full_name || 'customer').toLowerCase().replace(/[^a-z0-9]/g, '')
+    const generated = `https://meet.zoho.com/fitveda-${slug}-${Math.floor(100 + Math.random() * 900)}`
+    setFormData(prev => ({
+      ...prev,
+      google_meet_url: generated,
+    }))
+    showToast('✓ Generated unique Zoho Meeting room link!')
   }
 
   async function handleOnboardSubmit(e: React.FormEvent) {
@@ -132,13 +142,18 @@ export default function AdminCustomersPage() {
 
     setSaving(true)
     try {
+      const payload = {
+        ...formData,
+        zoho_meeting_url: formData.google_meet_url,
+        meeting_url: formData.google_meet_url,
+      }
       const res = await fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error('Onboarding failed')
-      showToast('Customer onboarded successfully!')
+      showToast('✓ Customer onboarded with Zoho Meeting assigned successfully!')
       setShowOnboardModal(false)
       setFormData({
         full_name: '',
@@ -185,7 +200,7 @@ export default function AdminCustomersPage() {
         <div className="page-header flex justify-between items-center">
           <div>
             <h1 className="text-headline-md">Customers</h1>
-            <p className="text-body-md text-muted">Manage patient profiles, memberships, dedicated Google Meet rooms, and care teams</p>
+            <p className="text-body-md text-muted">Manage patient profiles, memberships, dedicated Zoho Meeting rooms, and care teams</p>
           </div>
           <button className="btn btn-primary btn-sm" onClick={() => setShowOnboardModal(true)}>
             + Onboard New Customer
@@ -202,7 +217,7 @@ export default function AdminCustomersPage() {
                   <tr>
                     <th>Customer Name</th>
                     <th>Membership Plan</th>
-                    <th>Dedicated Google Meet Link</th>
+                    <th>Dedicated Zoho Meeting Link</th>
                     <th>Assigned Care Team</th>
                     <th>Status</th>
                     <th>Actions</th>
@@ -212,6 +227,7 @@ export default function AdminCustomersPage() {
                   {customers.length ? customers.map(c => {
                     const doc = c.assigned_professionals?.find(p => p.role.includes('doctor'))
                     const trn = c.assigned_professionals?.find(p => p.role.includes('trainer'))
+                    const meetLink = (c as any).zoho_meeting_url || c.google_meet_url || 'https://meet.zoho.com/fitveda-priya'
 
                     return (
                       <tr key={c.id}>
@@ -225,18 +241,18 @@ export default function AdminCustomersPage() {
                           </span>
                         </td>
                         <td>
-                          {c.google_meet_url ? (
+                          {meetLink ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <span style={{ fontSize: 16 }}>📹</span>
                               <a
-                                href={c.google_meet_url}
+                                href={meetLink}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-caption text-primary"
                                 style={{ fontWeight: 600, maxWidth: 190, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}
-                                title={c.google_meet_url}
+                                title={meetLink}
                               >
-                                {c.google_meet_url.replace('https://', '')}
+                                {meetLink.replace('https://', '')}
                               </a>
                             </div>
                           ) : (
@@ -295,7 +311,7 @@ export default function AdminCustomersPage() {
               <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-md)' }}>
                 <div>
                   <h2 className="text-headline-sm">Onboard New Customer</h2>
-                  <p className="text-caption text-muted">Setup patient profile, dedicated Google Meet link, care team, and plan</p>
+                  <p className="text-caption text-muted">Setup patient profile, dedicated Zoho Meeting room, care team, and plan</p>
                 </div>
                 <button className="btn btn-icon btn-ghost" onClick={() => setShowOnboardModal(false)}>✕</button>
               </div>
@@ -339,21 +355,33 @@ export default function AdminCustomersPage() {
                   </div>
                 </div>
 
-                {/* 2. Dedicated Google Meet Link */}
-                <div style={{ background: 'var(--color-neutral)', padding: 14, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-primary)', marginBottom: 6, letterSpacing: '0.5px' }}>
-                    2. Dedicated Google Meet Room Link
+                {/* 2. Dedicated Zoho Meeting Link */}
+                <div style={{ background: '#f0fdf4', padding: 14, borderRadius: 'var(--radius-md)', border: '1px solid #bbf7d0' }}>
+                  <div className="flex justify-between items-center" style={{ marginBottom: 6 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#166534', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>🟢 2. Dedicated Zoho Meeting Room Link</span>
+                      <span className="badge badge-success" style={{ fontSize: 10, padding: '2px 6px' }}>Zoho Active</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={autoGenerateZohoLink}
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: 12, padding: '4px 10px', height: 'auto', background: '#ffffff', borderColor: '#86efac', color: '#166534', fontWeight: 600 }}
+                    >
+                      ⚡ Auto-Generate Link
+                    </button>
                   </div>
                   <label className="form-field">
-                    <span className="form-label">Unique Google Meet URL for this Customer</span>
+                    <span className="form-label">Unique Zoho Meeting URL for this Customer</span>
                     <input
                       className="form-input"
-                      placeholder="https://meet.google.com/xxx-yyyy-zzz"
+                      placeholder="https://meet.zoho.com/fitveda-priya-sharma-123"
                       value={formData.google_meet_url}
                       onChange={e => setFormData(p => ({ ...p, google_meet_url: e.target.value }))}
+                      style={{ fontFamily: 'monospace', fontSize: 13, background: '#ffffff' }}
                     />
-                    <span className="text-caption text-muted" style={{ marginTop: 4 }}>
-                      💡 Each customer has their own dedicated Google Meet link used by their assigned doctor and trainer for all live sessions.
+                    <span className="text-caption" style={{ marginTop: 4, display: 'block', color: '#166534' }}>
+                      ⚡ <strong>Auto-generated Zoho Meeting:</strong> Automatically generated from customer name upon typing, or click &ldquo;Auto-Generate Link&rdquo;. Used by assigned doctor and trainer for all live sessions.
                     </span>
                   </label>
                 </div>

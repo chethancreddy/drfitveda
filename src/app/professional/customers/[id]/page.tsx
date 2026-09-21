@@ -124,15 +124,15 @@ export default async function ProfessionalCustomerDetailPage({
           </div>
 
           <div className="flex gap-xs" style={{ alignItems: 'center' }}>
-            {customer.google_meet_url && (
+            {(customer.zoho_meeting_url || customer.google_meet_url) && (
               <a
-                href={customer.google_meet_url}
+                href={customer.zoho_meeting_url || customer.google_meet_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-secondary btn-sm"
                 style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #6ee7b7', fontWeight: 600 }}
               >
-                📹 Join Google Meet Room
+                📹 Join Zoho Meeting Room
               </a>
             )}
             <Link href={`/professional/plans/${customerId}`} className="btn btn-primary btn-sm">
@@ -141,7 +141,7 @@ export default async function ProfessionalCustomerDetailPage({
           </div>
         </div>
 
-        {/* Dedicated Google Meet Banner */}
+        {/* Dedicated Zoho Meeting Banner */}
         <div
           style={{
             padding: '12px 16px',
@@ -160,21 +160,21 @@ export default async function ProfessionalCustomerDetailPage({
             <span style={{ fontSize: 22 }}>📹</span>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#065f46' }}>
-                Dedicated Patient Video Consultation Room (Google Meet)
+                Dedicated Patient Video Consultation &amp; Live Training Room (Zoho Meeting)
               </div>
               <div style={{ fontSize: 12, color: '#047857', wordBreak: 'break-all' }}>
-                {customer.google_meet_url || 'https://meet.google.com/fit-veda-priya'}
+                {customer.zoho_meeting_url || customer.google_meet_url || 'https://meet.zoho.com/fitveda-priya'}
               </div>
             </div>
           </div>
           <a
-            href={customer.google_meet_url || 'https://meet.google.com/fit-veda-priya'}
+            href={customer.zoho_meeting_url || customer.google_meet_url || 'https://meet.zoho.com/fitveda-priya'}
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-primary btn-sm"
             style={{ fontWeight: 600 }}
           >
-            Launch Google Meet →
+            Launch Zoho Meeting →
           </a>
         </div>
 

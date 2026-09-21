@@ -71,7 +71,7 @@ export default async function ProfessionalCustomersPage() {
                   <th>Patient Name &amp; Contact</th>
                   <th>Membership</th>
                   <th>BMS (BMI / Weight)</th>
-                  <th>Google Meet Room</th>
+                  <th>Zoho Meeting Room</th>
                   <th>Doctor Clinical Actions</th>
                 </tr>
               </thead>
@@ -82,7 +82,7 @@ export default async function ProfessionalCustomersPage() {
                     const name = cust?.user_profiles?.full_name ?? 'Patient'
                     const phone = cust?.user_profiles?.phone
                     const profile = cust?.customer_profiles?.[0] || cust?.customer_profiles || {}
-                    const meetUrl = cust?.google_meet_url || 'https://meet.google.com/fit-veda-priya'
+                    const meetUrl = cust?.zoho_meeting_url || cust?.google_meet_url || 'https://meet.zoho.com/fitveda-priya-sharma'
 
                     return (
                       <tr key={a.id}>
@@ -121,7 +121,7 @@ export default async function ProfessionalCustomersPage() {
                             className="btn btn-ghost btn-sm"
                             style={{ color: '#0d9488', fontWeight: 600 }}
                           >
-                            📹 Join Meet Room
+                            📹 Join Zoho Meet
                           </a>
                         </td>
                         <td>

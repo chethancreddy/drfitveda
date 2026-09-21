@@ -66,7 +66,7 @@ export default function LatestTrainingSession({ session, customerId }: Props) {
           style={{ background: '#dc2626', borderColor: '#dc2626' }}
           id="btn-join-live-session"
         >
-          <span>🔴</span> Join Live Session on Google Meet
+          <span>🔴</span> {session.meeting_url.includes('zoho.com') ? 'Join Live on Zoho Meeting' : 'Join Live Session'}
         </a>
       )}
 
@@ -79,7 +79,7 @@ export default function LatestTrainingSession({ session, customerId }: Props) {
           className="btn-watch"
           id="btn-join-upcoming-session"
         >
-          <span>📹</span> Open Google Meet Link
+          <span>📹</span> {session.meeting_url.includes('zoho.com') ? 'Open Zoho Meeting Room' : 'Open Meeting Link'}
         </a>
       )}
 

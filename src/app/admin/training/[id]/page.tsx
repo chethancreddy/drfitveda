@@ -80,29 +80,29 @@ export default async function AdminSessionDetailPage({ params }: { params: Promi
           )}
         </div>
 
-        {/* Google Meet — Live & Recording Links */}
+        {/* Zoho Meeting — Live & Recording Links */}
         <div className="card">
-          <h2 className="text-headline-sm" style={{marginBottom:'var(--space-sm)'}}>Google Meet</h2>
+          <h2 className="text-headline-sm" style={{marginBottom:'var(--space-sm)'}}>Zoho Meeting &amp; Recording Links</h2>
           <p className="text-body-sm text-muted" style={{marginBottom:'var(--space-sm)'}}
-          >All sessions are conducted via Google Meet. Paste the session join link and recording link below. These are displayed directly to the customer and trainer.</p>
+          >All sessions are conducted via Zoho Meeting. The session join link and recording link below are displayed directly to the customer and trainer.</p>
           <div style={{display:'flex',flexDirection:'column',gap:'var(--space-sm)'}}>
             <div>
-              <div className="text-label-sm text-muted" style={{marginBottom:4}}>Session Join Link (Google Meet)</div>
+              <div className="text-label-sm text-muted" style={{marginBottom:4}}>Session Join Link (Zoho Meeting)</div>
               {session.meeting_url
                 ? <a href={session.meeting_url} target="_blank" rel="noopener noreferrer" className="text-body-sm" style={{color:'var(--color-primary)',wordBreak:'break-all'}}>{session.meeting_url}</a>
-                : <div className="text-body-sm text-muted">No meeting link set. Add via the training session editor.</div>
+                : <div className="text-body-sm text-muted">No Zoho Meeting link set. Add via the training session editor.</div>
               }
             </div>
             <div style={{borderTop:'1px dashed var(--color-border)',paddingTop:'var(--space-sm)'}}>
-              <div className="text-label-sm text-muted" style={{marginBottom:4}}>Recording Link (Google Meet)</div>
+              <div className="text-label-sm text-muted" style={{marginBottom:4}}>Recording Link (Zoho Meeting)</div>
               {session.recording_url
                 ? <a href={session.recording_url} target="_blank" rel="noopener noreferrer" className="text-body-sm" style={{color:'var(--color-primary)',wordBreak:'break-all'}}>{session.recording_url}</a>
-                : <div className="text-body-sm text-muted">No recording link yet. Add the Google Meet recording link here after the session ends.</div>
+                : <div className="text-body-sm text-muted">No recording link yet. Add the Zoho Meeting recording link here after the session ends.</div>
               }
             </div>
             <div className="alert alert-info" style={{fontSize:12}}>
               <span>ℹ️</span>
-              <span>Recording is managed entirely by Google Meet. Dr Fit Veda does not host or process video files. Share the Google Meet recording link with the customer once it is available.</span>
+              <span>Recording is managed by Zoho Meeting. Share the Zoho Meeting recording link with the customer once it is available.</span>
             </div>
           </div>
         </div>
