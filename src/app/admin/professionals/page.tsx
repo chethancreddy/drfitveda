@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import AdminSidebar from '@/components/admin/AdminSidebar'
 
 interface Professional {
@@ -16,6 +17,17 @@ interface Professional {
   is_active: boolean
 }
 
+export interface ProfessionalRole {
+  id: string
+  value: string
+  label: string
+  category: 'doctor' | 'trainer' | 'nutritionist' | 'therapist' | 'consultant' | 'other'
+  description?: string
+  icon?: string
+  is_active: boolean
+  display_order: number
+}
+
 const EMPTY_PRO: Partial<Professional> = {
   full_name: '',
   role: 'doctor',
@@ -27,17 +39,21 @@ const EMPTY_PRO: Partial<Professional> = {
   is_active: true,
 }
 
-const ROLE_OPTIONS = [
-  { value: 'doctor', label: '🩺 Medical Doctor / Consultant' },
-  { value: 'naturopathy_doctor', label: '🌿 Naturopathy Doctor' },
-  { value: 'trainer', label: '🏋️ Certified Fitness Trainer' },
-  { value: 'nutritionist', label: '🥗 Clinical Nutritionist' },
-  { value: 'yoga_doctor', label: '🧘 Yoga Doctor' },
-  { value: 'yoga_consultant', label: '🧘 Yoga Consultant' },
+const DEFAULT_FALLBACK_ROLES: ProfessionalRole[] = [
+  { id: '1', value: 'doctor', label: '🩺 Medical Doctor / Consultant', category: 'doctor', icon: '🩺', is_active: true, display_order: 1 },
+  { id: '2', value: 'naturopathy_doctor', label: '🌿 BNYS Naturopathy Doctor', category: 'doctor', icon: '🌿', is_active: true, display_order: 2 },
+  { id: '3', value: 'ayurveda_doctor', label: '🪔 BAMS Ayurvedic Doctor', category: 'doctor', icon: '🪔', is_active: true, display_order: 3 },
+  { id: '4', value: 'trainer', label: '🏋️ Certified Fitness Trainer', category: 'trainer', icon: '🏋️', is_active: true, display_order: 4 },
+  { id: '5', value: 'yoga_doctor', label: '🧘 Yoga & Pranayama Doctor', category: 'doctor', icon: '🧘', is_active: true, display_order: 5 },
+  { id: '6', value: 'yoga_consultant', label: '🧘 Yoga Consultant', category: 'consultant', icon: '🧘', is_active: true, display_order: 6 },
+  { id: '7', value: 'nutritionist', label: '🥗 Clinical Nutritionist & Dietitian', category: 'nutritionist', icon: '🥗', is_active: true, display_order: 7 },
+  { id: '8', value: 'physiotherapist', label: '🩹 Clinical Physiotherapist', category: 'therapist', icon: '🩹', is_active: true, display_order: 8 },
+  { id: '9', value: 'wellness_coach', label: '✨ Holistic Wellness Coach', category: 'consultant', icon: '✨', is_active: true, display_order: 9 },
 ]
 
 export default function AdminProfessionalsPage() {
   const [professionals, setProfessionals] = useState<Professional[]>([])
+  const [roles, setRoles] = useState<ProfessionalRole[]>(DEFAULT_FALLBACK_ROLES)
   const [loading, setLoading] = useState(true)
   const [editingPro, setEditingPro] = useState<Partial<Professional> | null>(null)
   const [saving, setSaving] = useState(false)
@@ -45,6 +61,7 @@ export default function AdminProfessionalsPage() {
 
   useEffect(() => {
     loadProfessionals()
+    loadRoles()
   }, [])
 
   async function loadProfessionals() {
@@ -59,6 +76,18 @@ export default function AdminProfessionalsPage() {
       showToast('Failed to load professionals')
     }
     setLoading(false)
+  }
+
+  async function loadRoles() {
+    try {
+      const res = await fetch('/api/settings/roles')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.roles && data.roles.length > 0) {
+          setRoles(data.roles)
+        }
+      }
+    } catch {}
   }
 
   function showToast(msg: string) {
@@ -118,93 +147,102 @@ export default function AdminProfessionalsPage() {
     }
   }
 
-  const roleIcon: Record<string, string> = {
-    doctor: '🩺',
-    naturopathy_doctor: '🌿',
-    trainer: '🏋️',
-    nutritionist: '🥗',
-    yoga_doctor: '🧘',
-    yoga_consultant: '🧘',
+  const getRoleInfo = (roleValue: string) => {
+    const matched = roles.find(r => r.value === roleValue)
+    return {
+      icon: matched?.icon || (roleValue.includes('trainer') ? '🏋️' : roleValue.includes('yoga') ? '🧘' : roleValue.includes('nutri') ? '🥗' : '🩺'),
+      label: matched?.label || roleValue.replace(/_/g, ' '),
+    }
   }
+
+  const activeRoles = roles.filter(r => r.is_active)
 
   return (
     <div className="app-layout">
       <AdminSidebar />
 
       <main className="app-main">
-        <div className="page-header flex justify-between items-center">
+        <div className="page-header flex justify-between items-center" style={{ flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h1 className="text-headline-md">Professionals &amp; Care Team</h1>
             <p className="text-body-md text-muted">Manage doctors, certified trainers, clinical nutritionists, and yoga specialists</p>
           </div>
-          <button className="btn btn-primary btn-sm" onClick={() => setEditingPro({ ...EMPTY_PRO })}>
-            + Add Professional
-          </button>
+          <div className="flex gap-xs">
+            <Link href="/admin/settings#roles" className="btn btn-secondary btn-sm" title="Configure roles & disciplines in Settings">
+              ⚙️ Role Settings
+            </Link>
+            <button className="btn btn-primary btn-sm" onClick={() => setEditingPro({ ...EMPTY_PRO })}>
+              + Add Professional
+            </button>
+          </div>
         </div>
 
         {loading ? (
           <div className="empty-state">Loading professionals...</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-            {professionals.length ? professionals.map(p => (
-              <div
-                key={p.id}
-                className="card"
-                style={{
-                  padding: 'var(--space-md)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-md)',
-                  flexWrap: 'wrap',
-                  opacity: p.is_active ? 1 : 0.6,
-                  border: p.is_active ? '1px solid var(--color-border)' : '1px dashed var(--color-border)',
-                }}
-              >
-                <div style={{
-                  width: 50, height: 50, borderRadius: '50%',
-                  background: 'var(--color-neutral)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 26, flexShrink: 0,
-                  border: '1px solid var(--color-border)',
-                }}>
-                  {roleIcon[p.role] ?? '👤'}
-                </div>
-
-                <div style={{ flex: 1, minWidth: 220 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 800, fontSize: 16 }}>{p.full_name}</span>
-                    <span className="badge badge-neutral" style={{ textTransform: 'capitalize', fontSize: 11, fontWeight: 600 }}>
-                      {p.role?.replace(/_/g, ' ')}
-                    </span>
-                    {!p.is_active && <span className="badge badge-neutral" style={{ fontSize: 11 }}>Inactive</span>}
+            {professionals.length ? professionals.map(p => {
+              const info = getRoleInfo(p.role)
+              return (
+                <div
+                  key={p.id}
+                  className="card"
+                  style={{
+                    padding: 'var(--space-md)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-md)',
+                    flexWrap: 'wrap',
+                    opacity: p.is_active ? 1 : 0.6,
+                    border: p.is_active ? '1px solid var(--color-border)' : '1px dashed var(--color-border)',
+                  }}
+                >
+                  <div style={{
+                    width: 50, height: 50, borderRadius: '50%',
+                    background: 'var(--color-neutral)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 26, flexShrink: 0,
+                    border: '1px solid var(--color-border)',
+                  }}>
+                    {info.icon}
                   </div>
-                  {p.qualification && <div className="text-body-sm text-primary" style={{ fontWeight: 600, marginTop: 2 }}>{p.qualification}</div>}
-                  {p.specialization && <div className="text-caption text-muted" style={{ marginTop: 1 }}>Specialization: {p.specialization}</div>}
+
+                  <div style={{ flex: 1, minWidth: 220 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 800, fontSize: 16 }}>{p.full_name}</span>
+                      <span className="badge badge-neutral" style={{ textTransform: 'capitalize', fontSize: 11, fontWeight: 600 }}>
+                        {p.role?.replace(/_/g, ' ')}
+                      </span>
+                      {!p.is_active && <span className="badge badge-neutral" style={{ fontSize: 11 }}>Inactive</span>}
+                    </div>
+                    {p.qualification && <div className="text-body-sm text-primary" style={{ fontWeight: 600, marginTop: 2 }}>{p.qualification}</div>}
+                    {p.specialization && <div className="text-caption text-muted" style={{ marginTop: 1 }}>Specialization: {p.specialization}</div>}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      className={`btn btn-sm ${p.is_available ? 'badge-success' : 'badge-neutral'}`}
+                      style={{ border: '1px solid var(--color-border)', cursor: 'pointer' }}
+                      onClick={() => toggleStatus(p, 'is_available')}
+                      title="Click to toggle availability"
+                    >
+                      {p.is_available ? '● Available' : '○ Unavailable'}
+                    </button>
+
+                    <button className="btn btn-primary btn-sm" onClick={() => setEditingPro({ ...p })}>
+                      Edit
+                    </button>
+
+                    <button
+                      className={`btn btn-sm ${p.is_active ? 'btn-outline' : 'btn-ghost'}`}
+                      onClick={() => toggleStatus(p, 'is_active')}
+                    >
+                      {p.is_active ? 'Deactivate' : 'Activate'}
+                    </button>
+                  </div>
                 </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <button
-                    className={`btn btn-sm ${p.is_available ? 'badge-success' : 'badge-neutral'}`}
-                    style={{ border: '1px solid var(--color-border)', cursor: 'pointer' }}
-                    onClick={() => toggleStatus(p, 'is_available')}
-                    title="Click to toggle availability"
-                  >
-                    {p.is_available ? '● Available' : '○ Unavailable'}
-                  </button>
-
-                  <button className="btn btn-primary btn-sm" onClick={() => setEditingPro({ ...p })}>
-                    Edit
-                  </button>
-
-                  <button
-                    className={`btn btn-sm ${p.is_active ? 'btn-outline' : 'btn-ghost'}`}
-                    onClick={() => toggleStatus(p, 'is_active')}
-                  >
-                    {p.is_active ? 'Deactivate' : 'Activate'}
-                  </button>
-                </div>
-              </div>
-            )) : (
+              )
+            }) : (
               <div className="empty-state">
                 <div className="empty-state-icon">👨‍⚕️</div>
                 <p className="text-body-md text-muted">No professionals found. Click &quot;+ Add Professional&quot; to add your medical and fitness team.</p>
@@ -239,15 +277,34 @@ export default function AdminProfessionalsPage() {
                   </label>
 
                   <label className="form-field">
-                    <span className="form-label">Role / Discipline *</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                      <span className="form-label">Role / Discipline *</span>
+                      <Link
+                        href="/admin/settings#roles"
+                        className="text-caption text-primary"
+                        style={{ fontWeight: 600, fontSize: 11 }}
+                        target="_blank"
+                        title="Add, edit or rename roles in Settings"
+                      >
+                        ⚙️ Edit in Settings ↗
+                      </Link>
+                    </div>
                     <select
                       className="form-input"
                       value={editingPro.role ?? 'doctor'}
                       onChange={e => setEditingPro(p => ({ ...p, role: e.target.value }))}
                     >
-                      {ROLE_OPTIONS.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      {activeRoles.map(opt => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
                       ))}
+                      {/* Preserve custom or legacy role if not in active list */}
+                      {editingPro.role && !activeRoles.some(r => r.value === editingPro.role) && (
+                        <option value={editingPro.role}>
+                          {editingPro.role.replace(/_/g, ' ')} (Custom)
+                        </option>
+                      )}
                     </select>
                   </label>
                 </div>

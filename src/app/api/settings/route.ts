@@ -16,7 +16,8 @@ export async function GET(req: NextRequest) {
       google_meet_auto_notify: true,
       google_meet_default_url: 'https://meet.google.com',
     }
-    return NextResponse.json({ settings })
+    const professional_roles = mockDb.state.professional_roles || []
+    return NextResponse.json({ settings, professional_roles })
   } catch {
     return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 })
   }
@@ -48,13 +49,23 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json()
+    if (body.professional_roles) {
+      mockDb.state.professional_roles = body.professional_roles
+    }
+
+    const { professional_roles, ...settingsData } = body
+
     mockDb.state.settings = {
       ...(mockDb.state.settings || {}),
-      ...body,
+      ...settingsData,
       updated_at: new Date().toISOString(),
     }
 
-    return NextResponse.json({ settings: mockDb.state.settings, success: true })
+    return NextResponse.json({
+      settings: mockDb.state.settings,
+      professional_roles: mockDb.state.professional_roles,
+      success: true,
+    })
   } catch {
     return NextResponse.json({ error: 'Bad request' }, { status: 400 })
   }
