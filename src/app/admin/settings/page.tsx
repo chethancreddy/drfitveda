@@ -28,6 +28,16 @@ export interface ProfessionalRole {
   display_order: number
 }
 
+interface AdminProfile {
+  id: string
+  full_name: string
+  email: string
+  phone: string
+  designation: string
+  role: string
+  avatar_url?: string
+}
+
 const DEFAULT_SETTINGS: PlatformSettings = {
   platform_name: 'Dr Fit Veda',
   tagline: 'Naturopathy · Clinical Nutrition · Yoga · Certified Fitness',
@@ -41,11 +51,24 @@ const DEFAULT_SETTINGS: PlatformSettings = {
   google_meet_default_url: 'https://meet.google.com',
 }
 
+const DEFAULT_ADMIN_PROFILE: AdminProfile = {
+  id: 'u0000000-0000-0000-0000-000000000004',
+  full_name: 'Rajesh Kumar',
+  email: 'admin@drfitveda.com',
+  phone: '+91 98765 43213',
+  designation: 'Super Administrator',
+  role: 'super_admin',
+}
+
 const EMOJI_PRESETS = ['🩺', '🌿', '🪔', '🏋️', '🧘', '🥗', '🩹', '✨', '🧠', '💊', '🍎', '🏃', '🥋', '💆']
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<PlatformSettings>(DEFAULT_SETTINGS)
   const [roles, setRoles] = useState<ProfessionalRole[]>([])
+  const [adminProfile, setAdminProfile] = useState<AdminProfile>(DEFAULT_ADMIN_PROFILE)
+  const [editingProfile, setEditingProfile] = useState(false)
+  const [profileForm, setProfileForm] = useState<Partial<AdminProfile & { password?: string }>>({})
+  const [savingProfile, setSavingProfile] = useState(false)
   const [loading, setLoading] = useState(true)
   const [editingSection, setEditingSection] = useState<'identity' | 'google_meet' | null>(null)
   const [formData, setFormData] = useState<Partial<PlatformSettings>>({})
@@ -56,6 +79,7 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     loadSettings()
     loadRoles()
+    loadAdminProfile()
   }, [])
 
   async function loadSettings() {
@@ -76,6 +100,16 @@ export default function AdminSettingsPage() {
       if (res.ok) {
         const data = await res.json()
         if (data.roles) setRoles(data.roles)
+      }
+    } catch {}
+  }
+
+  async function loadAdminProfile() {
+    try {
+      const res = await fetch('/api/admin/profile')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.profile) setAdminProfile(data.profile)
       }
     } catch {}
   }
@@ -110,6 +144,41 @@ export default function AdminSettingsPage() {
       setEditingSection(null)
     }
     setSaving(false)
+  }
+
+  // --- Superadmin Profile Save ---
+  async function handleSaveProfile(e: React.FormEvent) {
+    e.preventDefault()
+    if (!profileForm.full_name?.trim()) {
+      showToast('Full name is required')
+      return
+    }
+    if (!profileForm.email?.trim()) {
+      showToast('Email is required')
+      return
+    }
+
+    setSavingProfile(true)
+    try {
+      const res = await fetch('/api/admin/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profileForm),
+      })
+
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.error || 'Failed to update profile')
+      }
+
+      const data = await res.json()
+      setAdminProfile(data.profile)
+      showToast('✓ Superadmin profile updated successfully!')
+      setEditingProfile(false)
+    } catch (err: any) {
+      showToast(`Error: ${err.message || 'Could not update profile'}`)
+    }
+    setSavingProfile(false)
   }
 
   // --- Role Management Actions ---
@@ -215,6 +284,77 @@ export default function AdminSettingsPage() {
           <div className="empty-state">Loading settings...</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+            {/* 0. Super Administrator Profile Card */}
+            <div id="profile" className="card" style={{
+              padding: 'var(--space-lg)',
+              background: 'linear-gradient(135deg, rgba(13, 148, 136, 0.06) 0%, rgba(99, 102, 241, 0.06) 100%)',
+              border: '2px solid #0d9488',
+              borderRadius: 'var(--radius-md)',
+              boxShadow: '0 4px 20px rgba(13, 148, 136, 0.08)',
+            }}>
+              <div className="flex justify-between items-start" style={{ flexWrap: 'wrap', gap: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{
+                    width: 58, height: 58, borderRadius: '50%',
+                    background: '#0d9488', color: 'white',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 22, fontWeight: 800,
+                    boxShadow: '0 4px 14px rgba(13, 148, 136, 0.35)',
+                    flexShrink: 0,
+                  }}>
+                    {adminProfile.full_name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase() || 'SA'}
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <h2 className="text-headline-sm" style={{ margin: 0, color: '#0f172a' }}>
+                        {adminProfile.full_name}
+                      </h2>
+                      <span className="badge badge-success" style={{ fontSize: 11, fontWeight: 700 }}>
+                        👑 {adminProfile.designation || 'Super Administrator'}
+                      </span>
+                    </div>
+                    <p className="text-caption text-muted" style={{ marginTop: 3 }}>
+                      Master Administrator · Full Administrative Rights · Care Team &amp; Billing Supervisor
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => {
+                    setProfileForm({
+                      full_name: adminProfile.full_name,
+                      email: adminProfile.email,
+                      phone: adminProfile.phone,
+                      designation: adminProfile.designation || 'Super Administrator',
+                      password: '',
+                    })
+                    setEditingProfile(true)
+                  }}
+                  style={{ fontWeight: 600 }}
+                >
+                  ✏️ Edit Superadmin Profile
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginTop: 'var(--space-md)' }}>
+                <div style={{ padding: '12px 14px', background: 'white', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}>
+                  <div className="text-label-sm text-muted">Admin Email Address</div>
+                  <div className="text-body-sm" style={{ fontWeight: 700, marginTop: 2, color: '#0f172a' }}>{adminProfile.email}</div>
+                </div>
+                <div style={{ padding: '12px 14px', background: 'white', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}>
+                  <div className="text-label-sm text-muted">Contact Phone Number</div>
+                  <div className="text-body-sm" style={{ fontWeight: 700, marginTop: 2, color: '#0f172a' }}>{adminProfile.phone || 'Not set'}</div>
+                </div>
+                <div style={{ padding: '12px 14px', background: 'white', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}>
+                  <div className="text-label-sm text-muted">Security &amp; Authorization Level</div>
+                  <div className="text-body-sm" style={{ fontWeight: 700, marginTop: 2, color: '#0d9488' }}>
+                    Level 1 Master Root Access
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* 1. Platform Identity */}
             <div className="card" style={{ padding: 'var(--space-lg)' }}>
               <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-md)' }}>
@@ -758,6 +898,102 @@ export default function AdminSettingsPage() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Modal: Super Administrator Profile */}
+        {editingProfile && (
+          <div style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+          }}>
+            <div className="card" style={{ width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', padding: 'var(--space-lg)' }}>
+              <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-md)' }}>
+                <div>
+                  <h2 className="text-headline-sm">Edit Superadmin Profile</h2>
+                  <p className="text-caption text-muted">Update your administrative credentials, display name, and contact details</p>
+                </div>
+                <button className="btn btn-icon btn-ghost" onClick={() => setEditingProfile(false)}>✕</button>
+              </div>
+
+              <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12 }}>
+                  <label className="form-field">
+                    <span className="form-label">Superadmin Full Name *</span>
+                    <input
+                      className="form-input"
+                      required
+                      placeholder="e.g. Rajesh Kumar"
+                      value={profileForm.full_name ?? ''}
+                      onChange={e => setProfileForm(p => ({ ...p, full_name: e.target.value }))}
+                    />
+                  </label>
+
+                  <label className="form-field">
+                    <span className="form-label">Designation / Title *</span>
+                    <input
+                      className="form-input"
+                      required
+                      placeholder="e.g. Super Administrator"
+                      value={profileForm.designation ?? ''}
+                      onChange={e => setProfileForm(p => ({ ...p, designation: e.target.value }))}
+                    />
+                  </label>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12 }}>
+                  <label className="form-field">
+                    <span className="form-label">Email Address *</span>
+                    <input
+                      className="form-input"
+                      type="email"
+                      required
+                      placeholder="admin@drfitveda.com"
+                      value={profileForm.email ?? ''}
+                      onChange={e => setProfileForm(p => ({ ...p, email: e.target.value }))}
+                    />
+                  </label>
+
+                  <label className="form-field">
+                    <span className="form-label">Phone Number</span>
+                    <input
+                      className="form-input"
+                      placeholder="+91 98765 43213"
+                      value={profileForm.phone ?? ''}
+                      onChange={e => setProfileForm(p => ({ ...p, phone: e.target.value }))}
+                    />
+                  </label>
+                </div>
+
+                <div style={{ padding: '12px 14px', background: 'var(--color-neutral)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}>
+                  <div className="text-label-sm text-muted" style={{ marginBottom: 6 }}>
+                    Security &amp; Password Update (Optional)
+                  </div>
+                  <label className="form-field">
+                    <span className="form-label">New Password</span>
+                    <input
+                      className="form-input"
+                      type="password"
+                      placeholder="Leave blank to keep existing password"
+                      value={profileForm.password ?? ''}
+                      onChange={e => setProfileForm(p => ({ ...p, password: e.target.value }))}
+                    />
+                    <span className="text-caption text-muted" style={{ marginTop: 4 }}>
+                      Minimum 6 characters. Leave blank if you do not wish to change your password.
+                    </span>
+                  </label>
+                </div>
+
+                <div className="flex justify-end" style={{ gap: 10, marginTop: 6 }}>
+                  <button type="button" className="btn btn-ghost" onClick={() => setEditingProfile(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary" disabled={savingProfile}>
+                    {savingProfile ? 'Saving…' : 'Save Profile Changes'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

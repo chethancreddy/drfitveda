@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 
@@ -25,6 +25,16 @@ export default function AdminSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [loggingOut, setLoggingOut] = useState(false)
+  const [adminProfile, setAdminProfile] = useState<{ full_name: string; designation: string; email?: string } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/admin/profile')
+      .then(r => r.json())
+      .then(data => {
+        if (data.profile) setAdminProfile(data.profile)
+      })
+      .catch(() => {})
+  }, [pathname])
 
   const handleLogout = async () => {
     try {
@@ -38,6 +48,15 @@ export default function AdminSidebar() {
       setLoggingOut(false)
     }
   }
+
+  const adminName = adminProfile?.full_name || 'Rajesh Kumar'
+  const adminDesignation = adminProfile?.designation || 'Super Administrator'
+  const initials = adminName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(p => p[0].toUpperCase())
+    .join('') || 'SA'
 
   return (
     <aside
@@ -111,7 +130,9 @@ export default function AdminSidebar() {
           gap: 8,
         }}
       >
-        <div
+        <Link
+          href="/admin/settings#profile"
+          title="Click to edit Superadmin Profile in Settings"
           style={{
             padding: '8px 10px',
             background: 'var(--color-bg-subtle, #f8fafc)',
@@ -119,6 +140,10 @@ export default function AdminSidebar() {
             display: 'flex',
             alignItems: 'center',
             gap: 8,
+            border: '1px solid var(--color-border, #e2e8f0)',
+            textDecoration: 'none',
+            color: 'inherit',
+            transition: 'all 0.2s',
           }}
         >
           <div
@@ -132,20 +157,21 @@ export default function AdminSidebar() {
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: 700,
-              fontSize: 13,
+              fontSize: 12,
+              flexShrink: 0,
             }}
           >
-            AD
+            {initials}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              Rajesh Kumar
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {adminName}
             </div>
-            <div style={{ fontSize: 10, color: 'var(--color-text-muted, #64748b)' }}>
-              Super Administrator
+            <div style={{ fontSize: 10, color: '#0d9488', fontWeight: 600 }}>
+              {adminDesignation} ✏️
             </div>
           </div>
-        </div>
+        </Link>
 
         <button
           onClick={handleLogout}
