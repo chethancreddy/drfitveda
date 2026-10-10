@@ -24,7 +24,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
     }
 
-    const meetingUrl = customer.zoho_meeting_url || customer.google_meet_url || customer.meeting_url || null
+    const meetingUrl = customer.zoho_meeting_url || customer.meeting_url || null
 
     return NextResponse.json({
       success: true,

@@ -31,6 +31,28 @@ export function validateConsent(b: { purpose?: string; granted?: unknown; source
   return null
 }
 
+export interface ContactInquiryInput {
+  name: string
+  phone: string
+  health_focus: string
+  message?: string
+  consent: boolean
+  website?: string // honeypot
+}
+
+export function validateContactInquiry(b: Partial<ContactInquiryInput>): string | null {
+  if (b.website) return 'Invalid submission.'
+  const name = (b.name ?? '').trim()
+  if (name.length < 2 || name.length > 120) return 'Please enter your full name.'
+  const phone = (b.phone ?? '').trim()
+  if (phone.length < 7 || phone.length > 25) return 'Please enter a valid phone number.'
+  const focus = (b.health_focus ?? '').trim()
+  if (!focus || focus.length > 100) return 'Please select your primary health focus.'
+  if ((b.message ?? '').length > 1500) return 'Message must be under 1500 characters.'
+  if (b.consent !== true) return 'Please agree to the consultation callback consent terms.'
+  return null
+}
+
 export const POLICY_VERSION = LEGAL.version
 
 /** Tiny in-memory rate limiter (per server instance) to deter form abuse. */
