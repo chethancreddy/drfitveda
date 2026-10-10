@@ -5,7 +5,7 @@
 -- ============================================================
 
 -- ─── Consent records (append-only: a withdrawal is a new row) ─────
-create table public.consent_records (
+create table if not exists public.consent_records (
   id             uuid primary key default uuid_generate_v4(),
   user_id        uuid references auth.users(id) on delete set null,
   customer_id    uuid references public.customers(id) on delete set null,
@@ -18,11 +18,11 @@ create table public.consent_records (
   -- Deliberately NOT stored: IP address, user agent, free text.
 );
 
-create index idx_consent_user    on public.consent_records(user_id, purpose, created_at desc);
-create index idx_consent_created on public.consent_records(created_at);
+create index if not exists idx_consent_user    on public.consent_records(user_id, purpose, created_at desc);
+create index if not exists idx_consent_created on public.consent_records(created_at);
 
 -- ─── Data-subject requests ────────────────────────────────────────
-create table public.data_subject_requests (
+create table if not exists public.data_subject_requests (
   id                  uuid primary key default uuid_generate_v4(),
   request_type        text not null check (request_type in
                         ('access','correction','export','deletion','withdraw_consent','complaint')),
@@ -41,7 +41,7 @@ create table public.data_subject_requests (
   closed_at           timestamptz
 );
 
-create index idx_dsr_status on public.data_subject_requests(status, due_at);
+create index if not exists idx_dsr_status on public.data_subject_requests(status, due_at);
 
 -- ─── Row Level Security ───────────────────────────────────────────
 alter table public.consent_records       enable row level security;

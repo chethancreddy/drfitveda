@@ -20,10 +20,10 @@ create table if not exists public.training_sessions (
   updated_at    timestamptz not null default now()
 );
 
-create index idx_training_sessions_customer  on public.training_sessions(customer_id);
-create index idx_training_sessions_trainer   on public.training_sessions(trainer_id);
-create index idx_training_sessions_status    on public.training_sessions(status);
-create index idx_training_sessions_scheduled on public.training_sessions(scheduled_at desc);
+create index if not exists idx_training_sessions_customer  on public.training_sessions(customer_id);
+create index if not exists idx_training_sessions_trainer   on public.training_sessions(trainer_id);
+create index if not exists idx_training_sessions_status    on public.training_sessions(status);
+create index if not exists idx_training_sessions_scheduled on public.training_sessions(scheduled_at desc);
 
 -- ─── training_recordings ────────────────────────────────────
 -- Only ONE row per customer may have is_active = true at any time
@@ -47,13 +47,13 @@ create table if not exists public.training_recordings (
 );
 
 -- Enforce: at most 1 active recording per customer at any time
-create unique index idx_training_recordings_one_active
+create unique index if not exists idx_training_recordings_one_active
   on public.training_recordings(customer_id)
   where is_active = true;
 
-create index idx_training_recordings_customer on public.training_recordings(customer_id);
-create index idx_training_recordings_session  on public.training_recordings(session_id);
-create index idx_training_recordings_cleanup  on public.training_recordings(deletion_queued_at)
+create index if not exists idx_training_recordings_customer on public.training_recordings(customer_id);
+create index if not exists idx_training_recordings_session  on public.training_recordings(session_id);
+create index if not exists idx_training_recordings_cleanup  on public.training_recordings(deletion_queued_at)
   where deleted_at is null and recording_status = 'inactive';
 
 -- ─── training_retention_config ──────────────────────────────
@@ -80,18 +80,21 @@ alter table public.training_retention_config enable row level security;
 
 -- training_sessions RLS --
 
+drop policy if exists "admin_all_training_sessions" on public.training_sessions;
 create policy "admin_all_training_sessions"
   on public.training_sessions for all
   using (
     exists (select 1 from public.user_profiles where id = auth.uid() and role in ('admin','super_admin'))
   );
 
+drop policy if exists "trainer_own_sessions" on public.training_sessions;
 create policy "trainer_own_sessions"
   on public.training_sessions for all
   using (
     exists (select 1 from public.professionals p where p.user_id = auth.uid() and p.id = training_sessions.trainer_id)
   );
 
+drop policy if exists "customer_read_own_sessions" on public.training_sessions;
 create policy "customer_read_own_sessions"
   on public.training_sessions for select
   using (
@@ -100,12 +103,14 @@ create policy "customer_read_own_sessions"
 
 -- training_recordings RLS --
 
+drop policy if exists "admin_all_recordings" on public.training_recordings;
 create policy "admin_all_recordings"
   on public.training_recordings for all
   using (
     exists (select 1 from public.user_profiles where id = auth.uid() and role in ('admin','super_admin'))
   );
 
+drop policy if exists "trainer_own_recordings" on public.training_recordings;
 create policy "trainer_own_recordings"
   on public.training_recordings for all
   using (
@@ -116,6 +121,7 @@ create policy "trainer_own_recordings"
     )
   );
 
+drop policy if exists "customer_read_own_recordings" on public.training_recordings;
 create policy "customer_read_own_recordings"
   on public.training_recordings for select
   using (
@@ -124,6 +130,7 @@ create policy "customer_read_own_recordings"
 
 -- training_retention_config RLS --
 
+drop policy if exists "admin_retention_config" on public.training_retention_config;
 create policy "admin_retention_config"
   on public.training_retention_config for all
   using (
