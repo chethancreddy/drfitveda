@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import ProfessionalSidebar from '@/components/professional/ProfessionalSidebar'
 
-export const metadata: Metadata = { title: 'Live Training & Google Meet Sessions' }
+export const metadata: Metadata = { title: 'Live Training & Zoho Meeting Sessions' }
 export const dynamic = 'force-dynamic'
 
 type Rec = { id: string; recording_status: string; is_active: boolean }

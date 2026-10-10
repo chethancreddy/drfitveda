@@ -15,7 +15,7 @@ export default async function CustomerTrainingPage() {
   const { data: customer } = await (supabase as any)
     .from('customers').select('id').eq('user_id', user.id).single() as { data: { id: string } | null }
 
-  // Fetch sessions including Google Meet links
+  // Fetch sessions including Zoho Meeting links
   const { data: sessRaw } = customer ? await (supabase as any)
     .from('training_sessions')
     .select('id, scheduled_at, status, notes, meeting_url, recording_url, trainer:trainer_id(full_name)')
@@ -45,7 +45,7 @@ export default async function CustomerTrainingPage() {
       </header>
 
       <main className="container" style={{ paddingTop: 'var(--space-sm)' }}>
-        {/* Latest session hero card — Google Meet links */}
+        {/* Latest session hero card — Zoho Meeting links */}
         <LatestTrainingSession
           customerId={customer?.id ?? null}
           session={latestSession}
@@ -109,7 +109,7 @@ export default async function CustomerTrainingPage() {
           )}
         </div>
 
-        {/* Google Meet note */}
+        {/* Zoho Meeting note */}
         <div style={{
           marginTop: 'var(--space-sm)',
           padding: '12px 16px',
@@ -119,7 +119,7 @@ export default async function CustomerTrainingPage() {
           color: 'var(--color-muted)',
           lineHeight: 1.55,
         }}>
-          📹 <strong>All sessions are on Google Meet.</strong> Join links appear before the session. Recording links (shared by Google Meet) appear here after the session is completed.
+          📹 <strong>All sessions are on Zoho Meeting.</strong> Join links appear before the session. Recording links appear here after the session is completed.
         </div>
       </main>
 

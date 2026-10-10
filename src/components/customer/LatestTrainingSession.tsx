@@ -92,14 +92,14 @@ export default function LatestTrainingSession({ session, customerId }: Props) {
           className="btn-watch"
           id="btn-watch-meet-recording"
         >
-          <span>▶</span> Watch Session Recording (Google Meet)
+          <span>▶</span> Watch Session Recording (Zoho Meeting)
         </a>
       )}
 
       {/* Completed — no recording yet */}
       {isCompleted && !session.recording_url && (
         <div className="recording-empty" style={{ marginTop: 8 }}>
-          Session completed. Recording link will appear here once available from Google Meet.
+          Session completed. Recording link will appear here once available from Zoho Meeting.
         </div>
       )}
 
@@ -111,8 +111,8 @@ export default function LatestTrainingSession({ session, customerId }: Props) {
         borderTop: '1px dashed var(--color-border)',
         paddingTop: 8,
       }}>
-        📹 All sessions are conducted and recorded via <strong>Google Meet</strong>.
-        Recording links are provided by Google Meet after the session ends.
+        📹 All sessions are conducted via <strong>Zoho Meeting</strong>.
+        Recording links are provided by the care team after the session ends.
       </div>
     </div>
   )

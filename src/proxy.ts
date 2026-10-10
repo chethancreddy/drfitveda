@@ -13,6 +13,7 @@ const PUBLIC_ROUTES = [
   '/', '/programs', '/memberships', '/how-it-works', '/yoga', '/nutrition',
   '/womens-wellness', '/about', '/testimonials', '/faq', '/contact',
   '/login', '/register', '/auth',
+  '/privacy', '/terms', '/cookies', '/refund-policy', '/disclaimer', '/data-request',
 ]
 
 function matchRoute(pathname: string): UserRole[] | null {
@@ -38,7 +39,7 @@ function isPublicRoute(pathname: string): boolean {
   return false
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // Allow public routes and all API routes directly

@@ -1,48 +1,165 @@
 import type { Metadata } from 'next'
-import PublicHeader from '@/components/public/PublicHeader'
-import PublicFooter from '@/components/public/PublicFooter'
+import Link from 'next/link'
+import LegalLayout, { Section, Table } from '@/components/legal/LegalLayout'
+import { LEGAL } from '@/lib/legal/config'
 
 export const metadata: Metadata = {
-  title: 'Health Data Privacy & Security | Dr Fit Veda',
-  description: 'How Dr Fit Veda protects your medical documents, consultation notes, and personal health information.',
+  title: 'Privacy Policy (Draft) | Dr Fit Veda',
+  description: 'How Dr Fit Veda collects, uses, stores, shares and protects personal and health data, and how to exercise your rights.',
 }
 
 export default function PrivacyPage() {
   return (
-    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column'}}>
-      <PublicHeader />
+    <LegalLayout
+      title="Privacy Policy"
+      intro={`This policy explains how ${LEGAL.entityName} ("Dr Fit Veda", "we") handles personal data of visitors, customers and professionals on drfitveda.com and the Dr Fit Veda portals. It describes only data our platform is built to collect.`}
+    >
+      <Section title="1. Who is responsible">
+        <p>
+          {LEGAL.entityName} ({LEGAL.address}) decides why and how your personal data is processed (the &quot;data
+          fiduciary&quot; under Indian law and &quot;controller&quot; under other laws). Contact:{' '}
+          <a href={`mailto:${LEGAL.privacyEmail}`}>{LEGAL.privacyEmail}</a>.
+        </p>
+      </Section>
 
-      <main style={{flex:1,padding:'var(--space-xl) 0',background:'var(--surface-page)'}}>
-        <div className="container" style={{maxWidth:780}}>
-          <div className="card" style={{padding:'var(--space-xl)'}}>
-            <h1 className="text-headline-lg" style={{marginBottom:12}}>Health Data Privacy &amp; Security Policy</h1>
-            <p className="text-body-sm text-muted" style={{marginBottom:24}}>Effective Date: September 2026</p>
+      <Section title="2. Data we collect, why, and how long we keep it">
+        <Table
+          head={['Data', 'Purpose', 'Where stored', 'Retention']}
+          rows={[
+            ['Account: name, phone, email, role, login identifiers', 'Create and secure your account; contact you about your service', 'Platform database (Supabase)', 'While your account is active, then up to [CONFIRM: 12 months] unless law requires longer'],
+            ['Profile & lifestyle: date of birth, gender, height, weight, BMI, occupation, sleep, stress, activity, goals; women\'s wellness details (optional, restricted)', 'Let your care team prepare your plan', 'Platform database', 'While account active + [CONFIRM] period; clinical records per section 9'],
+            ['Food profile: diet type, meals, allergies, restrictions', 'Prepare nutrition plans safely', 'Platform database', 'Same as profile'],
+            ['Health documents you upload (lab reports, prescriptions, scans) and your notes', 'Doctor review and plan preparation', 'Private document storage / database', 'Until you delete them or your account closes, subject to section 9'],
+            ['Consultation records: appointments, topics, doctor notes, recommendations, assessments, weekly reviews', 'Deliver and document care', 'Platform database', 'Per section 9 ([CONFIRM] clinical record period)'],
+            ['Plans & tracking: diet/workout/yoga plans, daily check-ins, progress records, progress photos/videos you upload', 'Deliver, monitor and adjust your programme', 'Platform database / private storage', 'While account active + [CONFIRM]'],
+            ['Session recordings (live training/consultations) where enabled for your plan', 'Replay and form review', 'Private storage with short-lived signed links', 'Only the latest recording is kept; the previous one is deleted after a grace period (default 24 hours, set by admin)'],
+            ['Orders & payment records: plan, amount, currency, payment status, provider payment ID', 'Process and account for payments, refunds', 'Platform database; card details are handled by the payment provider, not stored by us', 'As required by tax/accounting law (typically 6–8 years in India) [CONFIRM]'],
+            ['Contact enquiries: name, phone, health focus, message', 'Respond to your request', 'See note below', '[CONFIRM] — see note'],
+            ['Consent records and privacy requests', 'Prove consent and handle your rights', 'Platform database', 'Consent: while relevant + 3 years; requests: 3 years after closure [CONFIRM]'],
+            ['Security & audit logs, session cookie', 'Security, fraud prevention, accountability', 'Platform database', 'Audit logs [CONFIRM: 12–24 months]'],
+          ]}
+        />
+        <p>
+          <strong>Note on the website enquiry form:</strong> in the current build the &quot;Request Consultation
+          Callback&quot; form does not yet transmit or store submitted details. Please do not rely on it until it is
+          connected; this policy will be updated when it is. Please do not include detailed medical information in it.
+        </p>
+        <p>
+          We do not knowingly collect data beyond what is listed. We do not run advertising or analytics trackers
+          at present (see the <Link href="/cookies">Cookie Policy</Link>).
+        </p>
+      </Section>
 
-            <div style={{display:'flex',flexDirection:'column',gap:16,lineHeight:1.7}}>
-              <p className="text-body-md">
-                At <strong>Dr Fit Veda</strong>, protecting your personal health records, diagnostic lab reports, and consultation notes is our foremost ethical and legal priority.
-              </p>
+      <Section title="3. Legal bases and consent">
+        <p>
+          <strong>India:</strong> we process your data with your consent or for limited legitimate uses allowed by
+          law (for example, to provide a service you requested, comply with law, or respond to a medical emergency).
+          Health information is treated as sensitive personal data; we ask for your separate, explicit consent
+          before you upload health documents or share health details, and for recording of sessions.
+          Accepting the Terms &amp; Conditions is not treated as consent to every kind of processing. Marketing
+          messages, if ever introduced, will need a separate optional consent that is never pre-ticked.
+        </p>
+        <p>
+          <strong>UAE and EU/UK users:</strong> where those laws apply to you (see section 10), we rely on your
+          explicit consent for health data, performance of our contract with you for service delivery, and legal
+          obligation for records. You can withdraw consent at any time (see section 8); withdrawal does not affect
+          earlier lawful processing, but we may no longer be able to provide services that need that data.
+        </p>
+      </Section>
 
-              <h2 className="text-headline-sm">1. Medical Information Confidentiality</h2>
-              <p className="text-body-sm text-muted">
-                Your health data is strictly restricted to your assigned clinical team (your doctor, personal trainer, and nutritionist). We will never sell, lease, or monetize your health information to pharmaceutical companies, advertisers, or third parties.
-              </p>
+      <Section title="4. Who we share data with">
+        <p>We do not sell your personal or health data. We share it only as needed:</p>
+        <ul style={{ paddingLeft: 18, margin: 0 }}>
+          <li><strong>Your assigned care team</strong> (doctor, trainer, nutritionist, yoga professional) — access is limited by role to data needed for your care.</li>
+          <li><strong>Platform administrators</strong> — limited operational and support access, logged.</li>
+          <li><strong>Supabase</strong> — database, authentication and file storage (hosting region: [CONFIRM]).</li>
+          <li><strong>Zoho Meeting</strong> — video sessions and live consultations; your name and email are used to provision meeting rooms and join links.</li>
+          <li><strong>Razorpay</strong> — payment processing, if/when checkout is enabled; <strong>Resend</strong> — transactional email, if/when enabled. Both are configured in the codebase but not yet active. [CONFIRM]</li>
+          <li><strong>Hosting provider</strong> (Vercel configuration present) — serves the website.</li>
+          <li>Authorities, courts or professional regulators where legally required.</li>
+        </ul>
+        <p>Each provider acts under its own terms and privacy policy; data-processing agreements must be in place before launch [CONFIRM].</p>
+      </Section>
 
-              <h2 className="text-headline-sm">2. Video Recordings &amp; Rolling Retention</h2>
-              <p className="text-body-sm text-muted">
-                Live training sessions are captured strictly for your personal movement practice. Under our automated rolling retention policy (TRD §6.5 &amp; §33), recordings are stored with signed, short-lived URLs and expired video files are deleted after the designated grace period while retaining compliance audit logs.
-              </p>
+      <Section title="5. International transfers">
+        <p>
+          Our providers may process data outside India (and outside the UAE for UAE customers). We will use
+          contractual and technical safeguards and, where a country-specific rule restricts transferring health data
+          abroad, we will take legal advice before transferring. The exact hosting regions are [CONFIRM].
+        </p>
+      </Section>
 
-              <h2 className="text-headline-sm">3. Encryption &amp; Security Standards</h2>
-              <p className="text-body-sm text-muted">
-                All data transmission uses industry-standard TLS 1.3 encryption. Uploaded medical documents are stored in private, isolated object buckets with row-level security (RLS) policies preventing unauthorized cross-patient access.
-              </p>
-            </div>
-          </div>
-        </div>
-      </main>
+      <Section title="6. Security">
+        <p>
+          Data is sent over encrypted connections (HTTPS). The database design restricts customer records by role and
+          ownership, medical files are kept in private storage, recordings are served by short-lived signed links, and
+          administrative actions are written to an audit log. No system is perfectly secure; if a breach affecting you
+          occurs we will notify you and regulators as the law requires.
+        </p>
+      </Section>
 
-      <PublicFooter />
-    </div>
+      <Section title="7. Children">
+        <p>
+          Our services are for adults aged {LEGAL.minimumAge} and over. We do not knowingly collect data from
+          children. If you believe a child&apos;s data has been provided, contact us and we will delete it.
+        </p>
+      </Section>
+
+      <Section title="8. Your rights and how to use them">
+        <p>
+          You may ask to <strong>access</strong>, <strong>correct</strong>, <strong>export</strong>, or{' '}
+          <strong>delete</strong> your personal data, <strong>withdraw consent</strong>, or make a{' '}
+          <strong>complaint</strong>. Use the <Link href="/data-request">data request form</Link> or email{' '}
+          <a href={`mailto:${LEGAL.privacyEmail}`}>{LEGAL.privacyEmail}</a>.
+        </p>
+        <p>
+          <strong>Verification:</strong> to protect you, we confirm identity before releasing or changing data — we
+          contact you using the phone/email already on your account (not details typed in the request) and may ask you
+          to sign in. We never ask for passwords or payment card numbers. Please do not put health data in the
+          request form.
+        </p>
+        <p>
+          <strong>Timing:</strong> we aim to acknowledge requests within 7 days and complete them within 30 days
+          [CONFIRM], extending only where permitted and telling you why. Requests are free unless clearly excessive.
+        </p>
+        <p>
+          <strong>Deletion limits:</strong> we cannot always delete everything. We must keep some records — for
+          example payment and tax records, clinical/consultation records we are required to retain, and records
+          needed to handle legal claims or fraud. Where we cannot delete, we will tell you what we are keeping and why,
+          and restrict it from other use. Your right to complain to a regulator (in India, the Data Protection Board
+          once operational; in the UAE, the UAE Data Office; in the EU, your local authority) is unaffected.
+        </p>
+      </Section>
+
+      <Section title="9. Records we must keep">
+        <p>
+          Laws on medical/consultation records, taxes and accounting require us to retain some data for set periods
+          (exact periods to be confirmed with counsel). After that period data is deleted or irreversibly anonymised.
+        </p>
+      </Section>
+
+      <Section title="10. Which laws apply (summary of our assessment)">
+        <Table
+          head={['Law', 'Applies?', 'Reason / action']}
+          rows={[
+            ['India — Digital Personal Data Protection Act 2023 and Rules', 'Yes', 'We operate from India and process data of people in India. Rules are being phased in — track commencement dates.'],
+            ['India — IT Act 2000 / SPDI Rules 2011', 'Yes', 'Health data is "sensitive personal data"; written consent and a published policy are required.'],
+            ['India — Consumer Protection (E-Commerce) Rules 2020', 'Likely', 'Online sale of services: grievance officer, pricing and refund transparency.'],
+            ['India — Telemedicine Practice Guidelines 2020', 'Counsel to confirm', 'Applies to registered medical practitioners; unclear for naturopathy/nutrition/fitness professionals.'],
+            ['UAE — Federal Decree-Law 45/2021 (PDPL)', 'Likely for UAE-resident customers', 'We serve a few UAE customers referred by existing customers. Extra-territorial scope is plausible; executive regulations are still developing.'],
+            ['UAE — health-data laws (e.g. Federal Law 2/2019 on ICT in health fields)', 'Counsel to confirm', 'May restrict storing/transferring UAE patients\' health data outside the UAE and may require licensing for health services.'],
+            ['EU/UK GDPR and ePrivacy', 'Not currently', 'We do not target the EU/UK. Re-assess if EU/UK customers are accepted.'],
+          ]}
+        />
+        <p>These are working assessments, not legal advice; a qualified lawyer must confirm them.</p>
+      </Section>
+
+      <Section title="11. Complaints">
+        <p>
+          Write to the Grievance Officer at <a href={`mailto:${LEGAL.privacyEmail}`}>{LEGAL.privacyEmail}</a>. We
+          aim to acknowledge within 48 hours and resolve within 30 days [CONFIRM].
+        </p>
+      </Section>
+    </LegalLayout>
   )
 }

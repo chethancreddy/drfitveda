@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 338" width="600" height="338">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f766e"/>
+      <stop offset="60%" stop-color="#115e59"/>
+      <stop offset="100%" stop-color="#134e4a"/>
+    </linearGradient>
+    <linearGradient id="sun" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.4"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#2dd4bf" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#0f766e" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="600" height="338" fill="url(#bg)"/>
+  <circle cx="300" cy="150" r="140" fill="url(#glow)"/>
+  <circle cx="300" cy="150" r="50" fill="url(#sun)"/>
+
+  <!-- Stylized Yoga / Sun Silhouette Elements -->
+  <path d="M 200 240 Q 300 170 400 240 L 400 338 L 200 338 Z" fill="#042f2e" opacity="0.6"/>
+  
+  <!-- Pose Icon Graphics -->
+  <g transform="translate(275, 110) scale(0.9)" stroke="#ffffff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="28" cy="10" r="7" fill="#ffffff"/>
+    <path d="M 28 20 L 28 45 L 12 70" />
+    <path d="M 28 45 L 44 70" />
+    <path d="M 10 32 L 28 26 L 46 32" />
+  </g>
+
+  <!-- Overlay Info Badge -->
+  <rect x="24" y="24" width="86" height="28" rx="6" fill="#134e4a" fill-opacity="0.8" stroke="#2dd4bf" stroke-width="1"/>
+  <text x="67" y="42" fill="#5eead4" font-family="system-ui, sans-serif" font-size="12" font-weight="700" text-anchor="middle">YOGA FLOW</text>
+
+  <!-- Title banner -->
+  <text x="300" y="270" fill="#ffffff" font-family="system-ui, sans-serif" font-size="18" font-weight="600" text-anchor="middle" letter-spacing="0.5">Surya Namaskar &amp; Core Flow</text>
+  <text x="300" y="295" fill="#99f6e4" font-family="system-ui, sans-serif" font-size="13" text-anchor="middle">Morning Mobility &amp; Alignment Review</text>
+
+  <!-- Play icon overlay -->
+  <circle cx="300" cy="150" r="28" fill="#042f2e" fill-opacity="0.65" stroke="#ffffff" stroke-width="2"/>
+  <polygon points="293,138 313,150 293,162" fill="#ffffff"/>
+</svg>

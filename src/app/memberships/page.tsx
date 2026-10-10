@@ -6,7 +6,7 @@ import { mockDb } from '@/lib/mock-db'
 
 export const metadata: Metadata = {
   title: 'Memberships & Pricing | Dr Fit Veda',
-  description: 'Transparent membership plans: Starter ₹9,999, Growth ₹49,999, Elite ₹89,999, and Super ₹1,99,999. Live 1-on-1 trainer sessions on Google Meet, doctor monitoring, and separate specialist consultations at ₹499.',
+  description: 'Transparent membership plans: Starter ₹9,999, Growth ₹49,999, Elite ₹89,999, and Super ₹1,99,999. Live 1-on-1 trainer sessions on Zoho Meeting, doctor monitoring, and separate specialist consultations at ₹499.',
 }
 
 export const dynamic = 'force-dynamic'
@@ -59,7 +59,7 @@ export default function MembershipsPage() {
               Choose Your Transformation Journey
             </h1>
             <p className="text-body-lg" style={{ color: 'rgba(255,255,255,0.82)', lineHeight: 1.65 }}>
-              Every plan includes live 1-on-1 Google Meet sessions with certified trainers, a customized health plan, and a dedicated care team. No hidden fees.
+              Every plan includes live 1-on-1 Zoho Meeting sessions with certified trainers, a customized health plan, and a dedicated care team. No hidden fees.
             </p>
           </div>
         </section>
@@ -168,7 +168,7 @@ export default function MembershipsPage() {
                               {plan.session_frequency}
                             </div>
                             <div style={{ fontSize: 11, color: mutedCol, marginTop: 3 }}>
-                              Live 1-on-1 on Google Meet with recording &amp; review
+                              Live 1-on-1 on Zoho Meeting with recording &amp; review
                             </div>
                           </div>
                         </div>
@@ -206,15 +206,21 @@ export default function MembershipsPage() {
               })}
             </div>
           </div>
+          <p className="text-body-sm text-muted" style={{ textAlign: 'center', margin: 'var(--space-md) auto 0', padding: '0 var(--space-md)', maxWidth: 760, lineHeight: 1.6 }}>
+            Before you buy, please read our <Link href="/terms">Terms &amp; Conditions</Link>,{' '}
+            <Link href="/refund-policy">Refund &amp; Cancellation Policy</Link>,{' '}
+            <Link href="/privacy">Privacy Policy</Link> and <Link href="/disclaimer">Medical Disclaimer</Link>.
+            Results vary and are not guaranteed.
+          </p>
         </section>
 
-        {/* Google Meet note */}
+        {/* Zoho Meeting note */}
         <section style={{ padding: 'var(--space-md) 0', background: 'var(--color-neutral)' }}>
           <div className="container" style={{ maxWidth: 860, textAlign: 'center' }}>
             <div className="alert alert-info" style={{ display: 'inline-flex', gap: 12, textAlign: 'left' }}>
               <span style={{ fontSize: 24 }}>📹</span>
               <div>
-                <strong>All live sessions are conducted on Google Meet.</strong>
+                <strong>All live sessions are conducted on Zoho Meeting.</strong>
                 <p className="text-body-sm" style={{ margin: '4px 0 0', lineHeight: 1.5 }}>
                   Every session is recorded and stored securely. Super Plan members get full overwrite & override access to their session recordings. Trainer & doctor sessions are clearly labeled and searchable from your dashboard.
                 </p>
@@ -261,7 +267,7 @@ export default function MembershipsPage() {
 
             <div style={{ marginTop: 'var(--space-md)', padding: '14px 20px', background: 'var(--color-neutral)', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
               <p className="text-body-sm text-muted">
-                All consultations conducted via <strong>Google Meet</strong>. Sessions are recorded and shared with you post-consultation.
+                All consultations conducted via <strong>Zoho Meeting</strong>. Sessions are recorded and shared with you post-consultation.
                 <br />Yoga, PCOD/PCOS & Wellness consultations are separate from membership entitlements.
               </p>
             </div>
@@ -277,7 +283,7 @@ export default function MembershipsPage() {
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
               {[
-                { label: 'Certified Trainer Sessions', sub: 'Live Google Meet coaching', val: '55%' },
+                { label: 'Certified Trainer Sessions', sub: 'Live Zoho Meeting coaching', val: '55%' },
                 { label: 'Doctor Reviews & Planning', sub: 'Clinical assessments & plan updates', val: '12%' },
                 { label: 'Platform & Secure Storage', sub: 'Video, HIPAA-grade hosting', val: '33%' },
               ].map(r => (

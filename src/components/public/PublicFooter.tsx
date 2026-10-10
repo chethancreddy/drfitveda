@@ -79,6 +79,18 @@ export default function PublicFooter() {
                 Terms &amp; Conditions
               </Link>
             </div>
+            {[
+              { label:'Cookie Policy', href:'/cookies' },
+              { label:'Refund & Cancellation', href:'/refund-policy' },
+              { label:'Medical Disclaimer', href:'/disclaimer' },
+              { label:'Data Requests', href:'/data-request' },
+            ].map(l => (
+              <div key={l.href} style={{marginBottom:8}}>
+                <Link href={l.href} className="text-body-sm" style={{color:'rgba(255,255,255,0.7)',textDecoration:'none'}}>
+                  {l.label}
+                </Link>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -91,6 +103,9 @@ export default function PublicFooter() {
           <div className="flex gap-sm">
             <Link href="/privacy" className="text-caption" style={{color:'rgba(255,255,255,0.45)'}}>Privacy Policy</Link>
             <Link href="/terms" className="text-caption" style={{color:'rgba(255,255,255,0.45)'}}>Terms &amp; Conditions</Link>
+            <Link href="/cookies" className="text-caption" style={{color:'rgba(255,255,255,0.45)'}}>Cookies</Link>
+            <Link href="/refund-policy" className="text-caption" style={{color:'rgba(255,255,255,0.45)'}}>Refunds</Link>
+            <Link href="/disclaimer" className="text-caption" style={{color:'rgba(255,255,255,0.45)'}}>Disclaimer</Link>
             <Link href="/contact" className="text-caption" style={{color:'rgba(255,255,255,0.45)'}}>Support</Link>
           </div>
         </div>

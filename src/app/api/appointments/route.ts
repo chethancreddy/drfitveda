@@ -107,7 +107,7 @@ export async function POST(request: Request) {
       scheduled_at,
       duration_min = 30,
       notes = '',
-      meeting_url = 'https://meet.google.com/drf-veda-live'
+      meeting_url = 'https://meeting.zoho.com/join?key=drf-veda-live'
     } = body
 
     if (!scheduled_at) {

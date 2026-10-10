@@ -18,6 +18,7 @@ export const ADMIN_NAV_LINKS = [
   { href: '/admin/cms', icon: '🌐', label: 'CMS' },
   { href: '/admin/reports', icon: '📈', label: 'Reports' },
   { href: '/admin/audit', icon: '🔍', label: 'Audit Logs' },
+  { href: '/admin/privacy-requests', icon: '🔒', label: 'Privacy Requests' },
   { href: '/admin/settings', icon: '⚙️', label: 'Settings' },
 ]
 

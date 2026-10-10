@@ -58,8 +58,8 @@ export async function POST(request: Request) {
     const {
       title,
       category = 'workout',
-      video_url = 'https://www.w3schools.com/html/mov_bbb.mp4',
-      thumbnail_url = 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&q=80',
+      video_url = '/videos/demo-movement.mp4',
+      thumbnail_url = '/images/gallery-surya-namaskar.svg',
       notes = ''
     } = body
 

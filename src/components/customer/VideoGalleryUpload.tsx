@@ -48,10 +48,10 @@ export default function VideoGalleryUpload({ customerId }: { customerId?: string
           customer_id: customerId,
           title: title.trim(),
           category,
-          video_url: videoUrl.trim() || 'https://www.w3schools.com/html/mov_bbb.mp4',
+          video_url: videoUrl.trim() || '/videos/demo-movement.mp4',
           thumbnail_url: category === 'yoga'
-            ? 'https://images.unsplash.com/photo-1545205597-3d9d02c29597?w=600&q=80'
-            : 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=600&q=80',
+            ? '/images/gallery-surya-namaskar.svg'
+            : '/images/gallery-squat-form.svg',
           notes: notes.trim(),
         })
       })

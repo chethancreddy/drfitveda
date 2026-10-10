@@ -390,7 +390,7 @@ export default function AdminMembershipsPage() {
                       { key: 'has_yoga_consultation', label: '🧘 Yoga Consultation Included' },
                       { key: 'has_yoga_plan', label: '📋 Yoga Plan Included' },
                       { key: 'is_super_plan', label: '🌟 Super Plan (Weekly Model)' },
-                      { key: 'google_meet_recording', label: '📹 Google Meet Recording' },
+                      { key: 'google_meet_recording', label: '📹 Zoho Meeting Recording' },
                       { key: 'is_active', label: '✅ Active (Visible to Customers)' },
                     ].map(field => (
                       <label key={field.key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>

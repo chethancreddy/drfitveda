@@ -104,10 +104,19 @@ export default function ContactPage() {
                     </select>
                   </div>
 
-                  <div className="input-group" style={{marginBottom:16}}>
-                    <label className="input-label">Message (Optional)</label>
-                    <textarea className="input" rows={3} placeholder="Share any existing conditions or questions..."></textarea>
+                  <div className="input-group" style={{marginBottom:12}}>
+                    <label className="input-label" htmlFor="contact-message">Message (Optional)</label>
+                    <textarea id="contact-message" className="input" rows={3} placeholder="Share any existing conditions or questions..."></textarea>
                   </div>
+
+                  <label style={{display:'flex',gap:8,alignItems:'flex-start',fontSize:12.5,lineHeight:1.5,marginBottom:16}}>
+                    <input type="checkbox" required id="contact-consent" style={{marginTop:3}} />
+                    <span>
+                      I agree that Dr Fit Veda may use my name, phone number and any health information I enter to contact me
+                      about my enquiry, as described in the <Link href="/privacy">Privacy Policy</Link>. Our guidance is
+                      not emergency care — see the <Link href="/disclaimer">Medical Disclaimer</Link>. *
+                    </span>
+                  </label>
 
                   <button type="submit" className="btn btn-primary btn-full">
                     Request Medical Callback

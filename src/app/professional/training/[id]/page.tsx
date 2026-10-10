@@ -52,7 +52,7 @@ export default async function ProfessionalSessionDetailPage({ params }: { params
 
   const recording = session.training_recordings?.[0] ?? null
   const customerName = session.customers?.user_profiles?.full_name ?? '—'
-  const meetUrl = session.meeting_url || 'https://meet.google.com/fit-veda-priya'
+  const meetUrl = session.meeting_url || 'https://meeting.zoho.com/join?key=fit-veda-priya'
 
   return (
     <div className="app-layout">
@@ -81,7 +81,7 @@ export default async function ProfessionalSessionDetailPage({ params }: { params
           </div>
         </div>
 
-        {/* Dedicated Google Meet Link */}
+        {/* Dedicated Zoho Meeting Link */}
         <div
           style={{
             padding: '12px 16px',
@@ -100,7 +100,7 @@ export default async function ProfessionalSessionDetailPage({ params }: { params
             <span style={{ fontSize: 22 }}>📹</span>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#065f46' }}>
-                Google Meet Video Consultation Room
+                Zoho Meeting Video Consultation Room
               </div>
               <div style={{ fontSize: 12, color: '#047857', wordBreak: 'break-all' }}>
                 {meetUrl}
@@ -114,7 +114,7 @@ export default async function ProfessionalSessionDetailPage({ params }: { params
             className="btn btn-primary btn-sm"
             style={{ fontWeight: 600 }}
           >
-            Launch Google Meet →
+            Launch Zoho Meeting →
           </a>
         </div>
 

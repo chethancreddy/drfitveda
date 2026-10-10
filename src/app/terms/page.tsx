@@ -1,162 +1,133 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import PublicHeader from '@/components/public/PublicHeader'
-import PublicFooter from '@/components/public/PublicFooter'
+import LegalLayout, { Section } from '@/components/legal/LegalLayout'
+import { LEGAL } from '@/lib/legal/config'
 
 export const metadata: Metadata = {
-  title: 'Terms & Conditions | Dr Fit Veda',
-  description: 'Terms and conditions for using the Dr Fit Veda platform, including membership, live sessions, and health consultation services.',
+  title: 'Terms & Conditions (Draft) | Dr Fit Veda',
+  description: 'Terms governing use of the Dr Fit Veda platform: memberships, live sessions, consultations, payments and acceptable use.',
 }
 
 export default function TermsPage() {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <PublicHeader />
+    <LegalLayout
+      title="Terms & Conditions"
+      intro="These terms govern your use of the Dr Fit Veda website and portals. Please read them with our Privacy Policy, Cookie Policy, Refund & Cancellation Policy and Medical, Fitness & Nutrition Disclaimer."
+    >
+      <Section title="1. Who we are and acceptance">
+        <p>
+          The service is provided by {LEGAL.entityName}, {LEGAL.address}. By creating an account, buying a
+          membership or consultation, or otherwise using the platform you agree to these terms. If you do not agree,
+          please do not use the platform. These terms are an agreement about the service only; they are{' '}
+          <strong>not</strong> your consent to the processing of health data, session recordings or marketing, which
+          we ask for separately (see the <Link href="/privacy">Privacy Policy</Link>).
+        </p>
+      </Section>
 
-      <main style={{ flex: 1 }}>
-        {/* Hero */}
-        <section style={{
-          background: 'linear-gradient(160deg, #453421 0%, #2a1f12 100%)',
-          color: 'white',
-          padding: 'var(--space-xl) 0',
-          textAlign: 'center',
-        }}>
-          <div className="container" style={{ maxWidth: 680 }}>
-            <span className="chip chip-accent" style={{ marginBottom: 12, display: 'inline-flex' }}>📋 Legal</span>
-            <h1 className="text-display" style={{ color: 'white', marginBottom: 12 }}>Terms & Conditions</h1>
-            <p className="text-body-md" style={{ color: 'rgba(255,255,255,0.75)' }}>
-              Last updated: September 2026 &nbsp;·&nbsp; These terms govern your use of the Dr Fit Veda platform.
-            </p>
-          </div>
-        </section>
+      <Section title="2. Eligibility and accounts">
+        <p>
+          You must be at least {LEGAL.minimumAge} years old and able to enter a binding contract. Provide accurate
+          information, keep your login details confidential, and do not share your account. You are responsible for
+          activity under your account; tell us promptly if you suspect misuse.
+        </p>
+      </Section>
 
-        {/* Under Construction Notice */}
-        <section style={{ padding: 'var(--space-xl) 0', background: 'var(--surface-page)' }}>
-          <div className="container" style={{ maxWidth: 760 }}>
+      <Section title="3. Services">
+        <p>
+          Dr Fit Veda offers doctor-guided lifestyle, naturopathy, nutrition, yoga and fitness programmes through
+          memberships and separately bookable consultations, delivered online. Services are wellness and lifestyle
+          guidance — see the <Link href="/disclaimer">Medical, Fitness &amp; Nutrition Disclaimer</Link>. Available
+          plans, inclusions, session frequency and prices are those shown on the{' '}
+          <Link href="/memberships">memberships page</Link> and at purchase.
+        </p>
+      </Section>
 
-            <div className="alert alert-warning" style={{ marginBottom: 'var(--space-lg)', fontSize: 14 }}>
-              <span>⚠️</span>
-              <div>
-                <strong>Document In Progress</strong>
-                <p style={{ margin: '4px 0 0', lineHeight: 1.55 }}>
-                  Our full Terms & Conditions are being finalized by our legal team. The outline below represents the key areas that will be covered. Please check back soon for the complete document.
-                </p>
-              </div>
-            </div>
+      <Section title="4. Live sessions and recordings">
+        <ul style={{ paddingLeft: 18, margin: 0 }}>
+          <li>Live training and consultations are held on a secure third-party video platform (Zoho Meeting).</li>
+          <li>Where recording is part of your plan, we ask for your consent before it is used. You can ask us to stop recording future sessions; this may limit replay features.</li>
+          <li>Only the most recent active recording is kept; earlier recordings are deleted after a grace period (see Privacy Policy).</li>
+          <li>You may not record, copy or share sessions or other users&apos; content without permission.</li>
+        </ul>
+      </Section>
 
-            {/* Key sections outline */}
-            {TERMS_SECTIONS.map((section) => (
-              <div key={section.title} className="card" style={{ marginBottom: 'var(--space-sm)', padding: 'var(--space-lg)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                  <span style={{ fontSize: 24 }}>{section.icon}</span>
-                  <h2 className="text-headline-sm" style={{ margin: 0 }}>{section.title}</h2>
-                </div>
-                <p className="text-body-sm text-muted" style={{ lineHeight: 1.65, marginBottom: section.points ? 12 : 0 }}>
-                  {section.description}
-                </p>
-                {section.points && (
-                  <ul style={{ margin: 0, padding: '0 0 0 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {section.points.map((p, i) => (
-                      <li key={i} className="text-body-sm" style={{ lineHeight: 1.55 }}>{p}</li>
-                    ))}
-                  </ul>
-                )}
-                {section.comingSoon && (
-                  <div style={{ marginTop: 12, display: 'inline-block', padding: '3px 10px', borderRadius: 999, background: 'var(--color-neutral)', fontSize: 11, fontWeight: 600, color: 'var(--color-muted)' }}>
-                    Full detail coming soon
-                  </div>
-                )}
-              </div>
-            ))}
+      <Section title="5. Prices, payment and renewal">
+        <p>
+          Prices are shown in Indian Rupees (₹) and are the price at the time of purchase [CONFIRM: tax-inclusive
+          or exclusive, and handling of UAE customers&apos; currency]. Membership fees are payable in advance for the
+          chosen duration. Memberships are fixed-term and the current platform does not renew them automatically; if
+          automatic renewal is ever introduced we will ask for your explicit consent first and state renewal price and
+          cancellation steps clearly. Price changes by us do not affect a membership you have already purchased.
+          Refunds and cancellations are covered by the <Link href="/refund-policy">Refund &amp; Cancellation Policy</Link>.
+        </p>
+      </Section>
 
-            {/* Contact */}
-            <div className="card" style={{ padding: 'var(--space-lg)', textAlign: 'center', border: '1px dashed var(--color-border)' }}>
-              <p className="text-body-md" style={{ marginBottom: 12 }}>
-                Have questions about our terms or privacy practices?
-              </p>
-              <Link href="/contact" className="btn btn-primary btn-sm">Contact Us</Link>
-            </div>
-          </div>
-        </section>
-      </main>
+      <Section title="6. Your responsibilities">
+        <ul style={{ paddingLeft: 18, margin: 0 }}>
+          <li>Give accurate, complete health and lifestyle information, including conditions, medicines, allergies, injuries and pregnancy.</li>
+          <li>Tell your care team about any change in health and stop an activity that causes pain or distress.</li>
+          <li>Do not upload unlawful content or other people&apos;s health records without their permission.</li>
+        </ul>
+      </Section>
 
-      <PublicFooter />
-    </div>
+      <Section title="7. Prohibited conduct">
+        <p>
+          Do not misuse the platform, attempt unauthorised access, reverse engineer it, share accounts, harass
+          professionals or other users, or use the service for unlawful purposes. We may suspend or end accounts for
+          serious or repeated breaches. Where we end an account without cause, we will refund the unused portion as set
+          out in the Refund &amp; Cancellation Policy.
+        </p>
+      </Section>
+
+      <Section title="8. Intellectual property">
+        <p>
+          The platform, its content, plans and branding belong to us or our licensors. Personalised plans are provided
+          for your personal, non-commercial use. You keep ownership of content you upload and give us permission to
+          use it only to provide the service. Third-party software and fonts are used under their own licences (see
+          the repository notice file THIRD_PARTY_NOTICES.md).
+        </p>
+      </Section>
+
+      <Section title="9. Privacy and your data">
+        <p>
+          How we use your data is explained in the <Link href="/privacy">Privacy Policy</Link>. You can request
+          access, correction, export or deletion through the <Link href="/data-request">data request form</Link>,
+          subject to records we must legally keep.
+        </p>
+      </Section>
+
+      <Section title="10. Liability">
+        <p>
+          Nothing in these terms limits liability that cannot be limited by law, including for death or personal
+          injury caused by negligence or for fraud, or removes rights you have as a consumer. Subject to that, we are
+          not liable for indirect losses, or for outcomes that depend on how you follow guidance, your health
+          condition, or the availability of third-party services (such as your internet connection). Results vary
+          between individuals and are not guaranteed. [CONFIRM: financial liability cap, if any, with counsel.]
+        </p>
+      </Section>
+
+      <Section title="11. Suspension and changes to the service">
+        <p>
+          We may modify or discontinue features with reasonable notice. If we discontinue a paid service you have
+          not fully received, we will refund the unused portion.
+        </p>
+      </Section>
+
+      <Section title="12. Governing law and disputes">
+        <p>
+          These terms are governed by the laws of {LEGAL.governingLaw}, with courts at Bangalore having jurisdiction
+          [CONFIRM with counsel]. Consumers outside India keep any mandatory protections of their country of residence.
+          Please first contact the Grievance Officer so we can try to resolve your complaint informally.
+        </p>
+      </Section>
+
+      <Section title="13. Changes to these terms">
+        <p>
+          We will give notice of material changes before they take effect. If you do not accept a change you may stop
+          using the service and request a refund of any unused prepaid period for changes that materially disadvantage
+          you.
+        </p>
+      </Section>
+    </LegalLayout>
   )
 }
-
-const TERMS_SECTIONS = [
-  {
-    icon: '🤝',
-    title: '1. Acceptance of Terms',
-    description: 'By registering on the Dr Fit Veda platform, purchasing a membership, or using any of our services, you agree to be bound by these Terms & Conditions. If you do not agree, please do not use our platform.',
-    comingSoon: true,
-  },
-  {
-    icon: '💳',
-    title: '2. Membership Plans & Payments',
-    description: 'Dr Fit Veda offers multiple membership tiers. By purchasing a plan, you agree to the following:',
-    points: [
-      'Membership fees are collected upfront for the selected duration.',
-      'Prices displayed at time of purchase are locked for your current membership period.',
-      'Future plan changes by the admin do not affect your existing active membership.',
-      'Refunds are subject to our refund policy (detailed in the full document).',
-      'Membership does not auto-renew without explicit consent.',
-    ],
-    comingSoon: false,
-  },
-  {
-    icon: '📹',
-    title: '3. Live Sessions & Google Meet',
-    description: 'All live training, doctor consultations, and monitoring sessions are conducted via Google Meet. By using these sessions, you acknowledge:',
-    points: [
-      'Sessions are scheduled and linked via the Dr Fit Veda platform but conducted on Google Meet.',
-      'Google Meet may record sessions depending on your plan. You consent to recording when joining a session.',
-      'Recording links are provided by Google Meet and accessible via your dashboard after the session.',
-      'Dr Fit Veda does not host or store video files independently. All recordings are on Google\'s infrastructure.',
-      'Super Plan members have recording and overwrite access as defined by their plan.',
-    ],
-    comingSoon: false,
-  },
-  {
-    icon: '🩺',
-    title: '4. Medical Disclaimer & Health Consultations',
-    description: 'Dr Fit Veda provides naturopathic, nutritional, and wellness guidance. This does not replace emergency or acute medical care.',
-    points: [
-      'Our doctors are qualified naturopaths and nutritionists — not emergency physicians.',
-      'Always consult a qualified emergency doctor for acute or life-threatening conditions.',
-      'Health plans and recommendations are personalized and intended as lifestyle guidance.',
-      'Individual results may vary.',
-    ],
-    comingSoon: false,
-  },
-  {
-    icon: '🔒',
-    title: '5. Privacy & Medical Data',
-    description: 'We take your health data seriously. How we handle your personal and medical information is outlined in our Privacy Policy.',
-    points: [
-      'Health and fitness data is collected solely to provide personalized care.',
-      'Data is not sold to third parties.',
-      'You may request deletion of your data at any time via your account settings.',
-    ],
-    comingSoon: false,
-  },
-  {
-    icon: '🚫',
-    title: '6. Prohibited Conduct',
-    description: 'Users agree not to misuse the platform, share accounts, reverse-engineer the service, or harass professionals or other users. Violation may result in immediate account termination without refund.',
-    comingSoon: true,
-  },
-  {
-    icon: '⚖️',
-    title: '7. Governing Law & Disputes',
-    description: 'These terms are governed by the laws of India. Any disputes will be subject to the jurisdiction of courts in the relevant city of operation. Detailed arbitration procedures will be covered in the full document.',
-    comingSoon: true,
-  },
-  {
-    icon: '✏️',
-    title: '8. Changes to Terms',
-    description: 'Dr Fit Veda reserves the right to update these terms. Registered users will be notified of material changes via email or in-app notification. Continued use after notification implies acceptance.',
-    comingSoon: true,
-  },
-]

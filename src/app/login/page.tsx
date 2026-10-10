@@ -529,6 +529,12 @@ export default function LoginPage() {
         >
           Dr Fit Veda Platform • Naturopathy, Clinical Nutrition &amp; Certified Fitness
         </p>
+        <p className="text-caption" style={{ textAlign: 'center', color: 'rgba(255,255,255,0.6)', marginTop: 8, lineHeight: 1.6 }}>
+          By signing in you acknowledge our <Link href="/terms" style={{ color: 'rgba(255,255,255,0.85)', textDecoration: 'underline' }}>Terms</Link>,{' '}
+          <Link href="/privacy" style={{ color: 'rgba(255,255,255,0.85)', textDecoration: 'underline' }}>Privacy Policy</Link> and{' '}
+          <Link href="/disclaimer" style={{ color: 'rgba(255,255,255,0.85)', textDecoration: 'underline' }}>Medical Disclaimer</Link>.
+          Separate consent is requested before you share health data.
+        </p>
       </div>
 
       {/* RESET PASSWORD MODAL */}

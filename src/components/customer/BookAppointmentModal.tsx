@@ -3,6 +3,7 @@
 // BookAppointmentModal — Modal/form to schedule a consultation
 // ============================================================
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 interface ProfessionalOption {
@@ -36,6 +37,7 @@ export default function BookAppointmentModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [consent, setConsent] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,6 +45,14 @@ export default function BookAppointmentModal({
     setLoading(true)
 
     try {
+      if (!consent) throw new Error('Please confirm your consent to share consultation details with the doctor.')
+      const consentRes = await fetch('/api/consents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ purpose: 'health_data_processing', granted: true, source: 'booking' }),
+      })
+      if (!consentRes.ok) throw new Error('Could not record your consent. Please try again.')
+
       const scheduledAt = new Date(`${date}T${time}:00`).toISOString()
 
       const res = await fetch('/api/appointments', {
@@ -150,6 +160,19 @@ export default function BookAppointmentModal({
               onChange={e => setNotes(e.target.value)}
             />
           </div>
+
+          <label style={{display:'flex',gap:8,alignItems:'flex-start',fontSize:12.5,lineHeight:1.5,marginBottom:'var(--space-sm)'}}>
+            <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} style={{marginTop:3}} />
+            <span>
+              I consent to my reason/symptoms and health details being shared with the selected professional for this
+              consultation (<Link href="/privacy" target="_blank">Privacy Policy</Link>). *
+            </span>
+          </label>
+          <p className="text-caption text-muted" style={{marginBottom:'var(--space-sm)',lineHeight:1.5}}>
+            Consultations are wellness guidance, not emergency care or a substitute for in-person medical treatment — see the{' '}
+            <Link href="/disclaimer" target="_blank">Medical Disclaimer</Link>. Cancellations and refunds:{' '}
+            <Link href="/refund-policy" target="_blank">Refund Policy</Link>.
+          </p>
 
           <div className="flex justify-end gap-xs">
             <button type="button" onClick={() => setIsOpen(false)} className="btn btn-secondary" disabled={loading}>

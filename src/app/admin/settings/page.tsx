@@ -44,11 +44,11 @@ const DEFAULT_SETTINGS: PlatformSettings = {
   contact_email: 'support@drfitveda.com',
   support_phone: '+91 98765 00000',
   platform_address: 'Bangalore, Karnataka, India',
-  google_meet_platform: 'Google Meet',
-  google_meet_recording_policy: 'Admin/trainer pastes Google Meet recording link after session completion',
+  google_meet_platform: 'Zoho Meeting',
+  google_meet_recording_policy: 'Admin/trainer shares Zoho Meeting recording link after session completion',
   google_meet_super_plan_overwrite: true,
   google_meet_auto_notify: true,
-  google_meet_default_url: 'https://meet.google.com',
+  google_meet_default_url: 'https://meeting.zoho.com',
 }
 
 const DEFAULT_ADMIN_PROFILE: AdminProfile = {
@@ -514,13 +514,13 @@ export default function AdminSettingsPage() {
               </div>
             </div>
 
-            {/* 3. Google Meet Integration */}
+            {/* 3. Zoho Meeting Integration */}
             <div className="card" style={{ padding: 'var(--space-lg)' }}>
               <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-md)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 24 }}>📹</span>
                   <div>
-                    <h2 className="text-headline-sm" style={{ margin: 0 }}>Google Meet / Zoho Integration &amp; Recording</h2>
+                    <h2 className="text-headline-sm" style={{ margin: 0 }}>Zoho Meeting Integration &amp; Recording</h2>
                     <p className="text-caption text-muted">Configure live video session hosting and recording policy</p>
                   </div>
                 </div>
@@ -826,7 +826,7 @@ export default function AdminSettingsPage() {
           </div>
         )}
 
-        {/* Edit Modal: Google Meet Integration */}
+        {/* Edit Modal: Zoho Meeting Integration */}
         {editingSection === 'google_meet' && (
           <div style={{
             position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000,
@@ -834,7 +834,7 @@ export default function AdminSettingsPage() {
           }}>
             <div className="card" style={{ width: '100%', maxWidth: 580, padding: 'var(--space-lg)' }}>
               <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-md)' }}>
-                <h2 className="text-headline-sm">Edit Google Meet / Video Integration</h2>
+                <h2 className="text-headline-sm">Edit Zoho Meeting / Video Integration</h2>
                 <button className="btn btn-icon btn-ghost" onClick={() => setEditingSection(null)}>✕</button>
               </div>
 
@@ -852,7 +852,7 @@ export default function AdminSettingsPage() {
                   <span className="form-label">Default Meeting Provider URL</span>
                   <input
                     className="form-input"
-                    placeholder="https://meet.google.com"
+                    placeholder="https://meeting.zoho.com"
                     value={formData.google_meet_default_url ?? ''}
                     onChange={e => setFormData(p => ({ ...p, google_meet_default_url: e.target.value }))}
                   />

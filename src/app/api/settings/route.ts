@@ -10,11 +10,11 @@ export async function GET(req: NextRequest) {
       contact_email: 'support@drfitveda.com',
       support_phone: '+91 98765 00000',
       platform_address: 'Bangalore, Karnataka, India',
-      google_meet_platform: 'Google Meet',
-      google_meet_recording_policy: 'Admin/trainer pastes Google Meet recording link after session completion',
+      google_meet_platform: 'Zoho Meeting',
+      google_meet_recording_policy: 'Admin/trainer shares Zoho Meeting recording link after session completion',
       google_meet_super_plan_overwrite: true,
       google_meet_auto_notify: true,
-      google_meet_default_url: 'https://meet.google.com',
+      google_meet_default_url: 'https://meeting.zoho.com',
     }
     const professional_roles = mockDb.state.professional_roles || []
     return NextResponse.json({ settings, professional_roles })

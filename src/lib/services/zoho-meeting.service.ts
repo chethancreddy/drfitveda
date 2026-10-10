@@ -18,8 +18,8 @@ export interface ZohoMeetingResult {
 }
 
 export class ZohoMeetingService {
-  private static clientId = process.env.ZOHO_CLIENT_ID || '1000.LAI9PXHSRVG360SVUQKIZI05XL9IVS'
-  private static clientSecret = process.env.ZOHO_CLIENT_SECRET || 'a289f84e2ae6e113a71e2e043ce75a9a84fd063042'
+  private static clientId = process.env.ZOHO_CLIENT_ID || ''
+  private static clientSecret = process.env.ZOHO_CLIENT_SECRET || ''
   private static accountsUrl = process.env.ZOHO_ACCOUNTS_URL || 'https://accounts.zoho.com'
   private static meetingApiUrl = process.env.ZOHO_MEETING_API_URL || 'https://meeting.zoho.com/api/v2'
 

@@ -49,7 +49,7 @@ INSERT INTO public.memberships (
       'Daily check-in & adherence tracking',
       'Secure chat with care team',
       'Video gallery: upload & get coach feedback',
-      'Google Meet sessions with recordings'
+      'Zoho Meeting sessions with recordings'
     ],
     true, 1
   ),
@@ -64,7 +64,7 @@ INSERT INTO public.memberships (
       'Daily check-in & adherence tracking',
       'Secure chat with care team',
       'Video gallery: upload & get coach feedback',
-      'Google Meet sessions with recordings',
+      'Zoho Meeting sessions with recordings',
       'Progress tracking & monthly health reports'
     ],
     true, 2
@@ -80,7 +80,7 @@ INSERT INTO public.memberships (
       'Daily check-in & adherence tracking',
       'Secure chat with care team',
       'Video gallery: upload & get coach feedback',
-      'Google Meet sessions with recordings',
+      'Zoho Meeting sessions with recordings',
       'Progress tracking & quarterly health reports',
       'Priority appointment scheduling'
     ],
@@ -91,10 +91,10 @@ INSERT INTO public.memberships (
     NULL, 'Weekly 5 live 1-on-1 sessions with trainer + Weekly 1 doctor diagnosis & monitoring + Unlimited daily live doctor consultation (weekdays only)',
     NULL, true, true, true, true,
     ARRAY[
-      'Weekly 5 live 1-on-1 sessions with certified trainer (Google Meet)',
+      'Weekly 5 live 1-on-1 sessions with certified trainer (Zoho Meeting)',
       'Weekly 1 live doctor diagnosis & full activity monitoring session',
       'Unlimited live 1-on-1 doctor consultations (once per day, weekdays only)',
-      'All Google Meet sessions recorded with overwrite access',
+      'All Zoho Meeting sessions recorded with overwrite access',
       'Customized fitness, nutrition & yoga plan',
       'Daily check-in & adherence tracking',
       'Dedicated care team: doctor + trainer + yoga specialist',

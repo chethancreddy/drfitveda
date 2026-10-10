@@ -3,6 +3,7 @@
 // DocumentUploadForm — Client component to upload/record medical documents
 // ============================================================
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 const DOC_TYPES = [
@@ -21,6 +22,7 @@ export default function DocumentUploadForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [consent, setConsent] = useState(false)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -37,6 +39,17 @@ export default function DocumentUploadForm() {
       if (!fileName.trim()) {
         throw new Error('Please specify or select a document.')
       }
+      if (!consent) {
+        throw new Error('Please give your consent to process your health documents to continue.')
+      }
+
+      // Record explicit consent (append-only) before storing the document
+      const consentRes = await fetch('/api/consents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ purpose: 'health_data_processing', granted: true, source: 'document_upload' }),
+      })
+      if (!consentRes.ok) throw new Error('Could not record your consent. Please try again.')
 
       const res = await fetch('/api/customers/documents', {
         method: 'POST',
@@ -116,6 +129,16 @@ export default function DocumentUploadForm() {
           onChange={e => setNotes(e.target.value)}
         />
       </div>
+
+      <label style={{display:'flex',gap:8,alignItems:'flex-start',fontSize:13,lineHeight:1.5,marginBottom:'var(--space-md)'}}>
+        <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} style={{marginTop:3}} />
+        <span>
+          I consent to Dr Fit Veda storing and processing the health information in this document so my assigned care
+          team can review it. I understand I can withdraw consent via the{' '}
+          <Link href="/data-request" target="_blank">data request form</Link>. See the{' '}
+          <Link href="/privacy" target="_blank">Privacy Policy</Link>. *
+        </span>
+      </label>
 
       <div className="flex justify-end">
         <button type="submit" className="btn btn-primary" disabled={loading}>

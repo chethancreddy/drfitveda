@@ -124,7 +124,7 @@ export default async function CustomerConsultPage() {
             </div>
             <div style={{marginTop:12,padding:'10px 16px',background:'var(--color-neutral)',borderRadius:'var(--radius-sm)'}}>
               <p className="text-caption text-muted">
-                📹 All consultations via <strong>Google Meet</strong>. Recorded and shared post-session. Yoga, PCOD/PCOS & Wellness are <strong>separate from</strong> your membership trainer sessions.
+                📹 All consultations via <strong>Zoho Meeting</strong>. Recorded and shared post-session. Yoga, PCOD/PCOS & Wellness are <strong>separate from</strong> your membership trainer sessions.
               </p>
             </div>
           </div>
