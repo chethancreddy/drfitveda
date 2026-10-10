@@ -19,5 +19,6 @@ alter table public.contact_inquiries enable row level security;
 
 -- Inquiries are inserted server-side by service role
 -- Only authenticated administrators can inspect or triage inquiries
+drop policy if exists "contact_inquiries_admin_all" on public.contact_inquiries;
 create policy "contact_inquiries_admin_all" on public.contact_inquiries
   for all using (public.is_admin());

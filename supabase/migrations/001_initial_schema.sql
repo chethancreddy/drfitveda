@@ -9,32 +9,133 @@ create extension if not exists "pg_trgm";  -- for fuzzy text search
 
 -- ─── Enums ────────────────────────────────────────────────
 
-create type user_role as enum (
-  'super_admin','admin','doctor','naturopathy_doctor',
+DO $$ BEGIN
+  CREATE TYPE user_role AS ENUM (
+    'super_admin','admin','doctor','naturopathy_doctor',
   'nutritionist','trainer','yoga_doctor','yoga_consultant','customer'
-);
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
-create type membership_status as enum ('active','inactive','expired','cancelled','suspended');
-create type order_status      as enum ('pending','paid','failed','refunded','cancelled');
-create type payment_status    as enum ('pending','processing','success','failed','refunded');
-create type payout_status     as enum ('pending','on_hold','approved','paid','cancelled');
-create type plan_status       as enum ('draft','published','archived');
-create type review_status     as enum ('due','in_progress','completed','approved','skipped','cancelled');
-create type session_status    as enum ('scheduled','live','completed','cancelled');
-create type recording_status  as enum ('uploading','processing','available','inactive','deleted');
-create type retention_mode    as enum ('immediate','grace_period');
-create type document_status   as enum ('pending','reviewed','archived');
-create type gender_type       as enum ('male','female','other','prefer_not_to_say');
-create type diet_pref         as enum ('vegetarian','vegan','non_vegetarian','eggetarian','jain','other');
-create type check_in_status   as enum ('yes','partial','no','skip');
-create type appointment_status as enum ('scheduled','completed','cancelled','no_show');
+DO $$ BEGIN
+  CREATE TYPE membership_status AS ENUM (
+    'active','inactive','expired','cancelled','suspended'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE order_status AS ENUM (
+    'pending','paid','failed','refunded','cancelled'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE payment_status AS ENUM (
+    'pending','processing','success','failed','refunded'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE payout_status AS ENUM (
+    'pending','on_hold','approved','paid','cancelled'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE plan_status AS ENUM (
+    'draft','published','archived'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE review_status AS ENUM (
+    'due','in_progress','completed','approved','skipped','cancelled'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE session_status AS ENUM (
+    'scheduled','live','completed','cancelled'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE recording_status AS ENUM (
+    'uploading','processing','available','inactive','deleted'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE retention_mode AS ENUM (
+    'immediate','grace_period'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE document_status AS ENUM (
+    'pending','reviewed','archived'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE gender_type AS ENUM (
+    'male','female','other','prefer_not_to_say'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE diet_pref AS ENUM (
+    'vegetarian','vegan','non_vegetarian','eggetarian','jain','other'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE check_in_status AS ENUM (
+    'yes','partial','no','skip'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE appointment_status AS ENUM (
+    'scheduled','completed','cancelled','no_show'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- ─── Identity ─────────────────────────────────────────────
 
 -- users is managed by Supabase Auth (auth.users)
 -- We extend it with a profiles table
 
-create table public.user_profiles (
+create table if not exists public.user_profiles (
   id            uuid primary key references auth.users(id) on delete cascade,
   role          user_role not null default 'customer',
   full_name     text,
@@ -46,11 +147,11 @@ create table public.user_profiles (
   updated_at    timestamptz not null default now()
 );
 
-create unique index idx_user_profiles_phone on public.user_profiles(phone) where phone is not null;
+create unique index if not exists idx_user_profiles_phone on public.user_profiles(phone) where phone is not null;
 
 -- ─── Professionals ────────────────────────────────────────
 
-create table public.professionals (
+create table if not exists public.professionals (
   id              uuid primary key default uuid_generate_v4(),
   user_id         uuid unique references auth.users(id) on delete set null,
   role            user_role not null,
@@ -66,12 +167,12 @@ create table public.professionals (
   updated_at      timestamptz not null default now()
 );
 
-create index idx_professionals_role   on public.professionals(role);
-create index idx_professionals_active on public.professionals(is_active);
+create index if not exists idx_professionals_role   on public.professionals(role);
+create index if not exists idx_professionals_active on public.professionals(is_active);
 
 -- ─── Customers ────────────────────────────────────────────
 
-create table public.customers (
+create table if not exists public.customers (
   id          uuid primary key default uuid_generate_v4(),
   user_id     uuid unique not null references auth.users(id) on delete cascade,
   membership_status membership_status not null default 'inactive',
@@ -80,10 +181,10 @@ create table public.customers (
   updated_at  timestamptz not null default now()
 );
 
-create index idx_customers_user_id on public.customers(user_id);
-create index idx_customers_status  on public.customers(membership_status);
+create index if not exists idx_customers_user_id on public.customers(user_id);
+create index if not exists idx_customers_status  on public.customers(membership_status);
 
-create table public.customer_profiles (
+create table if not exists public.customer_profiles (
   id               uuid primary key default uuid_generate_v4(),
   customer_id      uuid unique not null references public.customers(id) on delete cascade,
   date_of_birth    date,
@@ -108,7 +209,7 @@ create table public.customer_profiles (
   updated_at       timestamptz not null default now()
 );
 
-create table public.food_profiles (
+create table if not exists public.food_profiles (
   id                  uuid primary key default uuid_generate_v4(),
   customer_id         uuid unique not null references public.customers(id) on delete cascade,
   dietary_preference  diet_pref,
@@ -127,7 +228,7 @@ create table public.food_profiles (
 
 -- ─── Professional Assignments ─────────────────────────────
 
-create table public.professional_assignments (
+create table if not exists public.professional_assignments (
   id              uuid primary key default uuid_generate_v4(),
   customer_id     uuid not null references public.customers(id) on delete cascade,
   professional_id uuid not null references public.professionals(id) on delete cascade,
@@ -139,12 +240,12 @@ create table public.professional_assignments (
   notes           text
 );
 
-create index idx_assignments_customer    on public.professional_assignments(customer_id, is_active);
-create index idx_assignments_professional on public.professional_assignments(professional_id, is_active);
+create index if not exists idx_assignments_customer    on public.professional_assignments(customer_id, is_active);
+create index if not exists idx_assignments_professional on public.professional_assignments(professional_id, is_active);
 
 -- ─── Memberships & Orders ─────────────────────────────────
 
-create table public.memberships (
+create table if not exists public.memberships (
   id             uuid primary key default uuid_generate_v4(),
   name           text not null,
   description    text,
@@ -162,7 +263,7 @@ create table public.memberships (
   updated_at     timestamptz not null default now()
 );
 
-create table public.offers (
+create table if not exists public.offers (
   id               uuid primary key default uuid_generate_v4(),
   title            text not null,
   description      text,
@@ -176,7 +277,7 @@ create table public.offers (
   created_at       timestamptz not null default now()
 );
 
-create table public.orders (
+create table if not exists public.orders (
   id                uuid primary key default uuid_generate_v4(),
   customer_id       uuid not null references public.customers(id),
   membership_id     uuid not null references public.memberships(id),
@@ -191,10 +292,10 @@ create table public.orders (
   updated_at        timestamptz not null default now()
 );
 
-create index idx_orders_customer on public.orders(customer_id);
-create index idx_orders_status   on public.orders(status);
+create index if not exists idx_orders_customer on public.orders(customer_id);
+create index if not exists idx_orders_status   on public.orders(status);
 
-create table public.payments (
+create table if not exists public.payments (
   id                  uuid primary key default uuid_generate_v4(),
   order_id            uuid not null references public.orders(id),
   amount              numeric(10,2) not null,
@@ -208,9 +309,9 @@ create table public.payments (
   created_at          timestamptz not null default now()
 );
 
-create index idx_payments_order on public.payments(order_id);
+create index if not exists idx_payments_order on public.payments(order_id);
 
-create table public.subscriptions (
+create table if not exists public.subscriptions (
   id            uuid primary key default uuid_generate_v4(),
   customer_id   uuid not null references public.customers(id),
   membership_id uuid not null references public.memberships(id),
@@ -222,19 +323,19 @@ create table public.subscriptions (
   updated_at    timestamptz not null default now()
 );
 
-create index idx_subscriptions_customer on public.subscriptions(customer_id);
-create index idx_subscriptions_status   on public.subscriptions(status);
+create index if not exists idx_subscriptions_customer on public.subscriptions(customer_id);
+create index if not exists idx_subscriptions_status   on public.subscriptions(status);
 
 -- ─── Plans & Versions ─────────────────────────────────────
 
-create table public.plans (
+create table if not exists public.plans (
   id          uuid primary key default uuid_generate_v4(),
   customer_id uuid not null references public.customers(id),
   created_by  uuid not null references auth.users(id),
   created_at  timestamptz not null default now()
 );
 
-create table public.plan_versions (
+create table if not exists public.plan_versions (
   id            uuid primary key default uuid_generate_v4(),
   plan_id       uuid not null references public.plans(id),
   version_number int not null default 1,
@@ -246,7 +347,7 @@ create table public.plan_versions (
   unique(plan_id, version_number)
 );
 
-create table public.plan_items (
+create table if not exists public.plan_items (
   id              uuid primary key default uuid_generate_v4(),
   plan_version_id uuid not null references public.plan_versions(id),
   category        text not null, -- nutrition, workout, yoga, sleep, lifestyle, water, etc.
@@ -257,7 +358,7 @@ create table public.plan_items (
 
 -- ─── Doctor Assessments ───────────────────────────────────
 
-create table public.doctor_assessments (
+create table if not exists public.doctor_assessments (
   id                 uuid primary key default uuid_generate_v4(),
   customer_id        uuid not null references public.customers(id),
   doctor_id          uuid not null references public.professionals(id),
@@ -277,7 +378,7 @@ create table public.doctor_assessments (
 
 -- ─── Workouts ─────────────────────────────────────────────
 
-create table public.workout_plans (
+create table if not exists public.workout_plans (
   id              uuid primary key default uuid_generate_v4(),
   customer_id     uuid not null references public.customers(id),
   trainer_id      uuid not null references public.professionals(id),
@@ -287,7 +388,7 @@ create table public.workout_plans (
   created_at      timestamptz not null default now()
 );
 
-create table public.workout_sessions (
+create table if not exists public.workout_sessions (
   id              uuid primary key default uuid_generate_v4(),
   workout_plan_id uuid not null references public.workout_plans(id),
   day_of_week     int check (day_of_week between 0 and 6),
@@ -297,7 +398,7 @@ create table public.workout_sessions (
   display_order   int default 0
 );
 
-create table public.exercise_library (
+create table if not exists public.exercise_library (
   id           uuid primary key default uuid_generate_v4(),
   name         text not null,
   category     text,
@@ -308,7 +409,7 @@ create table public.exercise_library (
   created_at   timestamptz not null default now()
 );
 
-create table public.workout_exercises (
+create table if not exists public.workout_exercises (
   id               uuid primary key default uuid_generate_v4(),
   workout_session_id uuid not null references public.workout_sessions(id),
   exercise_id      uuid references public.exercise_library(id),
@@ -323,7 +424,7 @@ create table public.workout_exercises (
 
 -- ─── Yoga ─────────────────────────────────────────────────
 
-create table public.yoga_programs (
+create table if not exists public.yoga_programs (
   id            uuid primary key default uuid_generate_v4(),
   customer_id   uuid not null references public.customers(id),
   professional_id uuid not null references public.professionals(id),
@@ -333,7 +434,7 @@ create table public.yoga_programs (
   created_at    timestamptz not null default now()
 );
 
-create table public.yoga_sessions (
+create table if not exists public.yoga_sessions (
   id               uuid primary key default uuid_generate_v4(),
   yoga_program_id  uuid not null references public.yoga_programs(id),
   name             text,
@@ -346,7 +447,7 @@ create table public.yoga_sessions (
 
 -- ─── Daily Check-Ins ──────────────────────────────────────
 
-create table public.daily_check_ins (
+create table if not exists public.daily_check_ins (
   id              uuid primary key default uuid_generate_v4(),
   customer_id     uuid not null references public.customers(id),
   plan_version_id uuid references public.plan_versions(id),
@@ -363,11 +464,11 @@ create table public.daily_check_ins (
   unique(customer_id, check_in_date)
 );
 
-create index idx_check_ins_customer_date on public.daily_check_ins(customer_id, check_in_date);
+create index if not exists idx_check_ins_customer_date on public.daily_check_ins(customer_id, check_in_date);
 
 -- ─── Progress Records ─────────────────────────────────────
 
-create table public.progress_records (
+create table if not exists public.progress_records (
   id            uuid primary key default uuid_generate_v4(),
   customer_id   uuid not null references public.customers(id),
   recorded_by   uuid references auth.users(id),
@@ -381,7 +482,7 @@ create table public.progress_records (
 
 -- ─── Weekly Reviews ───────────────────────────────────────
 
-create table public.weekly_reviews (
+create table if not exists public.weekly_reviews (
   id              uuid primary key default uuid_generate_v4(),
   customer_id     uuid not null references public.customers(id),
   doctor_id       uuid not null references public.professionals(id),
@@ -400,12 +501,12 @@ create table public.weekly_reviews (
   updated_at      timestamptz not null default now()
 );
 
-create index idx_reviews_doctor_status   on public.weekly_reviews(doctor_id, status);
-create index idx_reviews_customer_date   on public.weekly_reviews(customer_id, review_date);
+create index if not exists idx_reviews_doctor_status   on public.weekly_reviews(doctor_id, status);
+create index if not exists idx_reviews_customer_date   on public.weekly_reviews(customer_id, review_date);
 
 -- ─── Consultations / Appointments ────────────────────────
 
-create table public.appointments (
+create table if not exists public.appointments (
   id              uuid primary key default uuid_generate_v4(),
   customer_id     uuid not null references public.customers(id),
   professional_id uuid not null references public.professionals(id),
@@ -418,10 +519,10 @@ create table public.appointments (
   updated_at      timestamptz not null default now()
 );
 
-create index idx_appointments_customer      on public.appointments(customer_id);
-create index idx_appointments_professional  on public.appointments(professional_id, scheduled_at);
+create index if not exists idx_appointments_customer      on public.appointments(customer_id);
+create index if not exists idx_appointments_professional  on public.appointments(professional_id, scheduled_at);
 
-create table public.consultation_notes (
+create table if not exists public.consultation_notes (
   id              uuid primary key default uuid_generate_v4(),
   appointment_id  uuid not null references public.appointments(id),
   notes           text,
@@ -432,7 +533,7 @@ create table public.consultation_notes (
 
 -- ─── Medical Documents ────────────────────────────────────
 
-create table public.medical_documents (
+create table if not exists public.medical_documents (
   id           uuid primary key default uuid_generate_v4(),
   customer_id  uuid not null references public.customers(id),
   uploaded_by  uuid not null references auth.users(id),
@@ -445,11 +546,11 @@ create table public.medical_documents (
   uploaded_at  timestamptz not null default now()
 );
 
-create index idx_documents_customer on public.medical_documents(customer_id);
+create index if not exists idx_documents_customer on public.medical_documents(customer_id);
 
 -- ─── Food Database ────────────────────────────────────────
 
-create table public.foods (
+create table if not exists public.foods (
   id                    uuid primary key default uuid_generate_v4(),
   name                  text not null,
   category              text,
@@ -466,11 +567,11 @@ create table public.foods (
   created_at            timestamptz not null default now()
 );
 
-create index idx_foods_name on public.foods using gin(name gin_trgm_ops);
+create index if not exists idx_foods_name on public.foods using gin(name gin_trgm_ops);
 
 -- ─── Finance ──────────────────────────────────────────────
 
-create table public.compensation_rule_versions (
+create table if not exists public.compensation_rule_versions (
   id           uuid primary key default uuid_generate_v4(),
   name         text not null,
   effective_from date not null,
@@ -480,7 +581,7 @@ create table public.compensation_rule_versions (
   created_at   timestamptz not null default now()
 );
 
-create table public.payout_rule_components (
+create table if not exists public.payout_rule_components (
   id               uuid primary key default uuid_generate_v4(),
   rule_version_id  uuid not null references public.compensation_rule_versions(id),
   component_code   text not null,
@@ -492,7 +593,7 @@ create table public.payout_rule_components (
   is_active        boolean not null default true
 );
 
-create table public.service_events (
+create table if not exists public.service_events (
   id               uuid primary key default uuid_generate_v4(),
   event_type       text not null,
   customer_id      uuid references public.customers(id),
@@ -506,7 +607,7 @@ create table public.service_events (
   created_at       timestamptz not null default now()
 );
 
-create table public.payouts (
+create table if not exists public.payouts (
   id              uuid primary key default uuid_generate_v4(),
   professional_id uuid not null references public.professionals(id),
   customer_id     uuid references public.customers(id),
@@ -526,9 +627,9 @@ create table public.payouts (
   updated_at      timestamptz not null default now()
 );
 
-create index idx_payouts_professional_status on public.payouts(professional_id, status);
+create index if not exists idx_payouts_professional_status on public.payouts(professional_id, status);
 
-create table public.financial_transactions (
+create table if not exists public.financial_transactions (
   id                         uuid primary key default uuid_generate_v4(),
   order_id                   uuid not null references public.orders(id),
   gross_amount               numeric(10,2) not null,
@@ -545,13 +646,13 @@ create table public.financial_transactions (
 
 -- ─── CMS ──────────────────────────────────────────────────
 
-create table public.website_settings (
+create table if not exists public.website_settings (
   key        text primary key,
   value      jsonb,
   updated_at timestamptz not null default now()
 );
 
-create table public.website_pages (
+create table if not exists public.website_pages (
   id           uuid primary key default uuid_generate_v4(),
   slug         text unique not null,
   title        text not null,
@@ -562,7 +663,7 @@ create table public.website_pages (
   updated_at   timestamptz not null default now()
 );
 
-create table public.website_sections (
+create table if not exists public.website_sections (
   id            uuid primary key default uuid_generate_v4(),
   page_id       uuid not null references public.website_pages(id),
   section_type  text not null,
@@ -576,7 +677,7 @@ create table public.website_sections (
   is_active     boolean not null default true
 );
 
-create table public.testimonials (
+create table if not exists public.testimonials (
   id            uuid primary key default uuid_generate_v4(),
   customer_name text not null,
   content       text not null,
@@ -588,7 +689,7 @@ create table public.testimonials (
   created_at    timestamptz not null default now()
 );
 
-create table public.faqs (
+create table if not exists public.faqs (
   id            uuid primary key default uuid_generate_v4(),
   question      text not null,
   answer        text not null,
@@ -599,7 +700,7 @@ create table public.faqs (
 
 -- ─── Notifications ────────────────────────────────────────
 
-create table public.notifications (
+create table if not exists public.notifications (
   id          uuid primary key default uuid_generate_v4(),
   user_id     uuid not null references auth.users(id),
   title       text not null,
@@ -610,11 +711,11 @@ create table public.notifications (
   created_at  timestamptz not null default now()
 );
 
-create index idx_notifications_user on public.notifications(user_id, is_read);
+create index if not exists idx_notifications_user on public.notifications(user_id, is_read);
 
 -- ─── Audit Logs ───────────────────────────────────────────
 
-create table public.audit_logs (
+create table if not exists public.audit_logs (
   id          uuid primary key default uuid_generate_v4(),
   user_id     uuid references auth.users(id),
   action      text not null,
@@ -626,12 +727,12 @@ create table public.audit_logs (
   created_at  timestamptz not null default now()
 );
 
-create index idx_audit_logs_created_at on public.audit_logs(created_at desc);
-create index idx_audit_logs_user       on public.audit_logs(user_id);
+create index if not exists idx_audit_logs_created_at on public.audit_logs(created_at desc);
+create index if not exists idx_audit_logs_user       on public.audit_logs(user_id);
 
 -- ─── Live Training (Rolling Recording) ───────────────────
 
-create table public.training_sessions (
+create table if not exists public.training_sessions (
   id           uuid primary key default uuid_generate_v4(),
   customer_id  uuid not null references public.customers(id),
   trainer_id   uuid not null references public.professionals(id),
@@ -644,11 +745,11 @@ create table public.training_sessions (
   updated_at   timestamptz not null default now()
 );
 
-create index idx_training_sessions_customer on public.training_sessions(customer_id);
-create index idx_training_sessions_trainer  on public.training_sessions(trainer_id);
-create index idx_training_sessions_status   on public.training_sessions(status);
+create index if not exists idx_training_sessions_customer on public.training_sessions(customer_id);
+create index if not exists idx_training_sessions_trainer  on public.training_sessions(trainer_id);
+create index if not exists idx_training_sessions_status   on public.training_sessions(status);
 
-create table public.training_recordings (
+create table if not exists public.training_recordings (
   id                 uuid primary key default uuid_generate_v4(),
   session_id         uuid not null references public.training_sessions(id),
   customer_id        uuid not null references public.customers(id),
@@ -666,18 +767,18 @@ create table public.training_recordings (
 );
 
 -- Enforce: only one active recording per customer at DB level
-create unique index idx_one_active_recording_per_customer
+create unique index if not exists idx_one_active_recording_per_customer
   on public.training_recordings(customer_id)
   where is_active = true;
 
-create index idx_training_recordings_customer_status
+create index if not exists idx_training_recordings_customer_status
   on public.training_recordings(customer_id, recording_status);
 
-create index idx_training_recordings_deletion_queue
+create index if not exists idx_training_recordings_deletion_queue
   on public.training_recordings(deletion_queued_at)
   where deleted_at is null;
 
-create table public.training_retention_config (
+create table if not exists public.training_retention_config (
   id                uuid primary key default uuid_generate_v4(),
   config_key        text unique not null default 'default_retention_policy',
   retention_mode    retention_mode not null default 'grace_period',

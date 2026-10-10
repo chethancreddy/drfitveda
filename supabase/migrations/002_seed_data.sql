@@ -19,7 +19,7 @@ insert into public.memberships (
   '["doctor_assessment", "trainer_service", "yoga_guidance", "nutrition_guidance", "weekly_reviews", "live_training"]'::jsonb,
   12,
   true, 1, true
-);
+) on conflict do nothing;
 
 -- ─── Seed: Compensation Rule Version ──────────────────────
 
@@ -27,7 +27,7 @@ insert into public.compensation_rule_versions (
   name, effective_from, is_active
 ) values (
   'Standard Rate V1', '2024-01-01', true
-);
+) on conflict do nothing;
 
 -- ─── Seed: Payout Components ──────────────────────────────
 

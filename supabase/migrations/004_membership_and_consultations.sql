@@ -15,7 +15,10 @@ ALTER TABLE public.memberships
   ADD COLUMN IF NOT EXISTS google_meet_recording  boolean         DEFAULT true,
   ADD COLUMN IF NOT EXISTS benefits               text[]          DEFAULT '{}',
   ADD COLUMN IF NOT EXISTS display_order          integer         DEFAULT 99,
-  ADD COLUMN IF NOT EXISTS original_price         numeric(10,2);
+  ADD COLUMN IF NOT EXISTS original_price         numeric(10,2),
+  ADD COLUMN IF NOT EXISTS price                  numeric(10,2);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_memberships_name_unique ON public.memberships(name);
 
 -- 2. Create standalone consultation services table
 CREATE TABLE IF NOT EXISTS public.consultation_services (
@@ -129,10 +132,12 @@ ON CONFLICT (key) DO UPDATE SET
 -- 5. Enable RLS on consultation_services
 ALTER TABLE public.consultation_services ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "consultation_services_public_read"
+DROP POLICY IF EXISTS "consultation_services_public_read" ON public.consultation_services;
+CREATE POLICY "consultation_services_public_read"
   ON public.consultation_services FOR SELECT USING (is_active = true);
 
-CREATE POLICY IF NOT EXISTS "consultation_services_admin_all"
+DROP POLICY IF EXISTS "consultation_services_admin_all" ON public.consultation_services;
+CREATE POLICY "consultation_services_admin_all"
   ON public.consultation_services FOR ALL
   USING (
     auth.jwt() ->> 'role' IN ('admin', 'super_admin')

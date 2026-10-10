@@ -52,20 +52,25 @@ $$;
 
 -- ─── user_profiles: users see own; admins see all ─────────
 
+drop policy if exists "users_own_profile" on public.user_profiles;
 create policy "users_own_profile" on public.user_profiles
   for all using (id = auth.uid());
 
+drop policy if exists "admins_all_profiles" on public.user_profiles;
 create policy "admins_all_profiles" on public.user_profiles
   for all using (public.is_admin());
 
 -- ─── customers ────────────────────────────────────────────
 
+drop policy if exists "customer_own" on public.customers;
 create policy "customer_own" on public.customers
   for select using (user_id = auth.uid());
 
+drop policy if exists "admin_all_customers" on public.customers;
 create policy "admin_all_customers" on public.customers
   for all using (public.is_admin());
 
+drop policy if exists "assigned_professional_view" on public.customers;
 create policy "assigned_professional_view" on public.customers
   for select using (
     exists (
@@ -78,9 +83,11 @@ create policy "assigned_professional_view" on public.customers
 
 -- ─── customer_profiles ────────────────────────────────────
 
+drop policy if exists "own_customer_profile" on public.customer_profiles;
 create policy "own_customer_profile" on public.customer_profiles
   for all using (customer_id = public.get_my_customer_id());
 
+drop policy if exists "assigned_pro_view_profile" on public.customer_profiles;
 create policy "assigned_pro_view_profile" on public.customer_profiles
   for select using (
     exists (
@@ -91,22 +98,27 @@ create policy "assigned_pro_view_profile" on public.customer_profiles
     )
   );
 
+drop policy if exists "admin_all_profiles" on public.customer_profiles;
 create policy "admin_all_profiles" on public.customer_profiles
   for all using (public.is_admin());
 
 -- ─── food_profiles: women_wellness restricted ─────────────
 
+drop policy if exists "own_food_profile" on public.food_profiles;
 create policy "own_food_profile" on public.food_profiles
   for all using (customer_id = public.get_my_customer_id());
 
+drop policy if exists "admin_food_profile" on public.food_profiles;
 create policy "admin_food_profile" on public.food_profiles
   for all using (public.is_admin());
 
 -- ─── daily_check_ins ──────────────────────────────────────
 
+drop policy if exists "own_checkins" on public.daily_check_ins;
 create policy "own_checkins" on public.daily_check_ins
   for all using (customer_id = public.get_my_customer_id());
 
+drop policy if exists "assigned_pro_view_checkins" on public.daily_check_ins;
 create policy "assigned_pro_view_checkins" on public.daily_check_ins
   for select using (
     exists (
@@ -117,18 +129,22 @@ create policy "assigned_pro_view_checkins" on public.daily_check_ins
     )
   );
 
+drop policy if exists "admin_checkins" on public.daily_check_ins;
 create policy "admin_checkins" on public.daily_check_ins
   for all using (public.is_admin());
 
 -- ─── training_sessions ────────────────────────────────────
 -- Customers see their own; trainer sees assigned; admin sees all
 
+drop policy if exists "customer_own_sessions" on public.training_sessions;
 create policy "customer_own_sessions" on public.training_sessions
   for select using (customer_id = public.get_my_customer_id());
 
+drop policy if exists "trainer_own_sessions" on public.training_sessions;
 create policy "trainer_own_sessions" on public.training_sessions
   for all using (trainer_id = public.get_my_professional_id());
 
+drop policy if exists "admin_all_sessions" on public.training_sessions;
 create policy "admin_all_sessions" on public.training_sessions
   for all using (public.is_admin());
 
@@ -136,6 +152,7 @@ create policy "admin_all_sessions" on public.training_sessions
 -- CRITICAL: Customer A cannot access Customer B's recording
 -- Signed URLs are generated server-side after this policy check
 
+drop policy if exists "customer_own_recording" on public.training_recordings;
 create policy "customer_own_recording" on public.training_recordings
   for select using (
     customer_id = public.get_my_customer_id()
@@ -143,6 +160,7 @@ create policy "customer_own_recording" on public.training_recordings
     and recording_status = 'available'
   );
 
+drop policy if exists "trainer_recording_manage" on public.training_recordings;
 create policy "trainer_recording_manage" on public.training_recordings
   for all using (
     exists (
@@ -152,35 +170,43 @@ create policy "trainer_recording_manage" on public.training_recordings
     )
   );
 
+drop policy if exists "admin_all_recordings" on public.training_recordings;
 create policy "admin_all_recordings" on public.training_recordings
   for all using (public.is_admin());
 
 -- ─── training_retention_config ────────────────────────────
 
+drop policy if exists "admin_retention_config" on public.training_retention_config;
 create policy "admin_retention_config" on public.training_retention_config
   for all using (public.is_admin());
 
 -- ─── notifications ────────────────────────────────────────
 
+drop policy if exists "own_notifications" on public.notifications;
 create policy "own_notifications" on public.notifications
   for all using (user_id = auth.uid());
 
+drop policy if exists "admin_notifications" on public.notifications;
 create policy "admin_notifications" on public.notifications
   for all using (public.is_admin());
 
 -- ─── payouts ──────────────────────────────────────────────
 
+drop policy if exists "professional_own_payouts" on public.payouts;
 create policy "professional_own_payouts" on public.payouts
   for select using (professional_id = public.get_my_professional_id());
 
+drop policy if exists "admin_all_payouts" on public.payouts;
 create policy "admin_all_payouts" on public.payouts
   for all using (public.is_admin());
 
 -- ─── medical_documents ────────────────────────────────────
 
+drop policy if exists "own_documents" on public.medical_documents;
 create policy "own_documents" on public.medical_documents
   for select using (customer_id = public.get_my_customer_id());
 
+drop policy if exists "assigned_pro_documents" on public.medical_documents;
 create policy "assigned_pro_documents" on public.medical_documents
   for select using (
     exists (
@@ -191,26 +217,37 @@ create policy "assigned_pro_documents" on public.medical_documents
     )
   );
 
+drop policy if exists "admin_documents" on public.medical_documents;
 create policy "admin_documents" on public.medical_documents
   for all using (public.is_admin());
 
 -- Public tables (no RLS needed for reads)
 alter table public.memberships enable row level security;
+drop policy if exists "public_read_memberships" on public.memberships;
 create policy "public_read_memberships" on public.memberships for select using (is_active = true);
+drop policy if exists "admin_memberships" on public.memberships;
 create policy "admin_memberships"       on public.memberships for all using (public.is_admin());
 
 alter table public.testimonials enable row level security;
+drop policy if exists "public_read_testimonials" on public.testimonials;
 create policy "public_read_testimonials" on public.testimonials for select using (is_active = true);
+drop policy if exists "admin_testimonials" on public.testimonials;
 create policy "admin_testimonials"        on public.testimonials for all using (public.is_admin());
 
 alter table public.faqs enable row level security;
+drop policy if exists "public_read_faqs" on public.faqs;
 create policy "public_read_faqs" on public.faqs for select using (is_active = true);
+drop policy if exists "admin_faqs" on public.faqs;
 create policy "admin_faqs"        on public.faqs for all using (public.is_admin());
 
 alter table public.website_settings enable row level security;
+drop policy if exists "public_read_settings" on public.website_settings;
 create policy "public_read_settings" on public.website_settings for select using (true);
+drop policy if exists "admin_settings" on public.website_settings;
 create policy "admin_settings"        on public.website_settings for all using (public.is_admin());
 
 alter table public.foods enable row level security;
+drop policy if exists "authenticated_read_foods" on public.foods;
 create policy "authenticated_read_foods" on public.foods for select to authenticated using (is_active = true);
+drop policy if exists "admin_foods" on public.foods;
 create policy "admin_foods"               on public.foods for all using (public.is_admin());

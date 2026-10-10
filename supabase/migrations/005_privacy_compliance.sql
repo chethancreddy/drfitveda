@@ -48,15 +48,21 @@ alter table public.consent_records       enable row level security;
 alter table public.data_subject_requests enable row level security;
 
 -- Users may read and add their own consent rows; never edit/delete.
+drop policy if exists "consent_own_select" on public.consent_records;
 create policy "consent_own_select" on public.consent_records
   for select using (user_id = auth.uid());
+
+drop policy if exists "consent_own_insert" on public.consent_records;
 create policy "consent_own_insert" on public.consent_records
   for insert with check (user_id = auth.uid());
+
+drop policy if exists "consent_admin_select" on public.consent_records;
 create policy "consent_admin_select" on public.consent_records
   for select using (public.is_admin());
 
 -- Requests: inserted server-side only (service role bypasses RLS).
 -- Anonymous/authenticated clients get no direct table access; admins manage them.
+drop policy if exists "dsr_admin_all" on public.data_subject_requests;
 create policy "dsr_admin_all" on public.data_subject_requests
   for all using (public.is_admin());
 
