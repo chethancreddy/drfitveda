@@ -13,7 +13,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 COMMON_CSS = """
 @page {
     size: A4;
-    margin: 20mm 18mm 20mm 18mm;
+    margin: 18mm 16mm 18mm 16mm;
     @bottom-right {
         content: counter(page);
     }
@@ -25,46 +25,46 @@ COMMON_CSS = """
 
 body {
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
-    color: #1a202c;
-    line-height: 1.6;
-    font-size: 10pt;
+    color: #0f172a;
+    line-height: 1.55;
+    font-size: 9.5pt;
     margin: 0;
     padding: 0;
 }
 
 .header-banner {
-    border-bottom: 2px solid #2d3748;
-    padding-bottom: 15px;
-    margin-bottom: 25px;
+    border-bottom: 2.5px solid #0f766e;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
 }
 
 .brand-title {
-    font-size: 20pt;
-    font-weight: 700;
+    font-size: 19pt;
+    font-weight: 800;
     color: #0f766e;
-    margin: 0 0 4px 0;
+    margin: 0 0 2px 0;
     letter-spacing: -0.5px;
 }
 
 .brand-sub {
-    font-size: 9pt;
-    color: #4a5568;
-    margin: 0 0 12px 0;
+    font-size: 8.5pt;
+    color: #475569;
+    margin: 0 0 10px 0;
     text-transform: uppercase;
     letter-spacing: 0.8px;
-    font-weight: 600;
+    font-weight: 700;
 }
 
 .doc-meta {
     display: flex;
     justify-content: space-between;
     background-color: #f8fafc;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #cbd5e1;
     border-radius: 6px;
-    padding: 10px 14px;
+    padding: 8px 12px;
     font-size: 8.5pt;
-    color: #475569;
-    margin-bottom: 20px;
+    color: #334155;
+    margin-bottom: 16px;
 }
 
 .doc-meta-col {
@@ -89,39 +89,39 @@ body {
 }
 
 h1 {
-    font-size: 16pt;
-    font-weight: 700;
+    font-size: 15pt;
+    font-weight: 800;
     color: #0f172a;
-    margin: 0 0 12px 0;
+    margin: 0 0 10px 0;
     border-bottom: 1px solid #cbd5e1;
-    padding-bottom: 8px;
+    padding-bottom: 6px;
 }
 
 h2 {
-    font-size: 11.5pt;
+    font-size: 11pt;
     font-weight: 700;
     color: #0f766e;
-    margin: 20px 0 8px 0;
+    margin: 16px 0 6px 0;
     page-break-after: avoid;
 }
 
 p {
-    margin: 0 0 10px 0;
+    margin: 0 0 8px 0;
 }
 
 ul, ol {
-    margin: 0 0 12px 0;
-    padding-left: 20px;
+    margin: 0 0 10px 0;
+    padding-left: 18px;
 }
 
 li {
-    margin-bottom: 5px;
+    margin-bottom: 4px;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    margin: 14px 0 18px 0;
+    margin: 12px 0 16px 0;
     font-size: 8.5pt;
     page-break-inside: auto;
 }
@@ -136,12 +136,12 @@ th {
     color: #0f172a;
     font-weight: 700;
     text-align: left;
-    padding: 8px 10px;
+    padding: 7px 9px;
     border: 1px solid #cbd5e1;
 }
 
 td {
-    padding: 8px 10px;
+    padding: 7px 9px;
     border: 1px solid #e2e8f0;
     vertical-align: top;
 }
@@ -156,7 +156,7 @@ tr:nth-child(even) td {
     border-top: 1px solid #fef3c7;
     border-right: 1px solid #fef3c7;
     border-bottom: 1px solid #fef3c7;
-    padding: 10px 14px;
+    padding: 10px 12px;
     margin: 12px 0;
     font-size: 8.5pt;
     color: #78350f;
@@ -167,41 +167,53 @@ tr:nth-child(even) td {
     color: #b45309;
 }
 
+.statute-tag {
+    display: inline-block;
+    background-color: #e0f2fe;
+    color: #0369a1;
+    font-size: 7.5pt;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 3px;
+    border: 1px solid #bae6fd;
+    margin-bottom: 4px;
+}
+
 .signoff-box {
-    margin-top: 35px;
+    margin-top: 28px;
     border: 1.5px solid #0f766e;
     background-color: #f0fdf4;
     border-radius: 6px;
-    padding: 16px 20px;
+    padding: 14px 18px;
     page-break-inside: avoid;
 }
 
 .signoff-title {
-    font-size: 11pt;
+    font-size: 10.5pt;
     font-weight: 700;
     color: #0f766e;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     border-bottom: 1px solid #a7f3d0;
-    padding-bottom: 6px;
+    padding-bottom: 4px;
 }
 
 .signoff-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    font-size: 9pt;
+    gap: 14px;
+    font-size: 8.5pt;
 }
 
 .signoff-field {
     border-bottom: 1px dashed #64748b;
-    padding-bottom: 4px;
-    margin-top: 16px;
+    padding-bottom: 3px;
+    margin-top: 14px;
 }
 
 .signoff-label {
     font-weight: 600;
     color: #334155;
-    font-size: 8pt;
+    font-size: 7.5pt;
     text-transform: uppercase;
 }
 
@@ -210,23 +222,23 @@ tr:nth-child(even) td {
 }
 
 .lead-text {
-    font-size: 10.5pt;
+    font-size: 9.5pt;
     color: #334155;
     font-style: italic;
     background: #f8fafc;
-    padding: 10px 14px;
+    padding: 9px 12px;
     border-radius: 4px;
     border-left: 3px solid #0f766e;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
 }
 """
 
-def wrap_html(title, doc_code, effective_date, body_content, signoff_title="Formal Legal Counsel Sign-Off"):
+def wrap_html(title, doc_code, effective_date, body_content, signoff_title="Indian Advocate / Legal Counsel Sign-Off"):
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{title} — Dr Fit Veda</title>
+    <title>{title} — Dr Fit Veda (India Compliance)</title>
     <style>
         {COMMON_CSS}
     </style>
@@ -234,17 +246,19 @@ def wrap_html(title, doc_code, effective_date, body_content, signoff_title="Form
 <body>
     <div class="header-banner">
         <div class="brand-title">DR FIT VEDA</div>
-        <div class="brand-sub">Holistic Health & Wellness Platform | Corporate Compliance</div>
+        <div class="brand-sub">Holistic Health & Wellness Platform | Corporate Regulatory Compliance (India)</div>
         <div class="doc-meta">
             <div class="doc-meta-col">
-                <strong>Legal Entity:</strong> Dr Fit Veda Holistic Health Services Ltd.<br>
-                <strong>Jurisdiction:</strong> Bangalore, Karnataka, India<br>
-                <strong>Contact:</strong> care@drfitveda.com
+                <strong>Operating Entity:</strong> Dr Fit Veda Holistic Health Services Ltd.<br>
+                <strong>Principal Place of Business:</strong> Bangalore, Karnataka, India<br>
+                <strong>Governing Law:</strong> Republic of India / Courts at Bangalore<br>
+                <strong>Compliance Officer Contact:</strong> care@drfitveda.com
             </div>
             <div class="doc-meta-col" style="text-align: right;">
                 <strong>Document Ref:</strong> {doc_code}<br>
-                <strong>Status:</strong> <span class="status-tag">Draft For Legal Sign-Off</span><br>
-                <strong>Effective / Review Date:</strong> {effective_date}
+                <strong>Status:</strong> <span class="status-tag">Draft For Advocate Approval</span><br>
+                <strong>Effective / Review Date:</strong> {effective_date}<br>
+                <strong>Jurisdiction:</strong> India (DPDP Act 2023, IT SPDI 2011, CPA 2019)
             </div>
         </div>
     </div>
@@ -255,35 +269,35 @@ def wrap_html(title, doc_code, effective_date, body_content, signoff_title="Form
 
     <div class="signoff-box">
         <div class="signoff-title">{signoff_title}</div>
-        <p style="font-size: 8.5pt; color: #334155; margin-bottom: 10px;">
-            By signing below, reviewing legal counsel approves the terms, statutory disclosures, and compliance provisions set forth in this document for commercial publication on <strong>drfitveda.com</strong> and associated mobile/web portals.
+        <p style="font-size: 8pt; color: #334155; margin-bottom: 8px;">
+            By executing below, reviewing Advocate / Legal Counsel approves the terms, statutory disclosures, and compliance provisions set forth in this document as compliant with applicable Indian statutes (including DPDP Act 2023, IT Act 2000, CPA 2019, Telemedicine Guidelines 2020) for commercial publication on <strong>drfitveda.com</strong>.
         </p>
         <div class="signoff-grid">
             <div>
                 <div class="signoff-field"></div>
-                <div class="signoff-label">Reviewing Advocate / Counsel Name</div>
+                <div class="signoff-label">Advocate / Legal Counsel Name</div>
             </div>
             <div>
                 <div class="signoff-field"></div>
-                <div class="signoff-label">Bar Council / Enrollment Number</div>
+                <div class="signoff-label">Bar Council Enrollment Number (State Bar)</div>
             </div>
             <div>
                 <div class="signoff-field"></div>
-                <div class="signoff-label">Law Firm / Corporate Legal Dept</div>
+                <div class="signoff-label">Law Chambers / Firm Name</div>
             </div>
             <div>
                 <div class="signoff-field"></div>
-                <div class="signoff-label">Review Date</div>
+                <div class="signoff-label">Review Date & Place</div>
             </div>
             <div style="grid-column: span 2;">
-                <div class="signoff-field" style="margin-top: 24px;"></div>
-                <div class="signoff-label">Signature & Official Seal / Stamp</div>
+                <div class="signoff-field" style="margin-top: 18px;"></div>
+                <div class="signoff-label">Advocate Signature & Official Seal</div>
             </div>
-            <div style="grid-column: span 2; margin-top: 6px;">
-                <div style="font-size: 8.5pt; color: #475569;">
-                    <strong>Decision:</strong> &nbsp;&nbsp;
+            <div style="grid-column: span 2; margin-top: 4px;">
+                <div style="font-size: 8pt; color: #475569;">
+                    <strong>Recommendation:</strong> &nbsp;&nbsp;
                     [ &nbsp; ] Approved without modification &nbsp;&nbsp;&nbsp;&nbsp;
-                    [ &nbsp; ] Approved with amendments noted on document
+                    [ &nbsp; ] Approved subject to confirmed modifications noted herein
                 </div>
             </div>
         </div>
@@ -295,253 +309,260 @@ def wrap_html(title, doc_code, effective_date, body_content, signoff_title="Form
 # 1. Privacy Policy
 PRIVACY_BODY = """
 <div class="lead-text">
-    This policy explains how Dr Fit Veda Holistic Health Services Ltd. ("Dr Fit Veda", "we") handles personal and sensitive data of visitors, customers and healthcare/fitness professionals on drfitveda.com and the Dr Fit Veda portals. It accurately reflects the actual technical architecture of the platform.
+    This Privacy Policy explains how Dr Fit Veda Holistic Health Services Ltd. ("Dr Fit Veda", "we", "us") collects, uses, stores, secures, and discloses personal data and Sensitive Personal Data or Information (SPDI) of visitors, registered clients, and healthcare professionals on drfitveda.com. It is formulated in strict accordance with the Digital Personal Data Protection Act, 2023 (DPDP Act), the Information Technology Act, 2000, and the Information Technology (Reasonable Security Practices and Procedures and Sensitive Personal Data or Information) Rules, 2011 (SPDI Rules).
 </div>
 
 <div class="confirm-box">
-    <strong>Instructions for Legal Counsel:</strong> Please inspect all callouts marked <code>[CONFIRM]</code> throughout this document, specifically regarding the designation of the statutory Grievance Officer, data retention thresholds for clinical records, and international health data transfer restrictions for UAE referral patients.
+    <strong>Advocate Review Checklist (Indian DPDP Act & IT SPDI Rules):</strong> Please review the items flagged <code>[CONFIRM]</code>, specifically: (1) Mandatory formal designation of the Indian Grievance Officer under Section 5 of the DPDP Act and Rule 5(9) of the SPDI Rules; (2) Data retention periods for clinical consultation records under the Telemedicine Practice Guidelines, 2020; and (3) Physical location of primary server infrastructure (confirming data storage within India).
 </div>
 
-<h2>1. Who is Responsible (Data Fiduciary / Controller)</h2>
+<h2>1. Data Fiduciary Identity and Statutory Responsibility</h2>
 <p>
-    Dr Fit Veda Holistic Health Services Ltd. (Health & Wellness Tower, Indiranagar, Bangalore, Karnataka 560038, India) decides why and how your personal data is processed (the "Data Fiduciary" under the Indian Digital Personal Data Protection Act 2023 and "Data Controller" under international frameworks). Contact: <strong>care@drfitveda.com</strong>.
+    Dr Fit Veda Holistic Health Services Ltd., having its principal place of business at Health & Wellness Tower, Indiranagar, Bangalore, Karnataka 560038, India, operates as the <strong>Data Fiduciary</strong> under Section 2(i) of the Digital Personal Data Protection Act, 2023. We determine the purpose and means of personal data processing. Contact: <strong>care@drfitveda.com</strong>.
 </p>
 
-<h2>2. Data We Collect, Why, and Retention Periods</h2>
+<h2>2. Inventory of Data Collected, Purposes, and Retention Schedules</h2>
+<p>
+    In compliance with Section 5 of the DPDP Act and Rule 5 of the IT SPDI Rules, we collect only personal data necessary for specified and legitimate wellness services:
+</p>
 <table>
     <thead>
         <tr>
             <th style="width: 28%;">Data Category</th>
-            <th style="width: 27%;">Purpose of Processing</th>
-            <th style="width: 20%;">Storage System</th>
-            <th style="width: 25%;">Retention Schedule</th>
+            <th style="width: 27%;">Lawful Purpose</th>
+            <th style="width: 20%;">Storage & Security</th>
+            <th style="width: 25%;">Retention Schedule (India)</th>
         </tr>
     </thead>
     <tbody>
         <tr>
-            <td><strong>Account Identifiers:</strong> Name, phone number, email, role, secure authentication UUID.</td>
-            <td>Create and secure accounts; identity verification; service communications.</td>
-            <td>Platform Database (Supabase PostgreSQL, RLS restricted)</td>
-            <td>While account is active, then up to <strong>[CONFIRM: 12 months]</strong> unless law requires longer.</td>
+            <td><strong>Account Identifiers:</strong> Name, phone number, email address, role, secure authentication UUID.</td>
+            <td>User account registration, multi-factor authentication, service notifications, customer care.</td>
+            <td>PostgreSQL Database (Supabase instance with Row Level Security)</td>
+            <td>While user account remains active, then up to <strong>[CONFIRM: 12 months]</strong> post-closure unless required longer by Indian tax or corporate statutes.</td>
         </tr>
         <tr>
-            <td><strong>Profile & Lifestyle Data:</strong> Date of birth, gender, height, weight, BMI, occupation, sleep, stress score, activity level, health goals; women's wellness details (optional, strictly restricted).</td>
-            <td>Enable assigned multi-disciplinary care team (doctors, trainers, nutritionists) to prepare clinical and wellness plans.</td>
-            <td>Platform Database (Restricted access by professional role)</td>
-            <td>While account is active + <strong>[CONFIRM]</strong> statutory retention period. Clinical records follow Section 9.</td>
+            <td><strong>Lifestyle & Biometric Profiles:</strong> Date of birth, gender, height, weight, BMI, occupation, sleep cycles, stress score, activity level, health goals; women's wellness details (strictly restricted).</td>
+            <td>Enable assigned multi-disciplinary care team (doctors, nutritionists, trainers) to formulate customised regimens.</td>
+            <td>Encrypted Database (Role-restricted access)</td>
+            <td>Duration of active wellness subscription + <strong>[CONFIRM]</strong> clinical record retention period.</td>
         </tr>
         <tr>
-            <td><strong>Food & Nutrition Profile:</strong> Diet type, meal timings, food allergies, intolerances, dietary restrictions.</td>
-            <td>Prepare safe, effective naturopathic and dietary regimens.</td>
-            <td>Platform Database</td>
-            <td>Active subscription duration + statutory clinical duration.</td>
+            <td><strong>Food & Dietary Profile:</strong> Diet preferences (Vegetarian, Vegan, Non-Veg), meal schedules, food allergies, intolerances, clinical restrictions.</td>
+            <td>Formulate safe naturopathic diet plans and prevent adverse allergic reactions.</td>
+            <td>Encrypted Database</td>
+            <td>Active subscription duration + statutory record retention period.</td>
         </tr>
         <tr>
-            <td><strong>Health Documents & Reports:</strong> Diagnostic lab tests, medical prescriptions, clinical scans, user notes.</td>
-            <td>Doctor review, clinical evaluation, and health assessment.</td>
-            <td>Private Encrypted Cloud Storage</td>
-            <td>Until customer requests deletion or account termination, subject to Section 9 medical record retention mandates.</td>
+            <td><strong>Health Documents & Diagnostic Reports (SPDI):</strong> Uploaded blood lab tests, prescriptions, clinical imaging, medical notes.</td>
+            <td>Doctor review, clinical evaluation, and health risk assessment.</td>
+            <td>Private Encrypted Cloud Storage (Encrypted at rest)</td>
+            <td>Retained until customer deletion or account termination, subject to mandatory medical record retention under Indian Telemedicine Guidelines.</td>
         </tr>
         <tr>
-            <td><strong>Consultation Records:</strong> Appointment schedules, consultation topics, doctor clinical notes, recommendations, weekly reviews.</td>
-            <td>Deliver and document professional health care and continuity of treatment.</td>
-            <td>Platform Database (Restricted)</td>
-            <td>Retained per Section 9 <strong>[CONFIRM: Clinical record period under NMC / Telemedicine norms]</strong>.</td>
+            <td><strong>Clinical Consultation Records:</strong> Appointment schedules, consultation topics, doctor assessment notes, dietary prescriptions, weekly clinical reviews.</td>
+            <td>Document professional health care delivery and ensure continuity of clinical oversight.</td>
+            <td>Restricted Database (Access limited to assigned doctor)</td>
+            <td><strong>[CONFIRM: Minimum 3 years]</strong> as prescribed under the Telemedicine Practice Guidelines, 2020 issued by the National Medical Commission.</td>
         </tr>
         <tr>
-            <td><strong>Plans & Adherence Tracking:</strong> Diet, workout, yoga routines, daily check-in logs, biometric progress records, uploaded photos/videos.</td>
-            <td>Deliver, monitor, and adapt personalised wellness programmes.</td>
-            <td>Platform Database / Private Encrypted Media Storage</td>
-            <td>While account active + <strong>[CONFIRM: 3 years]</strong>.</td>
+            <td><strong>Exercise & Adherence Logs:</strong> Daily check-in metrics, workout logs, yoga adherence, uploaded progress media.</td>
+            <td>Monitor client progress and iteratively adjust training regimens.</td>
+            <td>Encrypted Database / Media Storage</td>
+            <td>Active subscription duration + <strong>[CONFIRM: 3 years]</strong>.</td>
         </tr>
         <tr>
-            <td><strong>Session Recordings:</strong> Live 1-on-1 fitness training or clinical yoga sessions where recording is enabled.</td>
-            <td>Replay access, form and posture correction review.</td>
-            <td>Private Storage with short-lived time-bounded signed URLs</td>
-            <td><strong>Strict 1-recording policy:</strong> Only the single latest recording is retained; the preceding recording is permanently queued for deletion after a grace period (default 24 hours).</td>
+            <td><strong>Live Training Session Recordings:</strong> Virtual 1-on-1 fitness coaching or yoga sessions where recording is explicitly opted into.</td>
+            <td>Client form review, posture correction, and exercise replay.</td>
+            <td>Private Storage accessible via short-lived, time-limited signed URLs</td>
+            <td><strong>Single-Active Recording Architecture:</strong> Only the single latest recording is retained; prior sessions are queued for automated permanent deletion after a 24-hour grace period.</td>
         </tr>
         <tr>
-            <td><strong>Orders & Payment Records:</strong> Plan tier, amount, currency (INR), transaction status, payment gateway transaction ID.</td>
-            <td>Process and reconcile subscription payments, statutory accounting, and tax audits.</td>
-            <td>Platform Database (Card and bank credentials handled entirely by RBI-licensed payment gateway; never stored by Dr Fit Veda)</td>
-            <td>Statutory tax and financial accounting requirement (typically 6–8 years under Indian tax regulations) <strong>[CONFIRM]</strong>.</td>
+            <td><strong>Financial & Billing Records:</strong> Subscription tier, invoice amount, currency (₹ INR), transaction timestamp, payment gateway reference ID.</td>
+            <td>Reconciliation, subscription activation, GST tax invoicing, statutory financial audits.</td>
+            <td>Platform Database (Card, UPI PIN, and banking credentials are handled entirely by RBI-licensed payment gateways; never stored by Dr Fit Veda)</td>
+            <td><strong>8 Years</strong> as mandated under the Indian Income Tax Act, 1961 and Companies Act, 2013 <strong>[CONFIRM]</strong>.</td>
         </tr>
         <tr>
             <td><strong>Contact Inquiries:</strong> Full name, phone number, health focus, callback message.</td>
             <td>Respond to user callback requests and consultation queries.</td>
             <td>Platform Database (Table: <code>contact_inquiries</code>)</td>
-            <td>Retained for <strong>[CONFIRM: 90 days]</strong> post-resolution, then purged.</td>
+            <td>Retained for <strong>[CONFIRM: 90 days]</strong> post-resolution, then permanently expunged.</td>
         </tr>
         <tr>
-            <td><strong>Consent Records & DSR Logs:</strong> Specific consent purpose, policy version, timestamp, DSR request tracking.</td>
-            <td>Demonstrate evidentiary compliance with DPDP Act, IT Rules, and privacy regulations.</td>
-            <td>Platform Database (Append-only <code>consent_records</code> and <code>data_subject_requests</code>)</td>
-            <td>Consent logs: Active duration + 3 years. Privacy requests: 3 years after closure <strong>[CONFIRM]</strong>.</td>
+            <td><strong>Consent Logs & DSR Records:</strong> Specific consent purpose, policy version, timestamp, DSR request tracking.</td>
+            <td>Demonstrate evidentiary compliance with DPDP Act Section 6 and IT SPDI Rules.</td>
+            <td>Platform Database (Append-only audit tables)</td>
+            <td>Active duration + 3 years after closure of consent/request <strong>[CONFIRM]</strong>.</td>
         </tr>
         <tr>
-            <td><strong>Security Audit Logs & Session Cookies:</strong> Access logs, administrative action logs, session security tokens.</td>
-            <td>Security monitoring, breach investigation, fraud prevention.</td>
-            <td>Platform Database</td>
-            <td>Audit logs retained for <strong>[CONFIRM: 12–24 months]</strong>.</td>
+            <td><strong>Security Audit Logs:</strong> Access logs, administrative action logs, session security tokens.</td>
+            <td>Platform security, unauthorized access detection, incident investigation.</td>
+            <td>Restricted Database</td>
+            <td>Retained for <strong>[CONFIRM: 12 to 24 months]</strong>.</td>
         </tr>
     </tbody>
 </table>
 
-<h2>3. Legal Bases and Consent Mechanisms</h2>
+<h2>3. Consent Framework under DPDP Act 2023 and SPDI Rules 2011</h2>
 <p>
-    <strong>India (DPDP Act 2023 & IT SPDI Rules 2011):</strong> We process personal data primarily on the basis of informed, explicit consent and for limited legitimate uses recognised by statute (e.g., fulfilling contracted services, complying with legal orders, or emergency medical response). Health information is classified as sensitive personal data. The platform enforces granular, separate, non-pre-ticked opt-in checkboxes prior to document uploads, consultation bookings, and session recordings. Acceptance of general Terms & Conditions is never conflated with consent for health data processing.
+    In accordance with Section 6 of the DPDP Act 2023, consent must be free, specific, informed, unconditional, and unambiguous with a clear affirmative action:
 </p>
-<p>
-    <strong>UAE and International Clients:</strong> For clients residing in the UAE or other jurisdictions, we rely on explicit consent for special categories of health data, performance of contract for wellness services, and legal compliance for transaction records. Consent may be revoked at any time; revocation does not invalidate prior lawful processing.
-</p>
-
-<h2>4. Third-Party Service Providers and Data Disclosures</h2>
-<p>Dr Fit Veda does not sell, rent, or trade personal or health data. Disclosures are strictly limited to necessary service partners:</p>
 <ul>
-    <li><strong>Assigned Care Professionals:</strong> Doctors, fitness trainers, yoga therapists, and clinical nutritionists. Access is restricted strictly to assigned customers via database Row Level Security (RLS).</li>
-    <li><strong>Cloud Infrastructure & Database (Supabase):</strong> Secure database hosting, authentication, and file storage. <em>[CONFIRM: Cloud region, e.g., AWS Mumbai (ap-south-1)].</em></li>
-    <li><strong>Video Teleconsultation & Live Training (Zoho Meeting):</strong> Customer name and email are transmitted strictly to provision encrypted video rooms and join links.</li>
-    <li><strong>Payment Gateway (Razorpay):</strong> Tokenised processing of payment transactions; no raw card credentials touch Dr Fit Veda servers. <em>[CONFIRM]</em></li>
-    <li><strong>Transactional Communications (Resend):</strong> System emails, booking confirmations, and password reset notifications. <em>[CONFIRM]</em></li>
-    <li><strong>Judicial & Statutory Authorities:</strong> Disclosed only where mandatory by court order, statutory subpoena, or regulatory summons under Indian law.</li>
+    <li><strong>Granular Affirmative Opt-In:</strong> The platform maintains distinct, non-pre-ticked opt-in checkboxes for: (a) Health document upload & sensitive health data processing; (b) Live session recording; and (c) Consultation inquiry callbacks.</li>
+    <li><strong>Unbundled Terms:</strong> Acceptance of general commercial Terms & Conditions is never conflated with consent for medical data processing.</li>
+    <li><strong>Right of Withdrawal:</strong> Clients have the statutory right to withdraw consent at any time via the client dashboard or by emailing our Grievance Officer. Withdrawal does not affect the lawfulness of processing conducted prior to withdrawal. Where withdrawal of consent renders it impossible to deliver health or training plans safely, services requiring such data may be terminated.</li>
 </ul>
 
-<h2>5. International Data Transfers</h2>
+<h2>4. Third-Party Service Providers and Data Processing</h2>
 <p>
-    Primary platform data is hosted on secure cloud infrastructure located in <strong>[CONFIRM: Mumbai, India]</strong>. For international customers (such as referral clients residing in the United Arab Emirates), data is processed through encrypted channels. Transfer mechanisms comply with cross-border transfer provisions under India's DPDP Act and UAE Federal Decree-Law 45/2021. <em>[CONFIRM: Specific health data residency mandates under UAE Federal Law No. 2 of 2019].</em>
+    Dr Fit Veda does not sell, rent, or trade personal data. We engage contracted data processors solely to deliver platform functionality:
+</p>
+<ul>
+    <li><strong>Assigned Care Professionals:</strong> Doctors, clinical nutritionists, and certified trainers. Access is strictly compartmentalised via database Row Level Security (RLS).</li>
+    <li><strong>Cloud Database Infrastructure (Supabase):</strong> Hosting database engine and private file storage. <em>[CONFIRM: Cloud region, e.g., AWS Mumbai / ap-south-1].</em></li>
+    <li><strong>Video Teleconsultation (Zoho Meeting):</strong> Integrated teleconsultation provider. Client name and email are transmitted strictly to provision encrypted video rooms.</li>
+    <li><strong>Payment Gateway (Razorpay):</strong> Authorised payment aggregator licensed by the Reserve Bank of India (RBI). Processes payments under PCI-DSS compliance. <em>[CONFIRM]</em></li>
+    <li><strong>Transactional Communications (Resend):</strong> System notifications, booking confirmations, OTP dispatch. <em>[CONFIRM]</em></li>
+    <li><strong>Statutory Authorities:</strong> Disclosed only where mandatory under judicial warrant, police notice under Section 91 CrPC / BNSS, or statutory regulatory summons.</li>
+</ul>
+
+<h2>5. Domestic Data Storage and Sovereign Compliance</h2>
+<p>
+    Dr Fit Veda is an Indian corporate enterprise. Primary server infrastructure, databases, and customer records are hosted within the territory of India <em>[CONFIRM: Server hosting in Mumbai, India]</em>. Cross-border processing of data complies with central government notifications issued under Section 16 of the DPDP Act, 2023.
 </p>
 
 <h2>6. Technical and Organisational Security Measures</h2>
 <p>
-    All communications are encrypted in transit using Transport Layer Security (TLS 1.3 / HTTPS). Customer data is isolated at the database engine level using Row Level Security (RLS) policies. Diagnostic files and session recordings reside in private buckets accessed exclusively via temporary, cryptographically signed URLs. All administrative actions are recorded in immutable audit logs.
+    In compliance with Section 8(5) of the DPDP Act and Rule 8 of the IT SPDI Rules (Reasonable Security Practices):
 </p>
-
-<h2>7. Minors and Eligibility</h2>
-<p>
-    Services are restricted to individuals aged <strong>18 years and older</strong>. We do not knowingly solicit or collect data from children under 18. Any account identified as belonging to an unauthorised minor will be terminated and associated data permanently expunged.
-</p>
-
-<h2>8. Data Subject Rights and Exercising Procedures</h2>
-<p>Under applicable data privacy legislation, users enjoy the following actionable rights:</p>
 <ul>
-    <li><strong>Right of Access & Summary:</strong> Request a comprehensive export of all personal and health data stored on the platform.</li>
-    <li><strong>Right to Correction & Rectification:</strong> Request correction of inaccurate, incomplete, or out-of-date personal information.</li>
-    <li><strong>Right to Data Portability / Export:</strong> Receive personal data in a structured, commonly used, machine-readable JSON/PDF format.</li>
-    <li><strong>Right to Erasure / Deletion:</strong> Request deletion of personal data, subject to mandatory statutory retention exemptions.</li>
-    <li><strong>Right to Withdraw Consent:</strong> Revoke previously granted consents without retroactive penalty.</li>
-    <li><strong>Right to Grievance Redressal:</strong> Submit privacy concerns directly to our appointed Grievance Officer.</li>
+    <li><strong>Encryption:</strong> All digital communications are encrypted in transit using TLS 1.3. Stored diagnostic documents and recordings reside in encrypted private storage buckets.</li>
+    <li><strong>Access Isolation:</strong> Multi-tenant database separation enforced via PostgreSQL Row Level Security (RLS), ensuring no client can access another client's health records.</li>
+    <li><strong>Temporary Media Links:</strong> Media recordings and clinical files are accessed exclusively via cryptographically signed, short-lived URLs expiring within minutes.</li>
+    <li><strong>Security Incident Response:</strong> In the event of a personal data breach, Dr Fit Veda will notify the Data Protection Board of India and affected individuals in accordance with Section 8(6) of the DPDP Act.</li>
+</ul>
+
+<h2>7. Minors and Eligibility (Age of Majority)</h2>
+<p>
+    Pursuant to Section 9 of the DPDP Act and the Indian Contract Act, 1872, platform services are restricted to individuals aged <strong>18 years and above</strong>. Dr Fit Veda does not knowingly collect personal data from minors or conduct behavioural tracking of children. Accounts identified as belonging to an unauthorised minor will be terminated immediately and associated records expunged.
+</p>
+
+<h2>8. Statutory Data Principal Rights (DPDP Act, 2023)</h2>
+<p>Registered clients ("Data Principals") enjoy the following enforceable rights under Chapter III of the DPDP Act:</p>
+<ul>
+    <li><strong>Right to Summary & Identity of Data Fiduciaries (Section 11):</strong> Request a summary of personal data processed and identities of all entities with whom data has been shared.</li>
+    <li><strong>Right to Correction & Erasure (Section 12):</strong> Request correction of inaccurate data, completion of incomplete records, or erasure of personal data that is no longer necessary for the original purpose.</li>
+    <li><strong>Right of Grievance Redressal (Section 13):</strong> Right to have grievances redressed by the Data Fiduciary within the prescribed timeline before escalating to the Data Protection Board.</li>
+    <li><strong>Right to Nominate (Section 14):</strong> Right to nominate another individual to exercise data rights in the event of death or incapacity.</li>
 </ul>
 <p>
-    <strong>Verification Procedure:</strong> To prevent identity theft and unauthorized disclosure, identity verification is conducted via existing verified credentials before releasing or deleting any data.
-</p>
-<p>
-    <strong>Statutory Deletion Exemptions:</strong> Where clinical, accounting, tax, or fraud prevention laws mandate record preservation, certain records cannot be immediately deleted. In such instances, records are segregated, access-restricted, and retained solely for statutory defense.
+    <strong>How to Exercise:</strong> Data Principals may exercise these rights via the dedicated Data Subject Request portal at <code>drfitveda.com/data-request</code> or by writing to <strong>care@drfitveda.com</strong>.
 </p>
 
-<h2>9. Mandatory Record Retention Policies</h2>
+<h2>9. Mandatory Indian Grievance Redressal Mechanism</h2>
 <p>
-    Medical guidelines, accounting statutes, and electronic transaction laws impose strict retention periods. Consultation notes and medical histories are preserved in accordance with Indian medical regulatory norms <em>[CONFIRM: 3 years under Telemedicine Practice Guidelines / NMC regulations]</em> before automated anonymisation or deletion.
+    In strict compliance with Section 5 of the DPDP Act, 2023, Rule 5(9) of the IT SPDI Rules, 2011, and the Consumer Protection (E-Commerce) Rules, 2020, Dr Fit Veda has appointed an Indian Grievance Officer:
 </p>
-
-<h2>10. Statutory Grievance Redressal Mechanism</h2>
-<p>
-    In compliance with Section 5 of the Digital Personal Data Protection Act 2023, Rule 5(9) of the Information Technology (SPDI) Rules 2011, and the Consumer Protection (E-Commerce) Rules 2020, users may escalate complaints to our designated Grievance Officer:
-</p>
-<div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px 16px; margin: 10px 0; font-size: 9pt;">
-    <strong>Name of Grievance Officer:</strong> [CONFIRM: Full Name of Appointed Officer]<br>
+<div style="background: #f8fafc; border: 1.5px solid #0f766e; border-radius: 6px; padding: 12px 16px; margin: 12px 0; font-size: 8.5pt;">
+    <strong>Statutory Grievance Officer:</strong> [CONFIRM: Name of Appointed Indian Resident Officer]<br>
     <strong>Designation:</strong> Data Protection & Grievance Officer<br>
-    <strong>Office Address:</strong> Dr Fit Veda Holistic Health Services Ltd., Health & Wellness Tower, Indiranagar, Bangalore, Karnataka 560038, India<br>
+    <strong>Corporate Entity:</strong> Dr Fit Veda Holistic Health Services Ltd.<br>
+    <strong>Office Address:</strong> Health & Wellness Tower, Indiranagar, Bangalore, Karnataka 560038, India<br>
     <strong>Dedicated Grievance Email:</strong> grievance@drfitveda.com / care@drfitveda.com<br>
-    <strong>Acknowledgement Timeline:</strong> Within 48 hours of receipt<br>
-    <strong>Resolution Timeline:</strong> Within 30 days of receipt [CONFIRM]
+    <strong>Acknowledgment Timeline:</strong> Within 48 hours of receipt<br>
+    <strong>Resolution Timeline:</strong> Within 30 days of receipt (as mandated by Indian IT / E-Commerce Rules) [CONFIRM]
 </div>
 """
 
 # 2. Terms and Conditions
 TERMS_BODY = """
 <div class="lead-text">
-    These Terms & Conditions govern your access to and use of the Dr Fit Veda website (drfitveda.com) and associated client, professional, and administrative portals. Please read them thoroughly alongside our Privacy Policy, Cookie Policy, Refund & Cancellation Policy, and Medical Disclaimer.
+    These Terms & Conditions constitute a legally binding electronic contract executed under the provisions of the Indian Contract Act, 1872, the Information Technology Act, 2000, and the Consumer Protection (E-Commerce) Rules, 2020. They govern your access to and use of drfitveda.com and associated digital health and wellness portals.
 </div>
 
 <div class="confirm-box">
-    <strong>Instructions for Legal Counsel:</strong> Please verify Section 5 (tax inclusivity of pricing and UAE currency provisions), Section 10 (statutory liability limitation cap), and Section 12 (exclusive jurisdiction and Bangalore dispute forum).
+    <strong>Advocate Review Checklist (Indian Contract Law & E-Commerce Rules):</strong> Please review: (1) Pricing GST disclosure and tax status (Section 5); (2) Commercial liability limitation cap (Section 10); and (3) Dispute resolution forum, confirming exclusive jurisdiction of Courts in Bangalore, Karnataka (Section 12).
 </div>
 
-<h2>1. Entity Identification and Contractual Acceptance</h2>
+<h2>1. Contracting Parties and Electronic Execution</h2>
 <p>
-    This platform is operated by <strong>Dr Fit Veda Holistic Health Services Ltd.</strong>, located at Health & Wellness Tower, Indiranagar, Bangalore, Karnataka 560038, India ("Dr Fit Veda", "we", "us"). By registering an account, purchasing a membership package, booking a standalone consultation, or navigating the platform, you enter into a legally binding contract under these Terms. If you do not agree, you must cease using the platform immediately.
+    This agreement is entered into between <strong>Dr Fit Veda Holistic Health Services Ltd.</strong>, a company incorporated under the laws of India, having its principal place of business at Health & Wellness Tower, Indiranagar, Bangalore, Karnataka 560038, India ("Dr Fit Veda", "we", "us"), and the registered user ("Client", "you").
 </p>
 <p>
-    <strong>Non-Conflation of Terms:</strong> Acceptance of these operational Terms does not constitute blanket consent to the processing of sensitive personal health data, recording of live sessions, or promotional marketing. All sensitive data processing is governed by independent, unbundled consents under our Privacy Policy.
-</p>
-
-<h2>2. Eligibility and Account Security</h2>
-<p>
-    You must be at least <strong>18 years of age</strong> and legally capable of executing contracts under the Indian Contract Act 1872. You agree to provide true, current, and complete information during onboarding. You are strictly responsible for maintaining credential secrecy and for all actions executed under your authenticated session. Account sharing, sub-licensing, or joint access is strictly prohibited.
+    By registering an account, purchasing a wellness membership, or booking a clinical consultation, you agree to be bound by these Terms. This electronic record is generated by a computer system and does not require physical signatures pursuant to Section 10A of the Information Technology Act, 2000.
 </p>
 
-<h2>3. Scope of Online Wellness Services</h2>
+<h2>2. Eligibility and Capacity to Contract</h2>
 <p>
-    Dr Fit Veda delivers online lifestyle modification, naturopathic consultation, nutrition planning, yoga therapy, and 1-on-1 fitness coaching. Our services constitute supportive wellness, nutritional, and physical training guidance delivered via digital tools. They do not constitute emergency medical care or hospital services. Full clinical limitations are set forth in our Medical, Fitness & Nutrition Disclaimer.
+    You affirm that you are at least <strong>18 years of age</strong> and possess full legal capacity to enter into a binding contract under Section 11 of the Indian Contract Act, 1872. You agree to provide true, current, and accurate disclosures during intake. Accounts are personal, non-transferable, and non-assignable.
 </p>
 
-<h2>4. Live Training and Video Consultations</h2>
+<h2>3. Scope of Digital Health, Naturopathy, and Fitness Services</h2>
+<p>
+    Dr Fit Veda provides doctor-guided naturopathy consultations, dietary planning, yoga therapy, and personal fitness training delivered via digital tools. All services are wellness, lifestyle modification, and supportive health programmes.
+</p>
+<p>
+    <strong>Emergency Care Exclusion:</strong> The platform does not deliver emergency medical services, ICU care, acute trauma management, or hospital care. Complete clinical boundaries are set forth in our Medical, Fitness & Nutrition Disclaimer.
+</p>
+
+<h2>4. Virtual Sessions and Video Recording Policies</h2>
 <ul>
-    <li>All live virtual sessions are conducted via our integrated video partner, <strong>Zoho Meeting</strong>.</li>
-    <li>Where session recording is included in your membership tier (such as 1-on-1 fitness training), recording requires explicit client consent. You may request to disable recording at any time; doing so may limit posture review features.</li>
-    <li><strong>Retention of Recordings:</strong> To protect client privacy and storage hygiene, the platform enforces a strict single-active recording policy. Only the most recent recording is retained; prior sessions are queued for automated permanent deletion after a grace period.</li>
-    <li><strong>User Conduct in Live Sessions:</strong> Recording, screenshotting, disseminating, or publicly publishing virtual consultations or training sessions without express written consent is strictly prohibited and constitutes grounds for immediate termination.</li>
+    <li>All live virtual sessions are conducted via our integrated video provider, <strong>Zoho Meeting</strong>.</li>
+    <li><strong>Consent for Recording:</strong> Live fitness training sessions are recorded only where client explicit consent is recorded. A client may revoke recording consent at any time without terminating live access.</li>
+    <li><strong>Strict Privacy Architecture:</strong> To prevent data proliferation, only the single latest recording is maintained in client storage; prior sessions are permanently deleted after a 24-hour grace period.</li>
+    <li><strong>Intellectual Property & Non-Recording:</strong> Clients shall not record, capture, screen-record, screenshot, or distribute sessions or training materials without prior written consent.</li>
 </ul>
 
-<h2>5. Pricing, Billing, and Currency</h2>
+<h2>5. Pricing, Invoicing, and Statutory Taxes (GST)</h2>
 <p>
-    All prices are denominated in <strong>Indian Rupees (₹ INR)</strong> <em>[CONFIRM: Whether listed prices are inclusive of 18% GST and how overseas transactions in AED/USD are billed]</em>. Membership subscriptions are fixed-term contracts paid in full in advance.
+    All prices on drfitveda.com are denominated in <strong>Indian Rupees (₹ INR)</strong>. <em>[CONFIRM: Whether listed package prices are inclusive of 18% Goods and Services Tax (GST) under Indian tax laws].</em> Invoices reflecting applicable GSTIN details are issued upon transaction completion.
 </p>
 <p>
-    <strong>No Hidden Auto-Renewals:</strong> Dr Fit Veda does not deploy deceptive recurring auto-debit dark patterns. Subscriptions terminate at the end of their contracted duration unless you manually renew.
+    <strong>No Auto-Debit / Dark Patterns:</strong> In compliance with Consumer Protection (E-Commerce) Rules, 2020, memberships are fixed-term contracts paid in advance and do not renew automatically without explicit affirmative authorization.
 </p>
 
-<h2>6. User Health Disclosures and Obligations</h2>
+<h2>6. Client Health Disclosures and Adherence Obligations</h2>
 <ul>
-    <li>You warrant that all health histories, symptoms, lifestyle details, medications, allergies, and pregnancy statuses disclosed to our care team are accurate and complete.</li>
-    <li>You must promptly inform your care team of any emerging medical conditions, acute pain, injuries, or adverse symptoms, and immediately halt any exercise causing physical distress.</li>
-    <li>You shall not upload forged diagnostic documents or health records belonging to third parties without lawful proxy authority.</li>
+    <li>Clients are legally obligated to provide complete and accurate medical histories, current prescription medications, clinical diagnoses, and physiological limitations.</li>
+    <li>Clients must immediately notify their assigned care team of any emerging medical condition, surgery, acute pain, or pregnancy, and immediately cease any physical movement causing pain.</li>
+    <li>Clients shall not submit forged medical documents or diagnostic records belonging to other individuals without lawful authority.</li>
 </ul>
 
-<h2>7. Prohibited Uses and Platform Integrity</h2>
+<h2>7. Prohibited Platform Conduct</h2>
 <p>
-    Users shall not: (a) reverse-engineer, decompile, scrape, or extract platform source code; (b) introduce malicious code, denial-of-service scripts, or automated spiders; (c) harass, demean, or abuse healthcare professionals, trainers, or personnel; (d) use platform consultations for illegal, defamatory, or deceptive purposes. Violations will result in immediate account suspension, forfeiture of access, and referral to law enforcement where warranted.
+    Clients shall not: (a) reverse-engineer, decompile, scrape, or extract platform software; (b) introduce malicious code, bots, or automated scrapers; (c) verbally abuse, harass, or demean healthcare professionals or fitness trainers; (d) use consultation services for defamatory, fraudulent, or unlawful purposes under the Indian Penal Code / Bharatiya Nyaya Sanhita. Violations will result in immediate termination of account access and referral to authorities where appropriate.
 </p>
 
 <h2>8. Intellectual Property and Proprietary Rights</h2>
 <p>
-    All platform design assets, custom software, fitness regimens, diet methodologies, logos, and digital educational materials remain the sole exclusive property of Dr Fit Veda Holistic Health Services Ltd. You are granted a personal, revocable, non-exclusive, non-transferable licence to consume personalised plans for personal wellness.
+    All diet formulations, yoga sequences, proprietary software, design layouts, and trademarks are the exclusive intellectual property of Dr Fit Veda Holistic Health Services Ltd., protected under the Indian Copyright Act, 1957 and Trade Marks Act, 1999. Clients are granted a limited, personal, revocable, non-exclusive licence for personal wellness consumption.
 </p>
 
-<h2>9. Data Privacy and Rights</h2>
+<h2>9. Data Privacy and Regulatory Rights</h2>
 <p>
-    Our data handling procedures are governed by our Privacy Policy. Customers can submit data access, portability, rectification, and erasure requests at any time via the dedicated Data Subject Request form at <code>/data-request</code>.
+    All processing of personal and health data is governed by our Privacy Policy in compliance with the DPDP Act 2023. Data Subject Requests for access, correction, or erasure may be initiated at <code>drfitveda.com/data-request</code>.
 </p>
 
-<h2>10. Limitation of Liability and Warranties</h2>
+<h2>10. Limitation of Liability and Statutory Warranties</h2>
 <p>
-    Nothing in these Terms excludes or limits liability for gross negligence, willful misconduct, intentional fraud, or personal injury that cannot be limited under applicable Indian consumer protection jurisprudence. Subject to the foregoing, Dr Fit Veda, its directors, employees, and contracted professionals shall not be liable for indirect, incidental, or consequential damages resulting from platform use.
+    Nothing in these Terms limits liability for gross negligence, willful misconduct, or personal injury that cannot be limited under applicable Indian consumer jurisprudence. Subject to statutory limitations, Dr Fit Veda and its contracted professionals shall not be liable for indirect, incidental, or consequential damages resulting from platform use.
 </p>
 <p>
-    <strong>Liability Cap:</strong> <em>[CONFIRM: Total aggregate liability for commercial claims under this agreement shall be capped at the total subscription fees actually paid by the user to Dr Fit Veda in the twelve (12) months preceding the incident].</em>
+    <strong>Liability Cap:</strong> <em>[CONFIRM: Total aggregate liability for commercial claims under this agreement shall be capped at the total subscription fees actually paid by the client to Dr Fit Veda in the twelve (12) months preceding the claim].</em>
 </p>
 
 <h2>11. Service Availability and Modifications</h2>
 <p>
-    We reserve the right to alter, enhance, or temporarily suspend aspects of the platform for maintenance or technical upgrades. Where a paid service is permanently discontinued prior to full utilization, a pro-rata refund for the unused duration will be issued pursuant to our Refund Policy.
+    We reserve the right to upgrade or modify platform features with reasonable advance notice. Where a prepaid service is permanently discontinued prior to full utilization, a pro-rata refund for the unconsumed duration will be disbursed pursuant to our Refund Policy.
 </p>
 
-<h2>12. Governing Law and Exclusive Dispute Forum</h2>
+<h2>12. Governing Law, Dispute Resolution, and Jurisdiction</h2>
 <p>
-    These Terms are executed and governed in accordance with the substantive laws of <strong>India</strong>. The courts of competent jurisdiction located in <strong>Bangalore, Karnataka, India</strong> shall have exclusive jurisdiction to adjudicate disputes arising from these Terms, subject to prior informal escalation to our Grievance Officer. <em>[CONFIRM with legal counsel].</em>
+    This electronic agreement is governed by and construed in accordance with the substantive laws of the <strong>Republic of India</strong>. All legal disputes, claims, or proceedings arising out of this agreement shall be subject to the exclusive jurisdiction of the competent civil courts situated at <strong>Bangalore, Karnataka, India</strong>, following prior informal escalation to our Grievance Officer. <em>[CONFIRM with legal counsel].</em>
 </p>
 
-<h2>13. Amendments to Terms</h2>
+<h2>13. Modifications to Agreement</h2>
 <p>
     We will provide at least 15 days' advance notification of material amendments to these Terms via email or prominent platform banners. Continued use of the platform after the effective date of revised terms constitutes acceptance thereof.
 </p>
@@ -550,26 +571,26 @@ TERMS_BODY = """
 # 3. Cookie Policy
 COOKIES_BODY = """
 <div class="lead-text">
-    This Cookie Policy details how Dr Fit Veda uses cookies and local browser storage technologies on drfitveda.com and its authenticated portals. It is based on a comprehensive audit of the active Next.js production codebase.
+    This Cookie Policy details the use of browser cookies and local storage technologies on drfitveda.com. It is based on a technical audit of the active Next.js production codebase and aligns with the Information Technology Act, 2000 and the Digital Personal Data Protection Act, 2023.
 </div>
 
 <div class="confirm-box">
-    <strong>Instructions for Legal Counsel:</strong> Please confirm that our current deployment of strictly necessary cookies exempts the platform from displaying an intrusive cookie consent banner under Indian SPDI Rules, DPDP Act 2023, and international ePrivacy guidelines.
+    <strong>Advocate Review Checklist (Indian IT & Privacy Regulations):</strong> Please confirm our technical assessment that because the platform deploys strictly necessary first-party cookies and zero third-party advertising/tracking cookies, an intrusive consent popup banner is not mandated under Indian law.
 </div>
 
-<h2>1. Summary and Zero-Tracking Commitment</h2>
+<h2>1. Zero-Tracking Commitment and Architectural Summary</h2>
 <p>
-    Dr Fit Veda operates on a strict privacy-first foundation. The platform deploys <strong>only strictly necessary cookies</strong> required for user authentication, security verification, and role-based access control.
+    Dr Fit Veda operates on a strict privacy-first foundation. The platform deploys <strong>only strictly necessary, functional first-party cookies</strong> required to authenticate users, enforce role-based access control, and protect against cross-site request forgery.
 </p>
 <p>
-    <strong>Zero Advertising and Analytics Trackers:</strong> We do not deploy third-party advertising cookies, behavioural retargeting pixels (such as Meta Pixel or Google Ads), commercial tracking beacons, or cross-site fingerprinting scripts. Because strictly necessary cookies are exempt from prior consent requirements under ePrivacy guidelines and are not categorised as tracking under Indian or UAE data laws, no cookie consent banner is mandated at this time. Should non-essential analytics or marketing trackers be introduced in future releases, a compliant opt-in consent banner with granular controls will be deployed prior to firing any such scripts.
+    <strong>Absence of Third-Party Advertising & Behavioural Pixels:</strong> We do not deploy third-party advertising networks, behavioural retargeting trackers (e.g., Meta Pixel, Google Ads remarketing), commercial beacons, or browser fingerprinting scripts. Because functional security cookies do not track user behaviour across external websites and are essential to deliver requested digital services, a separate cookie consent banner is not mandated under Indian privacy and IT regulations.
 </p>
 
-<h2>2. Inventory of Active Cookies</h2>
+<h2>2. Complete Inventory of Active Cookies</h2>
 <table>
     <thead>
         <tr>
-            <th style="width: 25%;">Cookie Name</th>
+            <th style="width: 25%;">Cookie Identifier</th>
             <th style="width: 35%;">Technical Purpose</th>
             <th style="width: 15%;">Classification</th>
             <th style="width: 12%;">Duration</th>
@@ -579,14 +600,14 @@ COOKIES_BODY = """
     <tbody>
         <tr>
             <td><code>drf_session</code></td>
-            <td>Maintains encrypted session state, verifies authenticated user role (customer, professional, admin), and protects against session hijacking. Configured with <code>HttpOnly</code>, <code>Secure</code>, and <code>SameSite=Lax</code> flags.</td>
+            <td>Maintains encrypted session state, verifies authenticated user role (customer, doctor, trainer, admin), and protects against session hijacking. Configured with <code>HttpOnly</code>, <code>Secure</code>, and <code>SameSite=Lax</code> flags.</td>
             <td>Strictly Necessary</td>
             <td>7 Days</td>
             <td>Dr Fit Veda (First-Party)</td>
         </tr>
         <tr>
             <td><code>sb-*-auth-token</code></td>
-            <td>Manages secure authentication tokens and session refresh handshakes with the Supabase database instance.</td>
+            <td>Manages secure authentication handshakes and token refresh cycles with the Supabase database instance.</td>
             <td>Strictly Necessary</td>
             <td>Session / Refresh cycle</td>
             <td>Dr Fit Veda / Supabase</td>
@@ -594,7 +615,7 @@ COOKIES_BODY = """
     </tbody>
 </table>
 
-<h2>3. Self-Hosted Assets and Third-Party Isolation</h2>
+<h2>3. Self-Hosted Static Assets and Third-Party IP Isolation</h2>
 <p>
     To eliminate passive tracking and IP address leakage, all web typography (Nunito Sans) is self-hosted directly from our first-party origin (<code>/fonts/</code>). No connections are established with Google Fonts servers. All UI icons, sample video demonstrations, and SVG assets are served directly from our origin server.
 </p>
@@ -602,27 +623,27 @@ COOKIES_BODY = """
     When a customer joins an encrypted teleconsultation or live training session via Zoho Meeting, the connection is handed off to Zoho's video bridge, whereupon Zoho's independent security policies govern the real-time media transmission.
 </p>
 
-<h2>4. User Management of Browser Storage</h2>
+<h2>4. Browser Management and Deletion</h2>
 <p>
-    Users can inspect, delete, or block cookies through standard browser settings. However, disabling strictly necessary cookies will inhibit user login and prevent access to the authenticated customer and professional dashboards.
+    Users can inspect, delete, or block cookies through browser preferences. However, disabling strictly necessary cookies will inhibit user login and prevent access to the authenticated customer and professional dashboards.
 </p>
 """
 
 # 4. Refund Policy
 REFUND_BODY = """
 <div class="lead-text">
-    This Refund & Cancellation Policy outlines the conditions, timelines, and procedures governing membership terminations, consultation cancellations, and financial reimbursements for services offered by Dr Fit Veda.
+    This Refund & Cancellation Policy sets forth the terms, timelines, and commercial conditions governing membership cancellations, consultation rescheduling, and financial reimbursements. It is drafted pursuant to the Consumer Protection Act, 2019 and the Consumer Protection (E-Commerce) Rules, 2020.
 </div>
 
 <div class="confirm-box">
-    <strong>Instructions for Legal Counsel & Management:</strong> Please review and finalize the placeholder terms marked <code>[CONFIRM]</code>, specifically: cooling-off period (e.g., 7 days vs 14 days), pro-rata cancellation deductions, and the commercial terms of the "100% Satisfaction Guarantee".
+    <strong>Advocate & Management Review Checklist:</strong> Please review and finalize the placeholder parameters marked <code>[CONFIRM]</code>: (1) Cooling-off cancellation window (e.g., 7 calendar days); (2) Consultation cancellation notice window (e.g., 24 hours); and (3) Qualifying criteria for the "100% Satisfaction Guarantee" promotion.
 </div>
 
 <h2>1. Scope of Purchased Services</h2>
 <ul>
-    <li><strong>Fixed-Term Memberships:</strong> Pre-paid packages (1 Month, 3 Months, 6 Months, 12 Months) delivering customised fitness training, clinical nutrition, yoga regimens, and ongoing professional supervision. Memberships terminate automatically at contract end without auto-debit.</li>
-    <li><strong>Standalone Consultations:</strong> Per-session appointments with certified Doctors (Yoga, PCOD/PCOS, General Wellness) booked at fixed slot durations.</li>
-    <li><strong>Currency:</strong> All transactions are conducted in Indian Rupees (₹ INR) <em>[CONFIRM: Foreign exchange conversion for UAE referral clients]</em>.</li>
+    <li><strong>Fixed-Term Wellness Memberships:</strong> Pre-paid subscription packages (1 Month, 3 Months, 6 Months, 12 Months) delivering customized fitness routines, clinical nutrition plans, yoga sessions, and multi-disciplinary professional supervision. Fixed-term subscriptions do not auto-debit.</li>
+    <li><strong>Standalone Consultations:</strong> Per-session appointments with certified Doctors (Yoga Doctor, PCOD/PCOS Specialist, General Naturopathic Doctor) booked for designated slot durations.</li>
+    <li><strong>Currency & Pricing:</strong> All transactions are conducted in Indian Rupees (₹ INR) inclusive of applicable taxes.</li>
 </ul>
 
 <h2>2. Cancellation Timelines and Guidelines</h2>
@@ -632,13 +653,13 @@ REFUND_BODY = """
     <li><strong>Cancellations by Dr Fit Veda:</strong> If a scheduled professional is unavailable due to medical emergency or technical outage, the client will be offered an immediate rescheduled slot or a 100% full refund for the affected session.</li>
 </ul>
 
-<h2>3. Eligibility for Refund</h2>
-<p>Clients are entitled to a full or partial refund under the following circumstances:</p>
+<h2>3. Statutory and Commercial Refund Eligibility</h2>
+<p>Clients are entitled to a refund under the following circumstances:</p>
 <ul>
     <li><strong>Billing Errors & Technical Double Charges:</strong> Where an erroneous duplicate debit occurs or payment succeeds without service activation.</li>
     <li><strong>Service Inability:</strong> Where Dr Fit Veda is unable to assign a qualified professional or permanently discontinues a booked programme.</li>
-    <li><strong>Cooling-Off Window:</strong> Where cancellation is submitted within <strong>[CONFIRM: 7 calendar days]</strong> of initial purchase and the user has consumed no more than <strong>[CONFIRM: 2 sessions]</strong>, refund is granted less the nominal fair value of delivered sessions.</li>
-    <li><strong>Statutory Consumer Rights:</strong> Any non-waivable statutory refund rights guaranteed under the Indian Consumer Protection (E-Commerce) Rules 2020 or applicable consumer laws.</li>
+    <li><strong>Statutory Cooling-Off Window:</strong> Where cancellation is submitted within <strong>[CONFIRM: 7 calendar days]</strong> of initial purchase and the user has consumed no more than <strong>[CONFIRM: 2 sessions]</strong>, refund is granted less the nominal fair value of delivered sessions.</li>
+    <li><strong>Statutory Consumer Rights:</strong> Any non-waivable statutory refund rights guaranteed under the Indian Consumer Protection (E-Commerce) Rules 2020.</li>
 </ul>
 <p>
     <strong>Mid-Term Pro-Rata Deductions:</strong> <em>[CONFIRM: Where mid-term cancellation is approved on compassionate/medical grounds, refund will be computed pro-rata against unconsumed weeks, deducting a 5% administrative payment-gateway processing fee].</em>
@@ -647,7 +668,7 @@ REFUND_BODY = """
     <strong>"100% Satisfaction Guarantee" Terms:</strong> <em>[CONFIRM: The landing page features a '100% Satisfaction Guarantee' badge. Counsel must formally validate the exact criteria: e.g., client must have maintained 85%+ adherence to daily check-ins and diet logs for 30 consecutive days, or this promotional claim must be modified].</em> Dr Fit Veda does not guarantee specific biological weight-loss or medical cure outcomes.
 </p>
 
-<h2>4. Refund Processing and Disbursement Timelines</h2>
+<h2>4. Refund Disbursement Timelines and Mode</h2>
 <p>
     Approved refunds are disbursed exclusively to the original payment instrument (credit card, debit card, UPI, net banking) via our licensed payment gateway. Refunds are processed by Dr Fit Veda within <strong>[CONFIRM: 5 to 7 business days]</strong> of approval. Bank processing cycles may require an additional 3–5 working days to reflect on customer statements.
 </p>
@@ -661,176 +682,177 @@ REFUND_BODY = """
 # 5. Medical Disclaimer
 DISCLAIMER_BODY = """
 <div class="lead-text">
-    This Medical, Fitness & Nutrition Disclaimer outlines the clinical and legal boundaries of guidance provided through Dr Fit Veda. All users must read and acknowledge this notice prior to commencing programmes or scheduling consultations.
+    This Medical, Fitness & Nutrition Disclaimer sets forth the clinical boundaries, emergency exclusions, and risk warnings governing guidance provided through drfitveda.com. It is formulated in accordance with the Telemedicine Practice Guidelines, 2020 (issued by the National Medical Commission), professional codes of medical ethics, and the Drugs and Magic Remedies (Objectionable Advertisements) Act, 1954.
 </div>
 
 <div class="confirm-box">
-    <strong>Instructions for Legal Counsel:</strong> Please confirm compliance of these disclaimers with the Telemedicine Practice Guidelines (2020) and statutory guidelines for AYUSH / Naturopathy / Dietetics professionals in India and cross-border telehealth advisory standards.
+    <strong>Advocate Review Checklist (Medical & Advertising Compliance):</strong> Please review the disclaimer terms for compliance with Indian Telemedicine Guidelines and confirm that advertising copy conforms to the statutory prohibitions under the Drugs and Magic Remedies (Objectionable Advertisements) Act, 1954.
 </div>
 
-<h2>1. Supportive Wellness Care — Not Emergency or Hospital Care</h2>
+<h2>1. Supportive Wellness Guidance — Strict Exclusion of Emergency Care</h2>
 <p>
-    Dr Fit Veda delivers online lifestyle modification, naturopathic consultation, nutritional guidance, and yoga/fitness training. Our services are <strong>strictly not an emergency medical service</strong> and do not replace comprehensive physical in-person clinical diagnosis, hospital admission, acute disease treatment, or direct surgical intervention by a primary healthcare physician.
+    Dr Fit Veda provides doctor-guided naturopathy consultations, dietary lifestyle planning, yoga therapy, and fitness training delivered through electronic media. Services provided on this platform constitute <strong>supportive wellness and lifestyle guidance only</strong>.
 </p>
 <p>
-    Never ignore, disregard, or delay obtaining professional in-person medical advice because of recommendations, meal plans, or workout instructions received through this platform.
+    <strong>Not an Emergency Medical Service:</strong> This platform is strictly not an emergency medical facility, critical care service, or hospital. It does not replace physical, in-person clinical diagnosis, clinical examination, pathology verification, or emergency hospital admission by a licensed primary care physician. Never ignore, disregard, or delay obtaining professional in-person medical advice because of recommendations or information received through this platform.
 </p>
 
-<h2>2. Emergency Medical Protocol (Immediate Action)</h2>
+<h2>2. Emergency Medical Protocol (Immediate Action Required)</h2>
 <p>
-    If you or someone under your care experiences severe or acute symptoms — including chest pain, crushing pressure, shortness of breath, sudden numbness, severe hemorrhage, loss of consciousness, stroke symptoms, allergic anaphylaxis, or acute psychiatric crisis — <strong>immediately contact emergency services</strong>:
+    If you or someone under your care experiences acute, critical, or life-threatening symptoms — including crushing chest pain or pressure, severe shortness of breath, sudden numbness, loss of consciousness, uncontrolled hemorrhage, symptoms of stroke, acute allergic anaphylaxis, or psychiatric crisis — <strong>immediately contact emergency emergency services or proceed to the nearest hospital emergency room</strong>:
 </p>
-<div style="background: #fef2f2; border: 1.5px solid #f87171; border-radius: 6px; padding: 12px 16px; margin: 12px 0; font-size: 9.5pt; color: #991b1b;">
-    <strong>India Emergency Ambulance:</strong> Dial <strong>112</strong> or <strong>108</strong><br>
-    <strong>United Arab Emirates Emergency Services:</strong> Dial <strong>998</strong> (Ambulance) or <strong>999</strong> (Police)<br>
-    <strong>Immediate Hospital Transfer:</strong> Transport the patient immediately to the nearest tertiary emergency department.
+<div style="background: #fef2f2; border: 1.5px solid #dc2626; border-radius: 6px; padding: 12px 16px; margin: 12px 0; font-size: 9pt; color: #991b1b;">
+    <strong>National Emergency Number (India):</strong> Dial <strong>112</strong><br>
+    <strong>Ambulance Emergency Helpline (India):</strong> Dial <strong>108</strong> / <strong>102</strong><br>
+    <strong>Immediate Hospital Transfer:</strong> Transport the patient immediately to the nearest tertiary hospital casualty / emergency department.
 </div>
 
-<h2>3. Pre-Existing Clinical Conditions and Medical Clearance</h2>
+<h2>3. Pre-Existing Clinical Conditions and Treating Physician Clearance</h2>
 <p>
-    You are legally and medically obligated to consult your primary treating physician before commencing any programme if you:
+    Clients are legally and medically obligated to seek prior written clearance from their primary treating medical doctor before commencing any wellness or fitness regimen if they:
 </p>
 <ul>
-    <li>Have diagnosed cardiovascular, renal, metabolic, endocrine, or pulmonary conditions (e.g., Type 1/Type 2 Diabetes, Hypertension, Coronary Artery Disease, Thyroid disorders, Chronic Kidney Disease, PCOD/PCOS);</li>
-    <li>Take daily prescription medications, including antihypertensives, insulin, oral hypoglycaemics, anticoagulants, or psychiatric medications;</li>
-    <li>Are pregnant, planning pregnancy, breastfeeding, recovering from recent surgery, or managing eating disorders;</li>
-    <li>Are over the age of 60 and initiating vigorous physical exercise for the first time.</li>
+    <li>Have diagnosed cardiovascular, endocrine, renal, hepatic, or metabolic disorders (including Type 1/Type 2 Diabetes, Hypertension, Coronary Artery Disease, Thyroid disease, Chronic Kidney Disease, PCOD/PCOS);</li>
+    <li>Take daily prescription medications, including insulin, oral hypoglycaemics, antihypertensives, anticoagulants, or psychiatric medications;</li>
+    <li>Are pregnant, planning pregnancy, breastfeeding, recovering from surgical procedures, or managing eating disorders;</li>
+    <li>Are over the age of 60 and commencing physical training for the first time.</li>
 </ul>
 <p>
-    <strong>Prescription Medication Inviolability:</strong> Never adjust, reduce, taper, or terminate prescription medications without the express written approval of your treating licensed medical doctor.
+    <strong>Prescription Medication Inviolability:</strong> Never adjust, taper, reduce, or stop prescription medications or clinical therapies without the express written direction of your treating licensed physician.
 </p>
 
-<h2>4. Physical Exercise and Yoga Safety</h2>
+<h2>4. Physical Fitness and Yoga Asana Safety</h2>
 <p>
-    Physical exercise and yoga asanas carry inherent physiological risks of muscle strain, joint sprain, or cardiovascular stress. You must exercise in a hazard-free space, maintain adequate hydration, follow your trainer's instructions, and immediately cease any activity that produces acute pain, dizziness, or chest discomfort.
+    Physical exercise, movement rehabilitation, and yoga asanas carry inherent physiological risks of muscle sprain, joint strain, ligament tear, or cardiovascular stress. Clients must exercise in a clear, hazard-free physical environment, maintain proper hydration, adhere strictly to trainer instructions, and immediately cease any activity that causes sharp pain, dizziness, or chest discomfort.
 </p>
 
 <h2>5. Nutritional Plans and Allergen Disclosures</h2>
 <p>
-    Nutritional regimens are prepared based exclusively on user-provided dietary disclosures. It is your sole responsibility to review meal suggestions against known food allergies, histamine intolerances, or clinical dietary restrictions. Dietary supplements or herbal preparations must be verified for cross-interactions with prescription medications.
+    Nutritional regimens are formulated based exclusively on client-provided dietary disclosures. Clients bear sole responsibility for verifying all meal recommendations against personal allergies, food intolerances, and clinical restrictions. Herbal or nutritional supplements must be cleared with treating doctors to avoid drug-nutrient cross-interactions.
 </p>
 
-<h2>6. Non-Guarantee of Clinical Results and Weight Loss</h2>
+<h2>6. Non-Guarantee of Biological Outcomes (DMR Act Compliance)</h2>
 <p>
-    Physiological outcomes vary substantially based on genetics, metabolic health, hormonal profiles, and adherence. Dr Fit Veda explicitly does not guarantee specific biological weight loss, chronic disease reversal, cure, or guaranteed clinical outcomes. Testimonials and success stories displayed on the platform reflect individual customer experiences and do not represent guaranteed outcomes.
+    In compliance with the Drugs and Magic Remedies (Objectionable Advertisements) Act, 1954 and ASCI Guidelines, Dr Fit Veda explicitly clarifies that physiological responses vary widely across individuals. <strong>Dr Fit Veda makes no claim, promise, or guarantee of complete disease cure, permanent reversal of chronic metabolic illnesses, or specific kilograms of weight loss.</strong> Testimonials on the website describe individual experiences and do not represent guaranteed or typical outcomes.
 </p>
 
-<h2>7. Artificial Intelligence and Algorithmic Disclosures</h2>
+<h2>7. Artificial Intelligence and Professional Standards</h2>
 <p>
-    The platform currently does not deploy autonomous generative artificial intelligence for clinical diagnosis or prescription generation. All care plans, diet charts, and assessments are reviewed and created by certified human healthcare and fitness professionals.
-</p>
-
-<h2>8. Professional Standards and Duty of Care</h2>
-<p>
-    All contracted doctors, nutritionists, yoga therapists, and fitness coaches are credentialed professionals required to adhere to their respective statutory codes of ethics. Nothing in this disclaimer limits liability for medical negligence that cannot be excluded under applicable Indian law.
+    The platform does not deploy autonomous generative artificial intelligence to issue medical diagnoses or generate prescriptions. All health consultations and regimens are evaluated and prepared by qualified human professionals (BNYS Naturopathic Doctors, certified nutritionists, certified yoga therapists, and fitness coaches). All professionals are required to maintain valid registrations and adhere to professional standards.
 </p>
 """
 
 # Master Package Executive Cover and Index
 MASTER_COVER = """
-<div style="text-align: center; padding: 40px 0 30px 0; border-bottom: 2px solid #0f766e;">
-    <div style="font-size: 26pt; font-weight: 800; color: #0f766e; letter-spacing: -1px; margin-bottom: 8px;">DR FIT VEDA</div>
-    <div style="font-size: 13pt; font-weight: 600; color: #334155; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 15px;">Corporate Legal & Compliance Audit Package</div>
-    <div style="font-size: 10pt; color: #64748b;">Comprehensive Regulatory Documentation for Legal Counsel Formal Sign-Off</div>
-    <div style="margin-top: 15px;">
-        <span class="status-tag" style="font-size: 9pt; padding: 4px 12px;">Version 0.1-DRAFT (For Advocate Review & Formal Approval)</span>
+<div style="text-align: center; padding: 35px 0 25px 0; border-bottom: 2.5px solid #0f766e;">
+    <div style="font-size: 24pt; font-weight: 800; color: #0f766e; letter-spacing: -0.5px; margin-bottom: 6px;">DR FIT VEDA</div>
+    <div style="font-size: 12pt; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px;">Corporate Legal & Regulatory Compliance Dossier (India)</div>
+    <div style="font-size: 9.5pt; color: #64748b;">Comprehensive Legal Governance Policies Prepared for Review, Approval, and Execution by Indian Advocate</div>
+    <div style="margin-top: 14px;">
+        <span class="status-tag" style="font-size: 8.5pt; padding: 4px 12px;">Version 0.2-DRAFT (Statutory Indian Jurisprudence Scope)</span>
     </div>
 </div>
 
-<div style="margin: 30px 0; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 20px;">
-    <h2 style="margin-top: 0; color: #0f766e;">Executive Legal Overview & Background</h2>
-    <p style="font-size: 9.5pt; color: #334155;">
+<div style="margin: 25px 0; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 18px;">
+    <h2 style="margin-top: 0; color: #0f766e; font-size: 11pt;">Executive Legal Context & Regulatory Alignment</h2>
+    <p style="font-size: 9pt; color: #334155; margin-bottom: 8px;">
         This document bundle contains the complete, authoritative legal policies and regulatory governance frameworks drafted for <strong>Dr Fit Veda Holistic Health Services Ltd.</strong> (operating <strong>drfitveda.com</strong>).
     </p>
-    <p style="font-size: 9.5pt; color: #334155;">
-        The policies have been crafted by expert software, privacy, and compliance auditors following a meticulous end-to-end review of the platform's active technical architecture, database schemas, and digital intake channels. They strictly avoid hypothetical representations and reflect real data flows.
+    <p style="font-size: 9pt; color: #334155; margin-bottom: 0;">
+        <strong>Jurisdictional Mandate:</strong> Dr Fit Veda is an Indian corporate enterprise. All company registrations, digital service transactions, customer contracts, personal data processing, and compliance protocols are governed primarily and strictly by <strong>applicable laws of the Republic of India and Government of India regulations</strong>. Foreign legal regimes are not presumed to apply merely due to the geographical location of visitors or referral clients.
     </p>
 </div>
 
-<h2>Table of Contents & Document Hierarchy</h2>
+<h2>Statutory Matrix & Governing Indian Laws</h2>
 <table>
     <thead>
         <tr>
-            <th style="width: 8%;">Doc #</th>
-            <th style="width: 32%;">Document Title</th>
-            <th style="width: 35%;">Governing Statutory Frameworks</th>
-            <th style="width: 25%;">Legal Sign-Off Status</th>
+            <th style="width: 28%;">Statutory Legislation</th>
+            <th style="width: 27%;">Regulatory Authority</th>
+            <th style="width: 25%;">Compliance Governance Scope</th>
+            <th style="width: 20%;">Implementation Status</th>
         </tr>
     </thead>
     <tbody>
         <tr>
-            <td><strong>01</strong></td>
-            <td><strong>Privacy Policy</strong></td>
-            <td>DPDP Act 2023, IT SPDI Rules 2011, UAE Decree-Law 45/2021</td>
-            <td>Draft — Pending Counsel Sign-Off</td>
+            <td><strong>Digital Personal Data Protection Act, 2023 (DPDP Act)</strong></td>
+            <td>Data Protection Board of India / MeitY</td>
+            <td>Data Fiduciary notice, consent logs, Data Principal rights, breach reporting</td>
+            <td><strong>Implemented in Policies & DB</strong></td>
         </tr>
         <tr>
-            <td><strong>02</strong></td>
-            <td><strong>Terms & Conditions</strong></td>
-            <td>Indian Contract Act 1872, Consumer Protection (E-Commerce) Rules 2020</td>
-            <td>Draft — Pending Counsel Sign-Off</td>
+            <td><strong>Information Technology Act, 2000 & SPDI Rules, 2011</strong></td>
+            <td>Ministry of Electronics and Information Technology (MeitY)</td>
+            <td>Sensitive personal data protection, mandatory Grievance Officer, security practices</td>
+            <td><strong>Implemented in Policies & System</strong></td>
         </tr>
         <tr>
-            <td><strong>03</strong></td>
-            <td><strong>Cookie Policy</strong></td>
-            <td>IT Act 2000, International ePrivacy Regulations</td>
-            <td>Draft — Pending Counsel Sign-Off</td>
+            <td><strong>Consumer Protection Act, 2019 & E-Commerce Rules, 2020</strong></td>
+            <td>Central Consumer Protection Authority (CCPA)</td>
+            <td>Transparent pricing, no dark patterns, cancellation & refund rules, unfair trade practice bar</td>
+            <td><strong>Implemented in Terms & Refund</strong></td>
         </tr>
         <tr>
-            <td><strong>04</strong></td>
-            <td><strong>Refund & Cancellation Policy</strong></td>
-            <td>Consumer Protection Act 2019, E-Commerce Rules 2020</td>
-            <td>Draft — Pending Counsel Sign-Off</td>
+            <td><strong>Telemedicine Practice Guidelines, 2020</strong></td>
+            <td>National Medical Commission (NMC) / Ministry of AYUSH</td>
+            <td>RMP digital consultation norms, record-keeping, non-emergency care boundaries</td>
+            <td><strong>Implemented in Disclaimer</strong></td>
         </tr>
         <tr>
-            <td><strong>05</strong></td>
-            <td><strong>Medical, Fitness & Nutrition Disclaimer</strong></td>
-            <td>Telemedicine Practice Guidelines 2020, Medical Ethics Norms</td>
-            <td>Draft — Pending Counsel Sign-Off</td>
+            <td><strong>Drugs & Magic Remedies (Objectionable Advertisements) Act, 1954</strong></td>
+            <td>Ministry of Health and Family Welfare</td>
+            <td>Prohibition of misleading medical claims, non-guarantee of chronic condition cure</td>
+            <td><strong>Implemented in Disclaimer & Audit</strong></td>
+        </tr>
+        <tr>
+            <td><strong>Indian Contract Act, 1872 & IT Act §10A</strong></td>
+            <td>Judicial Courts of India</td>
+            <td>Valid electronic agreement formation, age of majority (18+), exclusive Bangalore forum</td>
+            <td><strong>Implemented in Terms</strong></td>
         </tr>
     </tbody>
 </table>
 
-<div class="confirm-box" style="margin-top: 25px;">
-    <h3 style="margin: 0 0 8px 0; color: #b45309; font-size: 10.5pt;">Mandatory Counsel Action Items (Checklist of [CONFIRM] Tags):</h3>
-    <ol style="margin: 0; padding-left: 20px; font-size: 9pt; color: #78350f;">
-        <li><strong>Grievance Officer Designation:</strong> Confirm the formal name, direct telephone, and email address of the appointed statutory Grievance Officer in Privacy Policy Section 10 and Terms Section 12.</li>
-        <li><strong>Commercial Refund Parameters:</strong> Formally approve the cancellation notice window (24 hours), cooling-off duration (7 days), and commercial rules governing the "100% Satisfaction Guarantee".</li>
-        <li><strong>Cross-Border Healthcare Transfers:</strong> Confirm data residency and telehealth licensing implications for referral clients residing in the United Arab Emirates under UAE Federal Law No. 2 of 2019.</li>
-        <li><strong>Corporate Registration Credentials:</strong> Confirm corporate entity registration number (CIN / LLPIN) and registered office address.</li>
+<div class="confirm-box" style="margin-top: 20px;">
+    <h3 style="margin: 0 0 6px 0; color: #b45309; font-size: 10pt;">Advocate Review Action Items (Checklist of [CONFIRM] Tags):</h3>
+    <ol style="margin: 0; padding-left: 18px; font-size: 8.5pt; color: #78350f;">
+        <li><strong>Grievance Officer Designation:</strong> Review and insert the formal name, physical office address, and contact telephone/email of the appointed Indian Grievance Officer in Privacy Policy §9 and Terms §12 (mandatory under DPDP Act §5 and IT SPDI Rule 5(9)).</li>
+        <li><strong>Commercial Refund Windows:</strong> Formally approve the cancellation notice window (24 hours), cooling-off duration (7 days), and qualifying rules for the "100% Satisfaction Guarantee" promotion.</li>
+        <li><strong>Clinical Record Retention Duration:</strong> Confirm exact mandatory preservation period for consultation clinical records under the Telemedicine Practice Guidelines, 2020 (recommended: 3 years).</li>
+        <li><strong>Tax & GST Disclosures:</strong> Confirm corporate GSTIN registration details and whether stated prices are inclusive of 18% GST.</li>
     </ol>
 </div>
 """
 
 DOCUMENTS = [
     {
-        "filename": "01_DrFitVeda_Privacy_Policy_v0.1_DRAFT.pdf",
+        "filename": "01_DrFitVeda_Privacy_Policy_India_DRAFT.pdf",
         "title": "Privacy Policy",
-        "code": "DFV-LEG-POL-001",
+        "code": "DFV-IND-POL-001",
         "body": PRIVACY_BODY,
     },
     {
-        "filename": "02_DrFitVeda_Terms_and_Conditions_v0.1_DRAFT.pdf",
+        "filename": "02_DrFitVeda_Terms_and_Conditions_India_DRAFT.pdf",
         "title": "Terms & Conditions",
-        "code": "DFV-LEG-POL-002",
+        "code": "DFV-IND-POL-002",
         "body": TERMS_BODY,
     },
     {
-        "filename": "03_DrFitVeda_Cookie_Policy_v0.1_DRAFT.pdf",
+        "filename": "03_DrFitVeda_Cookie_Policy_India_DRAFT.pdf",
         "title": "Cookie Policy",
-        "code": "DFV-LEG-POL-003",
+        "code": "DFV-IND-POL-003",
         "body": COOKIES_BODY,
     },
     {
-        "filename": "04_DrFitVeda_Refund_and_Cancellation_Policy_v0.1_DRAFT.pdf",
+        "filename": "04_DrFitVeda_Refund_and_Cancellation_Policy_India_DRAFT.pdf",
         "title": "Refund & Cancellation Policy",
-        "code": "DFV-LEG-POL-004",
+        "code": "DFV-IND-POL-004",
         "body": REFUND_BODY,
     },
     {
-        "filename": "05_DrFitVeda_Medical_and_Wellness_Disclaimer_v0.1_DRAFT.pdf",
+        "filename": "05_DrFitVeda_Medical_and_Wellness_Disclaimer_India_DRAFT.pdf",
         "title": "Medical, Fitness & Nutrition Disclaimer",
-        "code": "DFV-LEG-POL-005",
+        "code": "DFV-IND-POL-005",
         "body": DISCLAIMER_BODY,
     },
 ]
@@ -848,7 +870,7 @@ def generate_pdf_from_html(html_path, pdf_path):
 
 def main():
     print("=" * 60)
-    print("DR FIT VEDA - LEGAL & COMPLIANCE PDF GENERATOR")
+    print("DR FIT VEDA - INDIAN LAW COMPLIANCE PDF GENERATOR")
     print(f"Browser Engine: {BROWSER_EXE}")
     print(f"Destination: {OUTPUT_DIR}")
     print("=" * 60)
@@ -860,7 +882,7 @@ def main():
             doc_code=doc["code"],
             effective_date="11 October 2026",
             body_content=doc["body"],
-            signoff_title=f"Legal Counsel Sign-Off — {doc['title']}"
+            signoff_title=f"Indian Advocate Sign-Off -- {doc['title']}"
         )
         base_name = doc["filename"].replace(".pdf", "")
         html_path = os.path.join(OUTPUT_DIR, f"{base_name}.html")
@@ -880,32 +902,32 @@ def main():
         master_body += f"""
         <div class="page-break"></div>
         <div style="background: #0f766e; color: #ffffff; padding: 10px 16px; border-radius: 4px; margin-bottom: 20px;">
-            <strong style="text-transform: uppercase; letter-spacing: 1px; font-size: 9pt;">Document {i:02d} of 05</strong>
-            <div style="font-size: 15pt; font-weight: 700; margin-top: 4px;">{doc['title']}</div>
+            <strong style="text-transform: uppercase; letter-spacing: 1px; font-size: 8.5pt;">Document {i:02d} of 05 -- Indian Statutory Scope</strong>
+            <div style="font-size: 14pt; font-weight: 700; margin-top: 4px;">{doc['title']}</div>
         </div>
         {doc['body']}
         """
 
     master_html = wrap_html(
-        title="Complete Legal & Compliance Audit Package",
-        doc_code="DFV-LEG-PKG-MASTER-001",
+        title="Complete Corporate Legal & Compliance Dossier",
+        doc_code="DFV-IND-PKG-MASTER-001",
         effective_date="11 October 2026",
         body_content=master_body,
-        signoff_title="Master Corporate Legal Counsel Package Sign-Off & Approval"
+        signoff_title="Master Corporate Legal Counsel Package Sign-Off & Approval (India)"
     )
 
-    master_html_path = os.path.join(OUTPUT_DIR, "DrFitVeda_Complete_Legal_Compliance_Package_v0.1_DRAFT.html")
-    master_pdf_path = os.path.join(OUTPUT_DIR, "DrFitVeda_Complete_Legal_Compliance_Package_v0.1_DRAFT.pdf")
+    master_html_path = os.path.join(OUTPUT_DIR, "DrFitVeda_Indian_Law_Compliance_Package_v0.2_DRAFT.html")
+    master_pdf_path = os.path.join(OUTPUT_DIR, "DrFitVeda_Indian_Law_Compliance_Package_v0.2_DRAFT.pdf")
 
     with open(master_html_path, "w", encoding="utf-8") as f:
         f.write(master_html)
 
-    print("Generating Master Package PDF: DrFitVeda_Complete_Legal_Compliance_Package_v0.1_DRAFT.pdf...")
+    print("Generating Master Package PDF: DrFitVeda_Indian_Law_Compliance_Package_v0.2_DRAFT.pdf...")
     generate_pdf_from_html(master_html_path, master_pdf_path)
     master_size_kb = os.path.getsize(master_pdf_path) / 1024
     print(f"  [OK] Created Master Package: {master_pdf_path} ({master_size_kb:.1f} KB)")
 
-    print("\nAll 6 legal compliance PDFs generated successfully!")
+    print("\nAll 6 Indian Law compliance PDFs generated successfully!")
 
 if __name__ == "__main__":
     main()
