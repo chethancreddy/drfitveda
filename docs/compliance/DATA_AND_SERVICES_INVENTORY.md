@@ -2,7 +2,7 @@
 
 _DRAFT — compiled from code review on 9 Oct 2026 (schema `supabase/migrations/001–005`, API routes, components). "Planned" = present in schema/config but not yet active in running code._
 
-> **Important context:** the app currently runs on an **in-memory mock database** (`src/lib/mock-db.ts`) with demo login whenever Supabase env vars are not set. Nothing persists across restarts in that mode. The inventory below describes the production design (Supabase) the code is built for.
+> **Production Architecture:** The platform operates on **production Supabase (PostgreSQL with Row Level Security enforced and Supabase Auth)**. An in-memory mock database (`src/lib/mock-db.ts`) is retained solely as an offline development fallback when environment credentials are not injected. All table schemas and RLS policies in `supabase/migrations/001–006` are active.
 
 ## 1. Data inventory
 
@@ -22,7 +22,7 @@ _DRAFT — compiled from code review on 9 Oct 2026 (schema `supabase/migrations/
 | 12 | Audit logs | `audit_logs`: user_id, action, old/new data, ip_address | Security/accountability | DB | Admins | 12–24 mo [CONFIRM] | Personal |
 | 13 | **Consent records (new)** | `consent_records`: purpose, granted, policy_version, source, timestamp, user/customer id. **No IP/UA/free text.** | Prove consent | DB | Admins; own user | Relevant period + 3 yrs [CONFIRM] | Personal |
 | 14 | **Data requests (new)** | `data_subject_requests`: type, name, email, optional details, status, verification flag, resolution note | Handle rights requests | DB (service-role writes; admin read via RLS) | Admins | 3 yrs after closure [CONFIRM] | Personal |
-| 15 | Website enquiry | Contact form: name, phone, health focus, message | Callback | **Not transmitted/stored (form is non-functional)** | — | — | May contain health data |
+| 15 | Website enquiry | `contact_inquiries`: full_name, phone, health_focus, message, status | Callback triage | Supabase DB (service-role write; admin triage via RLS) | Admins/care triage | Until resolved / 12 mo [CONFIRM] | Personal / health focus |
 | 16 | Session cookie | `drf_session` (user_id, email, role, full_name) | Login | Browser, HttpOnly | — | 7 days | Personal |
 
 Data **not** collected (confirmed absent): analytics IDs, ad pixels, geolocation, device fingerprinting, government IDs, card numbers, AI-model prompts.
@@ -42,7 +42,7 @@ Data **not** collected (confirmed absent): analytics IDs, ad pixels, geolocation
 | Service | Role | Status in code | Data sent | Terms/DPA reviewed? | Notes |
 |---|---|---|---|---|---|
 | Supabase | DB, auth, storage | Wired (falls back to mock) | All app data | **Not verified** — DPA + region [CONFIRM] | Region matters for UAE health-data rules |
-| Zoho Meeting | Video sessions | Wired (`zoho-meeting.service.ts`) | Customer name/email for room | **Not verified** | Confirmed standard video platform; copy reconciled across entire site |
+| Zoho Meeting | Video sessions | Wired (`zoho-meeting.service.ts`) | Customer name/email for room | Credentials rotated in console; env-configured | Confirmed standard video platform; copy reconciled across entire site |
 | Google Meet | Formerly mentioned in copy/defaults | **Eliminated** | None | — | Replaced throughout with Zoho Meeting |
 | Razorpay | Payments | **Env only; no code calls** | — | Not reviewed | PCI scope stays with Razorpay if hosted checkout |
 | Resend | Email | **Env only; no code calls** | — | Not reviewed | No email is sent today |

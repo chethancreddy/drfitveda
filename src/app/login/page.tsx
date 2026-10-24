@@ -1,10 +1,33 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
+// Popular country codes supported with flags
+const POPULAR_COUNTRY_CODES = [
+  { code: '+91', flag: '🇮🇳', name: 'India (+91)' },
+  { code: '+971', flag: '🇦🇪', name: 'UAE (+971)' },
+  { code: '+1', flag: '🇺🇸', name: 'USA/CA (+1)' },
+  { code: '+44', flag: '🇬🇧', name: 'UK (+44)' },
+  { code: '+65', flag: '🇸🇬', name: 'Singapore (+65)' },
+  { code: '+61', flag: '🇦🇺', name: 'Australia (+61)' },
+  { code: '+966', flag: '🇸🇦', name: 'Saudi Arabia (+966)' },
+  { code: '+974', flag: '🇶🇦', name: 'Qatar (+974)' },
+  { code: '+965', flag: '🇰🇼', name: 'Kuwait (+965)' },
+  { code: '+968', flag: '🇴🇲', name: 'Oman (+968)' },
+  { code: '+973', flag: '🇧🇭', name: 'Bahrain (+973)' },
+  { code: '+60', flag: '🇲🇾', name: 'Malaysia (+60)' },
+  { code: '+49', flag: '🇩🇪', name: 'Germany (+49)' },
+  { code: '+33', flag: '🇫🇷', name: 'France (+33)' },
+  { code: '+81', flag: '🇯🇵', name: 'Japan (+81)' },
+  { code: '+27', flag: '🇿🇦', name: 'South Africa (+27)' },
+  { code: '+880', flag: '🇧🇩', name: 'Bangladesh (+880)' },
+  { code: '+977', flag: '🇳🇵', name: 'Nepal (+977)' },
+  { code: '+94', flag: '🇱🇰', name: 'Sri Lanka (+94)' },
+]
+
 export default function LoginPage() {
-  const [activeTab, setActiveTab] = useState<'password' | 'otp'>('password')
+  const [activeTab, setActiveTab] = useState<'password' | 'whatsapp_otp' | 'email_otp'>('whatsapp_otp')
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -13,11 +36,109 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
-  // OTP State
-  const [phoneOrEmail, setPhoneOrEmail] = useState('')
-  const [otpCode, setOtpCode] = useState('')
-  const [otpSent, setOtpSent] = useState(false)
-  const [otpPreview, setOtpPreview] = useState('')
+  // WhatsApp OTP State (with editable Country Code, defaults to India +91)
+  const [countryCode, setCountryCode] = useState('+91')
+  const [isCustomCode, setIsCustomCode] = useState(false)
+  const [customCountryCode, setCustomCountryCode] = useState('+')
+  const [whatsappMobile, setWhatsappMobile] = useState('')
+  const [whatsappFullPhone, setWhatsappFullPhone] = useState('')
+  const [whatsappDisplay, setWhatsappDisplay] = useState('')
+  const [whatsappCode, setWhatsappCode] = useState('')
+  const [whatsappSent, setWhatsappSent] = useState(false)
+  const [whatsappCountdown, setWhatsappCountdown] = useState(0)
+
+  // Email OTP State
+  const [emailIdentifier, setEmailIdentifier] = useState('')
+  const [emailDisplay, setEmailDisplay] = useState('')
+  const [emailCode, setEmailCode] = useState('')
+  const [emailSent, setEmailSent] = useState(false)
+  const [emailCountdown, setEmailCountdown] = useState(0)
+
+  // Countdown timers for OTP resend cooldown
+  useEffect(() => {
+    if (whatsappCountdown <= 0) return
+    const timer = setInterval(() => {
+      setWhatsappCountdown(prev => (prev > 0 ? prev - 1 : 0))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [whatsappCountdown])
+
+  useEffect(() => {
+    if (emailCountdown <= 0) return
+    const timer = setInterval(() => {
+      setEmailCountdown(prev => (prev > 0 ? prev - 1 : 0))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [emailCountdown])
+
+  // Helper: validate phone number using selected country code
+  const validatePhoneNumber = (
+    code: string,
+    number: string
+  ): { isValid: boolean; error?: string; cleanPhone: string; cleanCode: string; fullPhone: string } => {
+    let cleanNumber = number.replace(/\D/g, '')
+    let cleanCode = code.trim().startsWith('+') ? code.trim() : `+${code.trim()}`
+    cleanCode = `+${cleanCode.replace(/\D/g, '')}`
+
+    if (!cleanCode || cleanCode === '+') {
+      return { isValid: false, error: 'Please enter a valid country code (e.g. +91).', cleanPhone: '', cleanCode: '', fullPhone: '' }
+    }
+
+    if (!cleanNumber) {
+      return { isValid: false, error: 'Please enter your mobile number.', cleanPhone: '', cleanCode, fullPhone: '' }
+    }
+
+    // Handle duplicate country code if user accidentally pasted it in the mobile field
+    const codeDigits = cleanCode.replace(/\D/g, '')
+    if (cleanNumber.startsWith(codeDigits) && cleanNumber.length > 10) {
+      cleanNumber = cleanNumber.slice(codeDigits.length)
+    }
+
+    // Specific country validations
+    if (cleanCode === '+91') {
+      // Strip leading 0 if entered for India
+      if (cleanNumber.startsWith('0') && cleanNumber.length === 11) {
+        cleanNumber = cleanNumber.slice(1)
+      }
+      if (cleanNumber.length !== 10) {
+        return { isValid: false, error: 'Please enter a valid 10-digit Indian mobile number.', cleanPhone: cleanNumber, cleanCode, fullPhone: '' }
+      }
+      if (!/^[6-9]/.test(cleanNumber)) {
+        return { isValid: false, error: 'Indian mobile numbers must start with 6, 7, 8, or 9.', cleanPhone: cleanNumber, cleanCode, fullPhone: '' }
+      }
+    } else if (cleanCode === '+1') {
+      if (cleanNumber.length !== 10) {
+        return { isValid: false, error: 'Please enter a valid 10-digit US/Canada phone number.', cleanPhone: cleanNumber, cleanCode, fullPhone: '' }
+      }
+    } else if (cleanCode === '+971') {
+      if (cleanNumber.length !== 9) {
+        return { isValid: false, error: 'Please enter a valid 9-digit UAE mobile number (e.g. 50 123 4567).', cleanPhone: cleanNumber, cleanCode, fullPhone: '' }
+      }
+    } else {
+      if (cleanNumber.length < 6 || cleanNumber.length > 14) {
+        return { isValid: false, error: `Please enter a valid mobile number for country code ${cleanCode}.`, cleanPhone: cleanNumber, cleanCode, fullPhone: '' }
+      }
+    }
+
+    const fullPhone = `${cleanCode}${cleanNumber}`
+    return { isValid: true, cleanPhone: cleanNumber, cleanCode, fullPhone }
+  }
+
+  // Auto-detect pasted phone number containing a country code
+  const handleMobileInputChange = (val: string) => {
+    const trimmed = val.trim()
+    if (trimmed.startsWith('+')) {
+      const matched = POPULAR_COUNTRY_CODES.find(c => trimmed.startsWith(c.code))
+      if (matched) {
+        setCountryCode(matched.code)
+        setIsCustomCode(false)
+        const remainder = trimmed.slice(matched.code.length).replace(/[\s\-]/g, '')
+        setWhatsappMobile(remainder)
+        return
+      }
+    }
+    setWhatsappMobile(val)
+  }
 
   // Reset Password Modal State
   const [showResetModal, setShowResetModal] = useState(false)
@@ -55,11 +176,196 @@ export default function LoginPage() {
     }
   }
 
-  // 2. OTP Request Handler
-  const handleSendOtp = async (e: React.FormEvent) => {
+  // 2. WhatsApp OTP Send Handler (Combines Country Code + Mobile Number)
+  const handleSendWhatsappOtp = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!phoneOrEmail) {
-      setError('Please enter your mobile number or email')
+    const activeCode = isCustomCode ? customCountryCode : countryCode
+    const validation = validatePhoneNumber(activeCode, whatsappMobile)
+
+    if (!validation.isValid) {
+      setError(validation.error || 'Please enter a valid mobile number with country code.')
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+    setSuccessMsg(null)
+
+    try {
+      const res = await fetch('/api/auth/login-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: validation.fullPhone,
+          channel: 'whatsapp',
+          action: 'send_otp',
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to send WhatsApp verification code.')
+
+      setWhatsappSent(true)
+      setWhatsappFullPhone(validation.fullPhone)
+      setWhatsappDisplay(data.display || validation.fullPhone)
+      setWhatsappCountdown(data.cooldownSeconds || 60)
+      setSuccessMsg(data.message || `Verification code sent to WhatsApp: ${data.display || validation.fullPhone}`)
+    } catch (err: any) {
+      setError(err.message || 'Failed to send WhatsApp OTP')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 3. WhatsApp OTP Resend Handler
+  const handleResendWhatsappOtp = async () => {
+    if (whatsappCountdown > 0 || loading) return
+
+    const activeCode = isCustomCode ? customCountryCode : countryCode
+    const validation = validatePhoneNumber(activeCode, whatsappMobile)
+    const targetPhone = whatsappFullPhone || validation.fullPhone
+
+    setLoading(true)
+    setError(null)
+    setSuccessMsg(null)
+
+    try {
+      const res = await fetch('/api/auth/login-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: targetPhone,
+          channel: 'whatsapp',
+          action: 'resend_otp',
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to resend WhatsApp OTP.')
+
+      setWhatsappCountdown(data.cooldownSeconds || 60)
+      setSuccessMsg(`A fresh verification code has been dispatched to WhatsApp (${whatsappDisplay || targetPhone}).`)
+    } catch (err: any) {
+      setError(err.message || 'Failed to resend WhatsApp OTP')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 4. WhatsApp OTP Verify & Login Handler
+  const handleVerifyWhatsappOtp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const cleanCode = whatsappCode.trim()
+    if (!cleanCode || cleanCode.length !== 6) {
+      setError('Please enter the 6-digit verification code.')
+      return
+    }
+
+    const activeCode = isCustomCode ? customCountryCode : countryCode
+    const validation = validatePhoneNumber(activeCode, whatsappMobile)
+    const targetPhone = whatsappFullPhone || validation.fullPhone
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const res = await fetch('/api/auth/login-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: targetPhone,
+          channel: 'whatsapp',
+          otp: cleanCode,
+          action: 'verify_otp',
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Invalid verification code.')
+
+      setSuccessMsg('WhatsApp verification successful! Accessing your portal…')
+      window.location.href = data.redirectTo || '/customer'
+    } catch (err: any) {
+      setError(err.message || 'WhatsApp OTP verification failed')
+      setLoading(false)
+    }
+  }
+
+  // 5. Email OTP Send Handler
+  const handleSendEmailOtp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const cleanInput = emailIdentifier.trim()
+    if (!cleanInput || !cleanInput.includes('@')) {
+      setError('Please enter a valid registered email address.')
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+    setSuccessMsg(null)
+
+    try {
+      const res = await fetch('/api/auth/login-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: cleanInput,
+          channel: 'email',
+          action: 'send_otp',
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to send Email OTP')
+
+      setEmailSent(true)
+      setEmailDisplay(data.display || cleanInput)
+      setEmailCountdown(data.cooldownSeconds || 60)
+      setSuccessMsg(data.message || `Verification code sent to ${data.display || cleanInput}`)
+    } catch (err: any) {
+      setError(err.message || 'Failed to send Email OTP')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 6. Email OTP Resend Handler
+  const handleResendEmailOtp = async () => {
+    if (emailCountdown > 0 || loading) return
+
+    setLoading(true)
+    setError(null)
+    setSuccessMsg(null)
+
+    try {
+      const res = await fetch('/api/auth/login-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: emailIdentifier.trim(),
+          channel: 'email',
+          action: 'resend_otp',
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to resend Email OTP')
+
+      setEmailCountdown(data.cooldownSeconds || 60)
+      setSuccessMsg(`A fresh verification code has been sent to ${emailDisplay}.`)
+    } catch (err: any) {
+      setError(err.message || 'Failed to resend Email OTP')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 7. Email OTP Verify Handler
+  const handleVerifyEmailOtp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const cleanCode = emailCode.trim()
+    if (!cleanCode || cleanCode.length !== 6) {
+      setError('Please enter the 6-digit verification code.')
       return
     }
 
@@ -71,47 +377,20 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phone_or_email: phoneOrEmail,
-          action: 'send_otp',
-        }),
-      })
-
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to send OTP')
-
-      setOtpSent(true)
-      setOtpPreview(data.otp_preview || '123456')
-      setSuccessMsg(`OTP verification code generated for ${phoneOrEmail}`)
-    } catch (err: any) {
-      setError(err.message || 'Failed to send OTP')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // 3. OTP Verify & Login Handler
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-
-    try {
-      const res = await fetch('/api/auth/login-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone_or_email: phoneOrEmail,
-          otp: otpCode.trim(),
+          email: emailIdentifier.trim(),
+          channel: 'email',
+          otp: cleanCode,
           action: 'verify_otp',
         }),
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Invalid OTP code')
+      if (!res.ok) throw new Error(data.error || 'Invalid verification code.')
 
+      setSuccessMsg('Email verification successful! Accessing your portal…')
       window.location.href = data.redirectTo || '/customer'
     } catch (err: any) {
-      setError(err.message || 'OTP verification failed')
+      setError(err.message || 'Email OTP verification failed')
       setLoading(false)
     }
   }
@@ -179,7 +458,7 @@ export default function LoginPage() {
         padding: 'var(--space-md)',
       }}
     >
-      <div style={{ width: '100%', maxWidth: 480 }}>
+      <div style={{ width: '100%', maxWidth: 490 }}>
         {/* Logo Card */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 'var(--space-md)' }}>
           <Link
@@ -221,7 +500,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Navigation Tabs */}
+          {/* Navigation Tabs: Password, WhatsApp OTP, Email OTP */}
           <div
             style={{
               display: 'flex',
@@ -229,43 +508,88 @@ export default function LoginPage() {
               borderRadius: 8,
               padding: 4,
               marginBottom: 'var(--space-md)',
+              gap: 4,
             }}
           >
             <button
               type="button"
-              onClick={() => { setActiveTab('password'); setError(null); setSuccessMsg(null); }}
+              onClick={() => {
+                setActiveTab('whatsapp_otp')
+                setError(null)
+                setSuccessMsg(null)
+              }}
               style={{
                 flex: 1,
-                padding: '8px 12px',
+                padding: '8px 6px',
+                borderRadius: 6,
+                border: 'none',
+                background: activeTab === 'whatsapp_otp' ? 'white' : 'transparent',
+                fontWeight: activeTab === 'whatsapp_otp' ? 700 : 500,
+                fontSize: 12.5,
+                color: activeTab === 'whatsapp_otp' ? '#059669' : '#64748b',
+                boxShadow: activeTab === 'whatsapp_otp' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+              }}
+            >
+              <span>💬</span> WhatsApp OTP
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('email_otp')
+                setError(null)
+                setSuccessMsg(null)
+              }}
+              style={{
+                flex: 1,
+                padding: '8px 6px',
+                borderRadius: 6,
+                border: 'none',
+                background: activeTab === 'email_otp' ? 'white' : 'transparent',
+                fontWeight: activeTab === 'email_otp' ? 700 : 500,
+                fontSize: 12.5,
+                color: activeTab === 'email_otp' ? '#0d9488' : '#64748b',
+                boxShadow: activeTab === 'email_otp' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+              }}
+            >
+              <span>✉️</span> Email OTP
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('password')
+                setError(null)
+                setSuccessMsg(null)
+              }}
+              style={{
+                flex: 1,
+                padding: '8px 6px',
                 borderRadius: 6,
                 border: 'none',
                 background: activeTab === 'password' ? 'white' : 'transparent',
                 fontWeight: activeTab === 'password' ? 700 : 500,
-                fontSize: 13,
+                fontSize: 12.5,
                 color: activeTab === 'password' ? '#0d9488' : '#64748b',
                 boxShadow: activeTab === 'password' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
                 cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
               }}
             >
-              🔑 User ID &amp; Password
-            </button>
-            <button
-              type="button"
-              onClick={() => { setActiveTab('otp'); setError(null); setSuccessMsg(null); }}
-              style={{
-                flex: 1,
-                padding: '8px 12px',
-                borderRadius: 6,
-                border: 'none',
-                background: activeTab === 'otp' ? 'white' : 'transparent',
-                fontWeight: activeTab === 'otp' ? 700 : 500,
-                fontSize: 13,
-                color: activeTab === 'otp' ? '#0d9488' : '#64748b',
-                boxShadow: activeTab === 'otp' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
-                cursor: 'pointer',
-              }}
-            >
-              📲 Mobile OTP Login
+              <span>🔑</span> Password
             </button>
           </div>
 
@@ -304,7 +628,488 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* TAB 1: USER ID & PASSWORD LOGIN */}
+          {/* TAB 1: WHATSAPP OTP LOGIN (POWERED BY MSG91) */}
+          {activeTab === 'whatsapp_otp' && (
+            <div>
+              {!whatsappSent ? (
+                <form onSubmit={handleSendWhatsappOtp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div>
+                    <label className="text-body-sm" style={{ fontWeight: 600, display: 'block', marginBottom: 6, color: '#0f172a' }}>
+                      Registered Mobile Number *
+                    </label>
+
+                    {/* Side-by-side Country Code & Mobile Number Input */}
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+                      {/* Country Code: Default +91, easily selectable or editable */}
+                      {!isCustomCode ? (
+                        <div style={{ width: 140, flexShrink: 0 }}>
+                          <select
+                            value={countryCode}
+                            onChange={e => {
+                              if (e.target.value === 'custom') {
+                                setIsCustomCode(true)
+                                setCustomCountryCode('+')
+                              } else {
+                                setCountryCode(e.target.value)
+                              }
+                            }}
+                            className="form-input"
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              padding: '11px 8px',
+                              border: '1px solid var(--color-border)',
+                              borderRadius: 6,
+                              fontSize: 13.5,
+                              fontWeight: 600,
+                              background: '#f8fafc',
+                              color: '#0f172a',
+                              cursor: 'pointer',
+                            }}
+                            title="Country Code (defaults to +91 India)"
+                          >
+                            {POPULAR_COUNTRY_CODES.map(c => (
+                              <option key={c.code} value={c.code}>
+                                {c.flag} {c.code}
+                              </option>
+                            ))}
+                            <option value="custom">✏️ Other Code</option>
+                          </select>
+                        </div>
+                      ) : (
+                        <div style={{ width: 140, flexShrink: 0, display: 'flex', gap: 4 }}>
+                          <input
+                            type="text"
+                            value={customCountryCode}
+                            onChange={e => {
+                              let val = e.target.value.trim()
+                              if (!val.startsWith('+')) val = `+${val.replace(/\+/g, '')}`
+                              setCustomCountryCode(val)
+                            }}
+                            placeholder="+..."
+                            maxLength={5}
+                            className="form-input"
+                            style={{
+                              width: '100%',
+                              padding: '11px 8px',
+                              border: '1px solid #059669',
+                              borderRadius: 6,
+                              fontSize: 14,
+                              fontWeight: 700,
+                              textAlign: 'center',
+                              color: '#0f172a',
+                            }}
+                            title="Enter country code (e.g. +91)"
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsCustomCode(false)
+                              setCountryCode('+91')
+                            }}
+                            style={{
+                              background: '#f1f5f9',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: 6,
+                              padding: '0 8px',
+                              fontSize: 12,
+                              cursor: 'pointer',
+                              color: '#475569',
+                            }}
+                            title="Reset to default (+91)"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Mobile Number Input */}
+                      <div style={{ flex: 1, position: 'relative' }}>
+                        <input
+                          type="tel"
+                          inputMode="numeric"
+                          required
+                          value={whatsappMobile}
+                          onChange={e => handleMobileInputChange(e.target.value)}
+                          placeholder={countryCode === '+91' ? '98765 43210' : 'Mobile number'}
+                          className="form-input"
+                          style={{
+                            width: '100%',
+                            padding: '11px 14px 11px 36px',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 6,
+                            fontSize: 14,
+                            letterSpacing: '0.5px',
+                          }}
+                        />
+                        <span style={{ position: 'absolute', left: 11, top: 11, fontSize: 16, color: '#059669' }}>
+                          💬
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Country Code Helper & Switch Link */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                      <span style={{ fontSize: 11.5, color: '#64748b' }}>
+                        Country code: <strong>{isCustomCode ? customCountryCode : countryCode}</strong> (edit anytime)
+                      </span>
+                      {isCustomCode ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCustomCode(false)
+                            setCountryCode('+91')
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#059669',
+                            fontSize: 11.5,
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                            padding: 0,
+                            fontWeight: 600,
+                          }}
+                        >
+                          Reset to India (+91)
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCustomCode(true)
+                            setCustomCountryCode('+')
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#059669',
+                            fontSize: 11.5,
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                            padding: 0,
+                            fontWeight: 500,
+                          }}
+                        >
+                          Type other code
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Mode explanation */}
+                  <div
+                    style={{
+                      background: '#f0fdf4',
+                      padding: '10px 12px',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      color: '#166534',
+                      lineHeight: 1.5,
+                      border: '1px solid #bbf7d0',
+                    }}
+                  >
+                    <span>
+                      💬 <strong>Instant WhatsApp OTP:</strong> Verification code will be sent to{' '}
+                      <strong>
+                        {isCustomCode ? customCountryCode : countryCode} {whatsappMobile.trim() || '••••••••••'}
+                      </strong>{' '}
+                      via MSG91.
+                    </span>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading || !whatsappMobile.trim()}
+                    className="btn btn-primary"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      fontWeight: 700,
+                      fontSize: 15,
+                      background: '#059669',
+                      borderColor: '#059669',
+                    }}
+                  >
+                    {loading ? 'Sending WhatsApp Code…' : 'Get WhatsApp Verification Code →'}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyWhatsappOtp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className="text-body-sm text-muted">
+                      WhatsApp code sent to: <strong style={{ color: '#0f172a' }}>{whatsappDisplay}</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setWhatsappSent(false)
+                        setWhatsappCode('')
+                        setError(null)
+                        setSuccessMsg(null)
+                      }}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#059669',
+                        fontSize: 12,
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Change
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="text-body-sm" style={{ fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                      Enter 6-Digit WhatsApp Code *
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      required
+                      autoFocus
+                      value={whatsappCode}
+                      onChange={e => {
+                        const digits = e.target.value.replace(/\D/g, '')
+                        setWhatsappCode(digits)
+                      }}
+                      placeholder="••••••"
+                      className="form-input"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '2px solid #059669',
+                        borderRadius: 6,
+                        fontSize: 22,
+                        letterSpacing: '8px',
+                        textAlign: 'center',
+                        fontWeight: 700,
+                      }}
+                    />
+                  </div>
+
+                  {/* 60s Resend Cooldown Timer */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                    {whatsappCountdown > 0 ? (
+                      <span style={{ color: '#64748b' }}>
+                        ⏱️ Resend code in <strong>{whatsappCountdown}s</strong>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleResendWhatsappOtp}
+                        disabled={loading}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#059669',
+                          fontWeight: 700,
+                          fontSize: 13,
+                          cursor: 'pointer',
+                          padding: 0,
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        🔄 Didn&apos;t receive WhatsApp code? Resend
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading || whatsappCode.length !== 6}
+                    className="btn btn-primary"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      fontWeight: 700,
+                      fontSize: 15,
+                      background: '#059669',
+                      borderColor: '#059669',
+                      opacity: whatsappCode.length === 6 ? 1 : 0.7,
+                    }}
+                  >
+                    {loading ? 'Verifying WhatsApp Code…' : 'Verify & Sign In →'}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* TAB 2: EMAIL OTP LOGIN (POWERED BY MSG91) */}
+          {activeTab === 'email_otp' && (
+            <div>
+              {!emailSent ? (
+                <form onSubmit={handleSendEmailOtp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div>
+                    <label className="text-body-sm" style={{ fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                      Registered Email Address *
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="email"
+                        required
+                        value={emailIdentifier}
+                        onChange={e => setEmailIdentifier(e.target.value)}
+                        placeholder="e.g. yourname@domain.com"
+                        className="form-input"
+                        style={{
+                          width: '100%',
+                          padding: '11px 14px 11px 38px',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: 6,
+                          fontSize: 14,
+                        }}
+                      />
+                      <span style={{ position: 'absolute', left: 12, top: 11, fontSize: 16, color: '#94a3b8' }}>
+                        ✉️
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Mode explanation */}
+                  <div
+                    style={{
+                      background: '#f8fafc',
+                      padding: '10px 12px',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      color: '#64748b',
+                      lineHeight: 1.5,
+                      border: '1px solid #e2e8f0',
+                    }}
+                  >
+                    <span>
+                      ✉️ <strong>Passwordless Email Sign In:</strong> Enter your registered email to receive a secure 6-digit verification code.
+                    </span>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading || !emailIdentifier.trim()}
+                    className="btn btn-primary"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      fontWeight: 700,
+                      fontSize: 15,
+                    }}
+                  >
+                    {loading ? 'Sending Verification Code…' : 'Get Email Verification Code →'}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyEmailOtp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className="text-body-sm text-muted">
+                      Code sent to: <strong style={{ color: '#0f172a' }}>{emailDisplay}</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmailSent(false)
+                        setEmailCode('')
+                        setError(null)
+                        setSuccessMsg(null)
+                      }}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#0d9488',
+                        fontSize: 12,
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Change
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="text-body-sm" style={{ fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                      Enter 6-Digit Verification Code *
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      required
+                      autoFocus
+                      value={emailCode}
+                      onChange={e => {
+                        const digits = e.target.value.replace(/\D/g, '')
+                        setEmailCode(digits)
+                      }}
+                      placeholder="••••••"
+                      className="form-input"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '2px solid #0d9488',
+                        borderRadius: 6,
+                        fontSize: 22,
+                        letterSpacing: '8px',
+                        textAlign: 'center',
+                        fontWeight: 700,
+                      }}
+                    />
+                  </div>
+
+                  {/* 60s Resend Cooldown Timer */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                    {emailCountdown > 0 ? (
+                      <span style={{ color: '#64748b' }}>
+                        ⏱️ Resend code in <strong>{emailCountdown}s</strong>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleResendEmailOtp}
+                        disabled={loading}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#0d9488',
+                          fontWeight: 700,
+                          fontSize: 13,
+                          cursor: 'pointer',
+                          padding: 0,
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        🔄 Didn&apos;t receive code? Resend Code
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading || emailCode.length !== 6}
+                    className="btn btn-primary"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      fontWeight: 700,
+                      fontSize: 15,
+                      opacity: emailCode.length === 6 ? 1 : 0.7,
+                    }}
+                  >
+                    {loading ? 'Verifying Code…' : 'Verify & Sign In →'}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* TAB 3: USER ID & PASSWORD LOGIN */}
           {activeTab === 'password' && (
             <form onSubmit={handlePasswordLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
@@ -420,106 +1225,6 @@ export default function LoginPage() {
               </button>
             </form>
           )}
-
-          {/* TAB 2: MOBILE OTP LOGIN */}
-          {activeTab === 'otp' && (
-            <div>
-              {!otpSent ? (
-                <form onSubmit={handleSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div>
-                    <label className="text-body-sm" style={{ fontWeight: 600, display: 'block', marginBottom: 4 }}>
-                      Enter Mobile Number or Registered Email *
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type="text"
-                        required
-                        value={phoneOrEmail}
-                        onChange={e => setPhoneOrEmail(e.target.value)}
-                        placeholder="e.g. +91 98765 43210 or email@domain.com"
-                        className="form-input"
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px 10px 38px',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: 6,
-                          fontSize: 14,
-                        }}
-                      />
-                      <span style={{ position: 'absolute', left: 12, top: 10, fontSize: 16, color: '#94a3b8' }}>📱</span>
-                    </div>
-                  </div>
-
-                  <div style={{ background: '#f8fafc', padding: 12, borderRadius: 6, fontSize: 12, color: '#64748b' }}>
-                    💡 <strong>OTP-Ready:</strong> Enter your mobile number. A 6-digit verification code will be sent to your device.
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="btn btn-primary"
-                    style={{ width: '100%', padding: '12px', fontWeight: 700, fontSize: 15 }}
-                  >
-                    {loading ? 'Sending OTP…' : 'Get Verification OTP →'}
-                  </button>
-                </form>
-              ) : (
-                <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span className="text-body-sm text-muted">OTP sent to: <strong>{phoneOrEmail}</strong></span>
-                    <button
-                      type="button"
-                      onClick={() => setOtpSent(false)}
-                      style={{ background: 'transparent', border: 'none', color: '#0d9488', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}
-                    >
-                      Change
-                    </button>
-                  </div>
-
-                  <div>
-                    <label className="text-body-sm" style={{ fontWeight: 600, display: 'block', marginBottom: 4 }}>
-                      Enter 6-Digit OTP Code *
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      required
-                      value={otpCode}
-                      onChange={e => setOtpCode(e.target.value)}
-                      placeholder="123456"
-                      className="form-input"
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        border: '2px solid #0d9488',
-                        borderRadius: 6,
-                        fontSize: 20,
-                        letterSpacing: '6px',
-                        textAlign: 'center',
-                        fontWeight: 700,
-                      }}
-                    />
-                  </div>
-
-                  {otpPreview && (
-                    <div style={{ padding: '8px 12px', background: '#ecfdf5', borderRadius: 6, fontSize: 12, color: '#065f46', textAlign: 'center' }}>
-                      🔑 Test Code: <strong>{otpPreview}</strong>
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="btn btn-primary"
-                    style={{ width: '100%', padding: '12px', fontWeight: 700, fontSize: 15 }}
-                  >
-                    {loading ? 'Verifying OTP…' : 'Verify &amp; Sign In'}
-                  </button>
-                </form>
-              )}
-            </div>
-          )}
-
         </div>
 
         {/* Footer */}

@@ -629,53 +629,56 @@ COOKIES_BODY = """
 </p>
 """
 
-# 4. Refund Policy
+# 4. Cancellation & Non-Refund Policy
 REFUND_BODY = """
 <div class="lead-text">
-    This Refund & Cancellation Policy sets forth the terms, timelines, and commercial conditions governing membership cancellations, consultation rescheduling, and financial reimbursements. It is drafted pursuant to the Consumer Protection Act, 2019 and the Consumer Protection (E-Commerce) Rules, 2020.
+    This Cancellation & Non-Refund Policy sets forth the commercial terms and conditions governing digital membership subscriptions and standalone clinical/wellness consultations offered on drfitveda.com. All purchases are strictly non-refundable, as set forth herein, pursuant to the Indian Contract Act, 1872 and the Consumer Protection (E-Commerce) Rules, 2020.
 </div>
 
 <div class="confirm-box">
-    <strong>Advocate & Management Review Checklist:</strong> Please review and finalize the placeholder parameters marked <code>[CONFIRM]</code>: (1) Cooling-off cancellation window (e.g., 7 calendar days); (2) Consultation cancellation notice window (e.g., 24 hours); and (3) Qualifying criteria for the "100% Satisfaction Guarantee" promotion.
+    <strong>Advocate Review Checklist (Indian Consumer Protection & E-Commerce Law):</strong> Please confirm that our strict non-refundable policy is legally compliant under Indian law when clearly and conspicuously disclosed prior to payment, and approve the removal/redefinition of any conflicting promotional claims (e.g., "100% Satisfaction Guarantee") to prevent exposure under the Consumer Protection Act, 2019.
 </div>
 
-<h2>1. Scope of Purchased Services</h2>
+<h2>1. Strictly Non-Refundable Commercial Policy</h2>
+<p>
+    Dr Fit Veda delivers personalized lifestyle modification regimens, multi-disciplinary professional care (doctors, nutritionists, yoga therapists, fitness coaches), and dedicated consultation slots. Due to the customized allocation of professional time, proprietary diet plans, and infrastructure resources upon subscription:
+</p>
+<div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 10px 14px; margin: 12px 0; font-size: 9pt; color: #991b1b; border-radius: 0 4px 4px 0;">
+    <strong>MANDATORY NON-REFUNDABLE NOTICE:</strong> All subscription fees, membership packages, and consultation fees paid to Dr Fit Veda are <strong>strictly non-refundable and non-transferable under any circumstances</strong> once the transaction is completed. By making a payment, you expressly acknowledge and agree that no refunds, credits, or chargebacks will be issued for partially used, unused, or abandoned subscriptions.
+</div>
+
+<h2>2. Standalone Consultations: Rescheduling vs. Monetary Refund</h2>
 <ul>
-    <li><strong>Fixed-Term Wellness Memberships:</strong> Pre-paid subscription packages (1 Month, 3 Months, 6 Months, 12 Months) delivering customized fitness routines, clinical nutrition plans, yoga sessions, and multi-disciplinary professional supervision. Fixed-term subscriptions do not auto-debit.</li>
-    <li><strong>Standalone Consultations:</strong> Per-session appointments with certified Doctors (Yoga Doctor, PCOD/PCOS Specialist, General Naturopathic Doctor) booked for designated slot durations.</li>
-    <li><strong>Currency & Pricing:</strong> All transactions are conducted in Indian Rupees (₹ INR) inclusive of applicable taxes.</li>
+    <li><strong>Rescheduling Guidelines:</strong> Clients may reschedule an upcoming scheduled consultation (Yoga Doctor, PCOD Specialist, Wellness Doctor) without penalty by providing at least <strong>24 hours' prior written notice</strong> via the client dashboard or email to <strong>care@drfitveda.com</strong>. The booking credit will be transferred to a mutually agreeable available slot.</li>
+    <li><strong>Late Cancellations & No-Shows:</strong> Cancellations made with less than 24 hours' notice, or failure to attend a scheduled video session ("no-show"), will result in immediate forfeiture of the consultation session with <strong>zero monetary refund or credit</strong>.</li>
+    <li><strong>Cancellations Initiated by Dr Fit Veda:</strong> In the rare event that an assigned healthcare professional is unavailable due to sudden illness, technical emergency, or outage, Dr Fit Veda will provide an expedited rescheduled slot at the client's earliest convenience.</li>
 </ul>
 
-<h2>2. Cancellation Timelines and Guidelines</h2>
+<h2>3. Sole Technical Exceptions to Non-Refundable Rule</h2>
+<p>
+    In compliance with statutory electronic transaction guidelines, monetary refunds are disbursed strictly and solely under the following verified technical anomalies:
+</p>
 <ul>
-    <li><strong>Membership Cancellations:</strong> Clients may initiate cancellation requests at any time by emailing <strong>care@drfitveda.com</strong> or via the client dashboard. Cancellation terminates upcoming scheduled sessions immediately.</li>
-    <li><strong>Consultation Cancellations & Rescheduling:</strong> Standalone consultations may be rescheduled or cancelled up to <strong>[CONFIRM: 24 hours]</strong> prior to the appointed time without penalty, entitling the client to a full credit or refund. Cancellations made within less than 24 hours or no-shows are subject to <strong>[CONFIRM: 50% cancellation fee or slot forfeiture]</strong>.</li>
-    <li><strong>Cancellations by Dr Fit Veda:</strong> If a scheduled professional is unavailable due to medical emergency or technical outage, the client will be offered an immediate rescheduled slot or a 100% full refund for the affected session.</li>
-</ul>
-
-<h2>3. Statutory and Commercial Refund Eligibility</h2>
-<p>Clients are entitled to a refund under the following circumstances:</p>
-<ul>
-    <li><strong>Billing Errors & Technical Double Charges:</strong> Where an erroneous duplicate debit occurs or payment succeeds without service activation.</li>
-    <li><strong>Service Inability:</strong> Where Dr Fit Veda is unable to assign a qualified professional or permanently discontinues a booked programme.</li>
-    <li><strong>Statutory Cooling-Off Window:</strong> Where cancellation is submitted within <strong>[CONFIRM: 7 calendar days]</strong> of initial purchase and the user has consumed no more than <strong>[CONFIRM: 2 sessions]</strong>, refund is granted less the nominal fair value of delivered sessions.</li>
-    <li><strong>Statutory Consumer Rights:</strong> Any non-waivable statutory refund rights guaranteed under the Indian Consumer Protection (E-Commerce) Rules 2020.</li>
+    <li><strong>Duplicate / Erroneous Billing:</strong> Where a verified technical glitch causes multiple identical charges for a single order transaction.</li>
+    <li><strong>Payment Gateway Deduction without Service Creation:</strong> Where funds are debited from the client's bank account / card / UPI, but technical failure prevents user account creation or service activation on Dr Fit Veda.</li>
 </ul>
 <p>
-    <strong>Mid-Term Pro-Rata Deductions:</strong> <em>[CONFIRM: Where mid-term cancellation is approved on compassionate/medical grounds, refund will be computed pro-rata against unconsumed weeks, deducting a 5% administrative payment-gateway processing fee].</em>
-</p>
-<p>
-    <strong>"100% Satisfaction Guarantee" Terms:</strong> <em>[CONFIRM: The landing page features a '100% Satisfaction Guarantee' badge. Counsel must formally validate the exact criteria: e.g., client must have maintained 85%+ adherence to daily check-ins and diet logs for 30 consecutive days, or this promotional claim must be modified].</em> Dr Fit Veda does not guarantee specific biological weight-loss or medical cure outcomes.
+    In such instances, verified duplicate or un-activated debits will be reversed to the original payment instrument within <strong>5 to 7 business days</strong> via our RBI-licensed payment gateway.
 </p>
 
-<h2>4. Refund Disbursement Timelines and Mode</h2>
+<h2>4. Mid-Term Discontinuation and Account Termination</h2>
 <p>
-    Approved refunds are disbursed exclusively to the original payment instrument (credit card, debit card, UPI, net banking) via our licensed payment gateway. Refunds are processed by Dr Fit Veda within <strong>[CONFIRM: 5 to 7 business days]</strong> of approval. Bank processing cycles may require an additional 3–5 working days to reflect on customer statements.
+    Clients may discontinue participation in a wellness programme at any time. However, voluntary mid-term discontinuation, relocation, change of personal schedule, or unilateral cessation of adherence does not entitle the client to any pro-rata refund or monetary reimbursement for the remaining contract duration.
 </p>
 
-<h2>5. Escalation and Grievance Procedure</h2>
+<h2>5. Promotional Claims and Satisfaction Warranties (Consumer Protection Act)</h2>
 <p>
-    To request a refund, submit an email to <strong>care@drfitveda.com</strong> with your registered phone number, order ID, and reason for refund. Inquiries are acknowledged within 2 business days. If unresolved within 7 days, disputes may be escalated directly to our Grievance Officer: <strong>[CONFIRM: grievance@drfitveda.com]</strong>.
+    Dr Fit Veda delivers doctor-guided lifestyle guidance. Because biological outcomes, metabolic responses, and weight changes depend substantially on individual genetics, underlying pathologies, and daily adherence, <strong>Dr Fit Veda does not guarantee specific clinical or weight-loss results</strong>. Any promotional marketing reference to a "Satisfaction Guarantee" refers exclusively to our professional commitment to deliver scheduled consultations and customized regimens, and does <strong>not</strong> confer any contractual right to a monetary refund.
+</p>
+
+<h2>6. Grievance Redressal and Contact</h2>
+<p>
+    For any billing disputes or payment verification inquiries, write to <strong>care@drfitveda.com</strong>. Unresolved billing discrepancies may be escalated to our statutory Grievance Officer: <strong>[CONFIRM: grievance@drfitveda.com]</strong>.
 </p>
 """
 
@@ -817,7 +820,7 @@ MASTER_COVER = """
     <h3 style="margin: 0 0 6px 0; color: #b45309; font-size: 10pt;">Advocate Review Action Items (Checklist of [CONFIRM] Tags):</h3>
     <ol style="margin: 0; padding-left: 18px; font-size: 8.5pt; color: #78350f;">
         <li><strong>Grievance Officer Designation:</strong> Review and insert the formal name, physical office address, and contact telephone/email of the appointed Indian Grievance Officer in Privacy Policy §9 and Terms §12 (mandatory under DPDP Act §5 and IT SPDI Rule 5(9)).</li>
-        <li><strong>Commercial Refund Windows:</strong> Formally approve the cancellation notice window (24 hours), cooling-off duration (7 days), and qualifying rules for the "100% Satisfaction Guarantee" promotion.</li>
+        <li><strong>Commercial Non-Refund Policy:</strong> Confirm that the strict non-refundable terms meet statutory disclosure mandates under the Consumer Protection (E-Commerce) Rules, 2020 and approve the redefinition of any conflicting promotional satisfaction guarantees.</li>
         <li><strong>Clinical Record Retention Duration:</strong> Confirm exact mandatory preservation period for consultation clinical records under the Telemedicine Practice Guidelines, 2020 (recommended: 3 years).</li>
         <li><strong>Tax & GST Disclosures:</strong> Confirm corporate GSTIN registration details and whether stated prices are inclusive of 18% GST.</li>
     </ol>
@@ -844,8 +847,8 @@ DOCUMENTS = [
         "body": COOKIES_BODY,
     },
     {
-        "filename": "04_DrFitVeda_Refund_and_Cancellation_Policy_India_DRAFT.pdf",
-        "title": "Refund & Cancellation Policy",
+        "filename": "04_DrFitVeda_Cancellation_and_Non_Refund_Policy_India_DRAFT.pdf",
+        "title": "Cancellation & Non-Refund Policy",
         "code": "DFV-IND-POL-004",
         "body": REFUND_BODY,
     },

@@ -34,15 +34,16 @@ export default function PrivacyPage() {
             ['Plans & tracking: diet/workout/yoga plans, daily check-ins, progress records, progress photos/videos you upload', 'Deliver, monitor and adjust your programme', 'Platform database / private storage', 'While account active + [CONFIRM]'],
             ['Session recordings (live training/consultations) where enabled for your plan', 'Replay and form review', 'Private storage with short-lived signed links', 'Only the latest recording is kept; the previous one is deleted after a grace period (default 24 hours, set by admin)'],
             ['Orders & payment records: plan, amount, currency, payment status, provider payment ID', 'Process and account for payments, refunds', 'Platform database; card details are handled by the payment provider, not stored by us', 'As required by tax/accounting law (typically 6–8 years in India) [CONFIRM]'],
-            ['Contact enquiries: name, phone, health focus, message', 'Respond to your request', 'See note below', '[CONFIRM] — see note'],
+            ['Contact enquiries: name, phone, health focus, optional message', 'Schedule and conduct consultation callbacks; triage health focus', 'Platform database (contact_inquiries, restricted to administrators via RLS)', 'Until enquiry is resolved, or up to [CONFIRM: 12 months]'],
             ['Consent records and privacy requests', 'Prove consent and handle your rights', 'Platform database', 'Consent: while relevant + 3 years; requests: 3 years after closure [CONFIRM]'],
             ['Security & audit logs, session cookie', 'Security, fraud prevention, accountability', 'Platform database', 'Audit logs [CONFIRM: 12–24 months]'],
           ]}
         />
         <p>
-          <strong>Note on the website enquiry form:</strong> in the current build the &quot;Request Consultation
-          Callback&quot; form does not yet transmit or store submitted details. Please do not rely on it until it is
-          connected; this policy will be updated when it is. Please do not include detailed medical information in it.
+          <strong>Website enquiry form:</strong> When you submit the &quot;Request Consultation Callback&quot; form,
+          we record your name, phone number, and primary health focus with your explicit consent so our medical
+          coordinator can contact you. Please share clinical records or detailed medical histories only through your
+          authenticated patient portal, not in open enquiry messages.
         </p>
         <p>
           We do not knowingly collect data beyond what is listed. We do not run advertising or analytics trackers

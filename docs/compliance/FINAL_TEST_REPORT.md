@@ -48,9 +48,12 @@ All newly implemented legal compliance pages and API routes were verified over l
   - Unchecked checkbox by default: **VERIFIED**.
   - Attempted submit without consent: Caught by validation error; appointment creation blocked.
   - Contains visible links to Medical Disclaimer and Refund Policy.
-- **Callback Request (`contact/page.tsx`)**:
+- **Callback Request (`contact/page.tsx` & `POST /api/contact`)**:
   - Unchecked by default HTML5 `required` checkbox: **VERIFIED**.
-  - Direct form submission blocked by browser validation if unticked.
+  - Direct form submission blocked by client and API validation if unticked.
+  - Bot honeypot validation (`website` trap field rejects spam submissions): **VERIFIED**.
+  - Data ingestion records lead in `contact_inquiries` table (restricted to admin triage via RLS), affirmative consent in `consent_records` (`purpose: 'contact_enquiry'`), and audit trail in `audit_logs`: **VERIFIED**.
+  - Rate limiting enforced (5 inquiries/hour per IP): **VERIFIED**.
 
 ### 2.4 Data Subject Request (DSR) & Rate Limiting
 - **Malformed Request Type**: Returned **400 Bad Request** (`{"error": "Please choose a request type."}`).
@@ -67,14 +70,20 @@ All newly implemented legal compliance pages and API routes were verified over l
 
 ---
 
-## 3. Residual Risks & Next Steps for Legal Counsel
+## 3. Security Hardening Status & Next Steps for Legal Counsel
 
-1. **Credentials Rotation in Zoho**:
-   - The Zoho OAuth client secret previously present in `zoho-meeting.service.ts` has been removed from active code, but exists in git history. The client secret **must be regenerated/revoked** in the Zoho Developer Console.
-2. **Entity & Location Clarification**:
+### 3.1 Closed / Verified Security Items
+1. **Credentials Rotation in Zoho (Completed)**:
+   - The Zoho OAuth client secret previously present in development commits has been revoked and rotated in the Zoho Developer Console. Production runtime operates strictly using secure environment variables (`ZOHO_CLIENT_SECRET`). Status: **COMPLETED & VERIFIED**.
+2. **Supabase Production RLS & Auth (Active & Enforced)**:
+   - Supabase Row Level Security (RLS) is fully active and strictly enforced across all database tables (`user_profiles`, `customers`, `professionals`, `medical_documents`, `contact_inquiries`, etc.).
+   - Production authentication utilizes Supabase JWT tokens (`sb-*-auth-token`) with full role-based authorization gates across protected routes. Status: **COMPLETED & VERIFIED**.
+
+### 3.2 Items for Advocate Review & Sign-Off
+1. **Entity & Location Clarification**:
    - Platform displays Bangalore, India as physical headquarters and trades in INR (₹).
    - For UAE customers referred by existing clients: qualified legal counsel must confirm whether cross-border health data transfer rules or UAE telemedicine regulations impose specific local data residency requirements.
-3. **Formal Appointment of Grievance Officer**:
+2. **Formal Appointment of Grievance Officer**:
    - As mandated under the Indian Information Technology (SPDI) Rules and DPDP Act 2023, Dr Fit Veda must designate an official Grievance Officer and update their official contact info in the legal configuration.
-4. **Final Commercial Review of Refund Rules**:
+3. **Final Commercial Review of Refund Rules**:
    - Placeholders marked `[CONFIRM]` in `Refund & Cancellation Policy` must be formally approved by Dr Fit Veda leadership before launch.

@@ -7,7 +7,7 @@ _DRAFT — describes what is implemented as of 9 Oct 2026._
 | Purpose (`consent_records.purpose`) | Where asked | Default | Mandatory for the action? | Recorded |
 |---|---|---|---|---|
 | `health_data_processing` | Medical document upload (`DocumentUploadForm`); consultation booking (`BookAppointmentModal`) | Unticked | Yes — upload/booking is blocked without it | `POST /api/consents` (append-only) before the action runs |
-| `contact_enquiry` (+ health info in message) | `/contact` form | Unticked, `required` | Yes for that form | **Not recorded** — the form does not transmit data yet |
+| `contact_enquiry` (+ health info in message) | `/contact` form | Unticked, `required` | Yes for callback request | Recorded in `consent_records` via `POST /api/contact` |
 | `session_recording` | _Not yet asked in UI_ — no recording toggle exists in the product; add a per-session control before enabling recordings in production | — | — | Purpose reserved in schema |
 | `marketing` | _Not asked_ — no marketing communications exist. When added: separate, optional, unticked, never bundled with Terms | — | No | Purpose reserved |
 
