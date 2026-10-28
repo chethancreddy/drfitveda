@@ -132,16 +132,16 @@ export default function AdminSettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
-      if (!res.ok) throw new Error('Save failed')
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || 'Failed to save settings')
+      }
       const data = await res.json()
       setSettings(data.settings)
       showToast('Settings saved successfully!')
       setEditingSection(null)
-    } catch {
-      // Apply locally for demo
-      setSettings(prev => ({ ...prev, ...formData } as PlatformSettings))
-      showToast('Settings saved!')
-      setEditingSection(null)
+    } catch (err: any) {
+      showToast(err?.message || 'Error saving settings. Please try again.')
     }
     setSaving(false)
   }

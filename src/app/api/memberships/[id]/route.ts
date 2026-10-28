@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
   try {
+    await loadPersistedState()
     const resolvedParams = await Promise.resolve(context.params)
     const { id } = resolvedParams
 
@@ -26,7 +28,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
       }
     }
 
-    if (!['admin', 'super_admin'].includes(role)) {
+    if (!['admin', 'super_admin', 'operations_manager'].includes(role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
@@ -39,6 +41,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 
     // Preserve id and created_at to avoid historical tampering
     plans[idx] = { ...plans[idx], ...body, id, created_at: plans[idx].created_at }
+    await savePersistedState('memberships')
     return NextResponse.json({ membership: plans[idx] })
   } catch {
     return NextResponse.json({ error: 'Bad request' }, { status: 400 })
@@ -47,6 +50,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 
 export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
   try {
+    await loadPersistedState()
     const resolvedParams = await Promise.resolve(context.params)
     const { id } = resolvedParams
 
@@ -69,7 +73,7 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
       }
     }
 
-    if (!['admin', 'super_admin'].includes(role)) {
+    if (!['admin', 'super_admin', 'operations_manager'].includes(role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
@@ -79,6 +83,7 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
 
     // Soft-delete — preserve historical data
     plans[idx] = { ...plans[idx], is_active: false }
+    await savePersistedState('memberships')
     return NextResponse.json({ ok: true })
   } catch {
     return NextResponse.json({ error: 'Bad request' }, { status: 400 })

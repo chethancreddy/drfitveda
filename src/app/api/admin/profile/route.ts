@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb, MOCK_USERS } from '@/lib/mock-db'
+import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 
 const DEFAULT_ADMIN_PROFILE = {
   id: 'u0000000-0000-0000-0000-000000000004',
@@ -34,13 +35,14 @@ function getAdminSession(req: NextRequest, user: any) {
 
 export async function GET(req: NextRequest) {
   try {
+    await loadPersistedState()
     if (!mockDb.state.admin_profile) {
       mockDb.state.admin_profile = { ...DEFAULT_ADMIN_PROFILE }
     }
 
-    // Return the profile
+    const { password: _pw, ...safeProfile } = mockDb.state.admin_profile
     return NextResponse.json({
-      profile: mockDb.state.admin_profile,
+      profile: safeProfile,
     })
   } catch {
     return NextResponse.json({ error: 'Failed to fetch admin profile' }, { status: 500 })
@@ -113,6 +115,8 @@ export async function PUT(req: NextRequest) {
         }
       }
     }
+
+    await savePersistedState(['admin_profile', 'user_profiles'])
 
     // Create updated session payload
     const newSessionPayload = {

@@ -4,6 +4,7 @@
 // ============================================================
 
 import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 
 export interface ZohoMeetingResult {
   success: boolean
@@ -79,6 +80,7 @@ export class ZohoMeetingService {
     forceNew?: boolean
   }): Promise<ZohoMeetingResult> {
     const { customerId, customerName, customerEmail, forceNew = false } = params
+    await loadPersistedState()
 
     // 1. Check existing customer record for idempotency
     const customers = mockDb.state.customers || []
@@ -175,6 +177,7 @@ export class ZohoMeetingService {
           return s
         })
       }
+      await savePersistedState(['customers', 'training_sessions'])
     }
 
     return {
@@ -193,6 +196,7 @@ export class ZohoMeetingService {
    * Admin: Update or replace meeting link manually
    */
   public static async updateCustomerMeetingUrl(customerId: string, newUrl: string) {
+    await loadPersistedState()
     const customers = mockDb.state.customers || []
     const idx = customers.findIndex((c: any) => c.id === customerId || c.user_id === customerId)
     if (idx === -1) throw new Error('Customer not found')
@@ -206,6 +210,7 @@ export class ZohoMeetingService {
       meeting_provider: newUrl.includes('zoho.com') ? 'zoho_meeting' : 'custom',
       updated_at: now,
     }
+    await savePersistedState('customers')
 
     return customers[idx]
   }

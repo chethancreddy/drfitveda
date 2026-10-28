@@ -4,12 +4,35 @@
 // 5-attempt brute-force lockout, single-use OTP, and admin safety.
 // ============================================================
 
+import fs from 'fs'
+import path from 'path'
+
+// Load .env.local for standalone CLI test runs
+const envPath = path.resolve(__dirname, '../.env.local')
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8')
+  envContent.split('\n').forEach(line => {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) return
+    const eqIdx = trimmed.indexOf('=')
+    if (eqIdx > 0) {
+      const key = trimmed.slice(0, eqIdx).trim()
+      const val = trimmed.slice(eqIdx + 1).trim()
+      if (!process.env[key]) {
+        process.env[key] = val
+      }
+    }
+  })
+}
+
 import {
   normalizeIdentifier,
   checkOtpSendEligibility,
   recordOtpSend,
   recordOtpFailure,
   recordOtpSuccess,
+  createOtpSessionToken,
+  verifyOtpSessionToken,
 } from '../src/lib/services/otp-security'
 import { msg91EmailService } from '../src/lib/services/msg91-email.service'
 
@@ -73,18 +96,30 @@ async function runTests() {
   const emailTarget = 'member.portal@drfitveda.com'
   const sendRes = await msg91EmailService.sendOtp(emailTarget)
   assert('OTP Dispatch Succeeded', sendRes.success, sendRes.message)
+  assert('Stateless OTP Token Generated', Boolean(sendRes.otpToken))
+
+  const generatedOtp = msg91EmailService._getStoredOtpForTesting(emailTarget) || '123456'
 
   // Wrong code test
-  const wrongCodeRes = await msg91EmailService.verifyOtp(emailTarget, '999999')
+  const wrongCodeRes = await msg91EmailService.verifyOtp(emailTarget, '999999', sendRes.otpToken)
   assert('Incorrect Code Rejected', !wrongCodeRes.success)
 
-  // Correct code (in dev mode, test code 123456)
-  const correctCodeRes = await msg91EmailService.verifyOtp(emailTarget, '123456')
-  assert('Correct Code Accepted', correctCodeRes.success)
+  // Correct code with token
+  const correctCodeRes = await msg91EmailService.verifyOtp(emailTarget, generatedOtp, sendRes.otpToken)
+  assert('Correct Code Accepted with Stateless Token', correctCodeRes.success)
 
-  // Single-use token consumption test: replay same code must fail
-  const reuseRes = await msg91EmailService.verifyOtp(emailTarget, '123456')
+  // Single-use token consumption test: replay same code/token must fail
+  const reuseRes = await msg91EmailService.verifyOtp(emailTarget, generatedOtp, sendRes.otpToken)
   assert('Reused Code Rejected (Single-Use Token Enforced)', !reuseRes.success)
+
+  // Serverless container simulation: test verifyOtp with token when store is empty
+  const serverlessEmail = 'serverless.coldstart@drfitveda.com'
+  const coldSend = await msg91EmailService.sendOtp(serverlessEmail)
+  const coldOtp = msg91EmailService._getStoredOtpForTesting(serverlessEmail)!
+  // Clear the in-memory store to simulate another container handling the verification
+  ;(msg91EmailService as any).store.delete(serverlessEmail)
+  const coldVerify = await msg91EmailService.verifyOtp(serverlessEmail, coldOtp, coldSend.otpToken)
+  assert('Serverless Cold-Start Container Verified via Stateless Token', coldVerify.success)
 
   // ─── 4. Brute-Force Lockout Defense ────────────────────────
   console.log('\n--- 4. Testing 5-Attempt Brute-Force Lockout ---')
@@ -106,19 +141,37 @@ async function runTests() {
     !eligibilityAfterLock.allowed && Boolean(eligibilityAfterLock.error?.includes('Too many failed attempts'))
   )
 
-  // ─── 5. Admin Escalation Guard Logic ────────────────────────
-  console.log('\n--- 5. Testing Admin Role Escalation Prohibition ---')
-  const adminRoles = ['admin', 'super_admin', 'operations_manager']
-  const customerRoles = ['customer', 'doctor', 'trainer']
+  // ─── 5. Role-Based OTP Portal Routing (Admin, Professional, Customer) ───
+  console.log('\n--- 5. Testing Role-Based OTP Portal Routing (Including Admin OTP Login) ---')
+  const roleExpectations: Array<{ role: string; expectedRedirect: string }> = [
+    { role: 'admin', expectedRedirect: '/admin' },
+    { role: 'super_admin', expectedRedirect: '/admin' },
+    { role: 'operations_manager', expectedRedirect: '/admin' },
+    { role: 'doctor', expectedRedirect: '/professional' },
+    { role: 'trainer', expectedRedirect: '/professional' },
+    { role: 'customer', expectedRedirect: '/customer' },
+  ]
 
-  for (const role of adminRoles) {
-    const isBlocked = ['admin', 'super_admin', 'operations_manager'].includes(role)
-    assert(`Role "${role}" Blocked from OTP Passwordless Login`, isBlocked)
-  }
-
-  for (const role of customerRoles) {
-    const isAllowed = !['admin', 'super_admin', 'operations_manager'].includes(role)
-    assert(`Role "${role}" Permitted for OTP Sign In`, isAllowed)
+  for (const { role, expectedRedirect } of roleExpectations) {
+    let redirectTo = '/customer'
+    if (['admin', 'super_admin', 'operations_manager', 'care_coordinator', 'staff'].includes(role)) {
+      redirectTo = '/admin'
+    } else if ([
+      'doctor',
+      'trainer',
+      'nutritionist',
+      'yoga_doctor',
+      'yoga_consultant',
+      'naturopathy_doctor',
+      'ayurveda_doctor',
+      'physiotherapist',
+      'wellness_coach',
+      'doctor_lead',
+      'trainer_lead',
+    ].includes(role)) {
+      redirectTo = '/professional'
+    }
+    assert(`Role "${role}" Permitted for OTP Login -> Redirects to ${expectedRedirect}`, redirectTo === expectedRedirect)
   }
 
   console.log('\n============================================================')

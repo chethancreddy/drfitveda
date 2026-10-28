@@ -3,6 +3,7 @@ import Link from 'next/link'
 import PublicHeader from '@/components/public/PublicHeader'
 import PublicFooter from '@/components/public/PublicFooter'
 import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState } from '@/lib/persistent-store'
 
 export const metadata: Metadata = {
   title: 'Memberships & Pricing | Dr Fit Veda',
@@ -30,7 +31,8 @@ function fmt(n: number) {
   return '₹' + n.toLocaleString('en-IN')
 }
 
-export default function MembershipsPage() {
+export default async function MembershipsPage() {
+  await loadPersistedState()
   const plans = [...(mockDb.state.memberships ?? [])]
     .filter((m: any) => m.is_active)
     .sort((a: any, b: any) => a.display_order - b.display_order)

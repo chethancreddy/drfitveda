@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 
 function getRole(req: NextRequest, user: any) {
   let role = (user as any)?.user_metadata?.role || (user as any)?.role
@@ -17,6 +18,7 @@ function getRole(req: NextRequest, user: any) {
 
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
   try {
+    await loadPersistedState()
     const resolvedParams = await Promise.resolve(context.params)
     const { id } = resolvedParams
 
@@ -81,13 +83,14 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
 
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
   try {
+    await loadPersistedState()
     const resolvedParams = await Promise.resolve(context.params)
     const { id } = resolvedParams
 
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     const role = getRole(req, user)
-    if (!['admin', 'super_admin'].includes(role)) {
+    if (!['admin', 'super_admin', 'operations_manager', 'care_coordinator'].includes(role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
@@ -141,6 +144,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
       }
     }
 
+    await savePersistedState(['customers', 'user_profiles', 'customer_profiles'])
     return NextResponse.json({ customer: customers[idx], success: true })
   } catch {
     return NextResponse.json({ error: 'Failed to update customer' }, { status: 400 })

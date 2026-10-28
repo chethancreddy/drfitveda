@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 
 function getRole(req: NextRequest, user: any) {
   let role = (user as any)?.user_metadata?.role || (user as any)?.role
@@ -17,6 +18,7 @@ function getRole(req: NextRequest, user: any) {
 
 export async function GET() {
   try {
+    await loadPersistedState()
     const assignments = mockDb.state.professional_assignments || []
     const customers = mockDb.state.customers || []
     const userProfiles = mockDb.state.user_profiles || []
@@ -50,6 +52,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    await loadPersistedState()
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     const role = getRole(req, user)
@@ -88,6 +91,7 @@ export async function POST(req: NextRequest) {
 
     if (!mockDb.state.professional_assignments) mockDb.state.professional_assignments = []
     mockDb.state.professional_assignments.push(newAssignment)
+    await savePersistedState('professional_assignments')
 
     return NextResponse.json({ assignment: newAssignment, success: true }, { status: 201 })
   } catch {

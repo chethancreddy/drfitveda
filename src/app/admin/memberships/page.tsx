@@ -105,33 +105,31 @@ export default function AdminMembershipsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingPlan),
       })
-      if (!res.ok) throw new Error('Save failed')
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || 'Failed to save plan')
+      }
       showToast(isNew ? 'Plan created!' : 'Plan updated!')
       setEditingPlan(null)
       await loadData()
-    } catch {
-      showToast('Error saving plan. Changes applied locally for demo.')
-      // For demo: apply locally
-      if (editingPlan.id) {
-        setPlans(prev => prev.map(p => p.id === editingPlan.id ? { ...p, ...editingPlan } as Membership : p))
-      }
-      setEditingPlan(null)
+    } catch (err: any) {
+      showToast(err?.message || 'Error saving plan. Please try again.')
     }
     setSaving(false)
   }
 
   async function togglePlanActive(plan: Membership) {
     try {
-      await fetch(`/api/memberships/${plan.id}`, {
+      const res = await fetch(`/api/memberships/${plan.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...plan, is_active: !plan.is_active }),
       })
+      if (!res.ok) throw new Error('Failed to update plan status')
       setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, is_active: !p.is_active } : p))
       showToast(plan.is_active ? 'Plan deactivated' : 'Plan activated')
-    } catch {
-      showToast('Toggle applied locally')
-      setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, is_active: !p.is_active } : p))
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to toggle plan status')
     }
   }
 
@@ -144,15 +142,15 @@ export default function AdminMembershipsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingConsult),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || 'Failed to update consultation service')
+      }
       showToast('Consultation service updated!')
       setEditingConsult(null)
       await loadData()
-    } catch {
-      // Apply locally for demo
-      setConsultations(prev => prev.map(c => c.id === editingConsult.id ? { ...c, ...editingConsult } as ConsultationService : c))
-      showToast('Updated locally (demo mode)')
-      setEditingConsult(null)
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to update consultation service')
     }
     setSaving(false)
   }

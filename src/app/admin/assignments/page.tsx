@@ -137,13 +137,15 @@ export default function AdminAssignmentsPage() {
         body: JSON.stringify(payload),
       })
 
-      if (!res.ok) throw new Error('Save failed')
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || 'Failed to save assignment')
+      }
       showToast(isNew ? 'Slot assignment & dispatch completed!' : 'Assignment updated successfully!')
       setEditingAssignment(null)
       await loadAllData()
-    } catch {
-      showToast('Saved locally for demo')
-      setEditingAssignment(null)
+    } catch (err: any) {
+      showToast(err?.message || 'Error saving assignment. Please try again.')
     }
     setSaving(false)
   }

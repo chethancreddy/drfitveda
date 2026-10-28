@@ -5,10 +5,14 @@
 // Endpoint: POST https://control.msg91.com/api/v5/email/send
 // ============================================================
 
+import crypto from 'crypto'
+import { createOtpSessionToken, verifyOtpSessionToken } from './otp-security'
+
 export interface Msg91EmailSendResult {
   success: boolean
   message: string
   devMode?: boolean
+  otpToken?: string
 }
 
 export interface Msg91EmailVerifyResult {
@@ -17,24 +21,43 @@ export interface Msg91EmailVerifyResult {
 }
 
 class Msg91EmailService {
+  private getEnv(key: string): string | null {
+    if (process.env[key]) return process.env[key]!
+    try {
+      const fs = require('fs')
+      const path = require('path')
+      const envPath = path.resolve(process.cwd(), '.env.local')
+      if (fs.existsSync(envPath)) {
+        const content = fs.readFileSync(envPath, 'utf8')
+        const match = content.match(new RegExp(`^\\s*${key}\\s*=\\s*([^#\\r\\n]+)`, 'm'))
+        if (match && match[1]) {
+          const val = match[1].trim()
+          process.env[key] = val
+          return val
+        }
+      }
+    } catch {}
+    return null
+  }
+
   private get authKey(): string | null {
-    return process.env.MSG91_AUTH_KEY || null
+    return this.getEnv('MSG91_AUTH_KEY')
   }
 
   private get templateId(): string | null {
-    return process.env.MSG91_EMAIL_TEMPLATE_ID || null
+    return this.getEnv('MSG91_EMAIL_TEMPLATE_ID') || 'global_otp_1622'
   }
 
   private get fromEmail(): string {
-    return process.env.MSG91_FROM_EMAIL || 'care@drfitveda.com'
+    return this.getEnv('MSG91_FROM_EMAIL') || 'support@drfitveda.com'
   }
 
   private get fromName(): string {
-    return process.env.MSG91_FROM_NAME || 'Dr Fit Veda'
+    return this.getEnv('MSG91_FROM_NAME') || 'Dr Fit Veda'
   }
 
   private get domain(): string {
-    return process.env.MSG91_DOMAIN || 'drfitveda.com'
+    return this.getEnv('MSG91_DOMAIN') || 'drfitveda.com'
   }
 
   public isConfigured(): boolean {
@@ -55,16 +78,25 @@ class Msg91EmailService {
 
   /**
    * Generates a 6-digit OTP and dispatches it via MSG91 Email API.
+   * Generates a signed stateless OTP token to guarantee serverless reliability.
    */
   public async sendOtp(email: string): Promise<Msg91EmailSendResult> {
     const cleanEmail = email.toLowerCase().trim()
 
-    // Generate secure 6-digit OTP
-    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString()
+    // Generate cryptographically secure 6-digit OTP
+    let generatedOtp: string
+    try {
+      generatedOtp = crypto.randomInt(100000, 1000000).toString()
+    } catch {
+      generatedOtp = Math.floor(100000 + Math.random() * 900000).toString()
+    }
+
+    const expiresAt = Date.now() + 5 * 60 * 1000 // 5 minutes validity
+    const otpToken = createOtpSessionToken(cleanEmail, generatedOtp)
 
     this.store.set(cleanEmail, {
       otp: generatedOtp,
-      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes validity
+      expiresAt,
     })
 
     if (!this.isConfigured()) {
@@ -73,6 +105,7 @@ class Msg91EmailService {
         success: true,
         message: `Verification code sent to ${cleanEmail} (Development Mode: use test code 123456 or generated code)`,
         devMode: true,
+        otpToken,
       }
     }
 
@@ -129,6 +162,7 @@ class Msg91EmailService {
         return {
           success: true,
           message: `Verification code sent to ${cleanEmail}. Please check your inbox.`,
+          otpToken,
         }
       }
 
@@ -148,45 +182,78 @@ class Msg91EmailService {
 
   /**
    * Verifies the 6-digit code for the specified email.
+   * Supports both stateless token verification (serverless-proof) and in-memory store.
    */
-  public async verifyOtp(email: string, otp: string): Promise<Msg91EmailVerifyResult> {
+  public async verifyOtp(email: string, otp: string, otpToken?: string): Promise<Msg91EmailVerifyResult> {
     const cleanEmail = email.toLowerCase().trim()
-    const cleanOtp = otp.trim()
+    const cleanOtp = String(otp || '').trim()
+
+    if (!cleanOtp || cleanOtp.length !== 6 || !/^\d{6}$/.test(cleanOtp)) {
+      return {
+        success: false,
+        message: 'Please enter a valid 6-digit verification code.',
+      }
+    }
+
+    // 1. Primary verification: Stateless signed token (immune to serverless container restarts)
+    if (otpToken) {
+      const tokenVerification = verifyOtpSessionToken(cleanEmail, cleanOtp, otpToken)
+      if (tokenVerification.valid) {
+        this.store.delete(cleanEmail)
+        return {
+          success: true,
+          message: 'Email OTP verified successfully',
+        }
+      }
+      if (tokenVerification.reason === 'expired') {
+        this.store.delete(cleanEmail)
+        return {
+          success: false,
+          message: 'Verification code has expired. Please request a new code.',
+        }
+      }
+      if (tokenVerification.reason === 'already_used') {
+        return {
+          success: false,
+          message: 'This verification code has already been used. Please request a new code.',
+        }
+      }
+    }
+
+    // 2. Secondary verification: In-memory store (for warm containers and local test runner)
     const record = this.store.get(cleanEmail)
-
-    if (!record) {
-      return {
-        success: false,
-        message: 'No verification code requested or code expired. Please request a new code.',
+    if (record) {
+      if (Date.now() > record.expiresAt) {
+        this.store.delete(cleanEmail)
+        return {
+          success: false,
+          message: 'Verification code has expired. Please request a new code.',
+        }
       }
-    }
 
-    if (Date.now() > record.expiresAt) {
-      this.store.delete(cleanEmail)
-      return {
-        success: false,
-        message: 'Verification code has expired. Please request a new code.',
+      if (record.otp === cleanOtp) {
+        this.store.delete(cleanEmail)
+        return {
+          success: true,
+          message: 'Email OTP verified successfully',
+        }
       }
-    }
 
-    // In dev mode without API key, allow test code 123456 or the generated code
-    if (!this.isConfigured() && cleanOtp === '123456') {
-      this.store.delete(cleanEmail)
-      return { success: true, message: 'Email OTP verified successfully' }
-    }
-
-    if (record.otp !== cleanOtp) {
       return {
         success: false,
         message: 'Incorrect verification code. Please check your email and try again.',
       }
     }
 
-    // Success: single-use OTP consumed
-    this.store.delete(cleanEmail)
+    // 3. Fallback for development mode test code 123456
+    if (!this.isConfigured() && cleanOtp === '123456') {
+      this.store.delete(cleanEmail)
+      return { success: true, message: 'Email OTP verified successfully' }
+    }
+
     return {
-      success: true,
-      message: 'Email OTP verified successfully',
+      success: false,
+      message: 'No verification code requested or code expired. Please request a new code.',
     }
   }
 

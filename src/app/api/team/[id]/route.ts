@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 
 function getRole(req: NextRequest, user: any) {
   let role = (user as any)?.user_metadata?.role || (user as any)?.role
@@ -17,6 +18,7 @@ function getRole(req: NextRequest, user: any) {
 
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
   try {
+    await loadPersistedState()
     const resolvedParams = await Promise.resolve(context.params)
     const { id } = resolvedParams
 
@@ -39,6 +41,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
       updated_at: new Date().toISOString(),
     }
 
+    await savePersistedState('team_members')
     return NextResponse.json({ success: true, member: members[idx] })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Failed to update member' }, { status: 400 })
@@ -47,6 +50,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 
 export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
   try {
+    await loadPersistedState()
     const resolvedParams = await Promise.resolve(context.params)
     const { id } = resolvedParams
 
@@ -54,7 +58,7 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
     const { data: { user } } = await supabase.auth.getUser()
     const role = getRole(req, user)
 
-    if (!['admin', 'super_admin'].includes(role)) {
+    if (!['admin', 'super_admin', 'operations_manager'].includes(role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
@@ -63,6 +67,7 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
     if (idx === -1) return NextResponse.json({ error: 'Member not found' }, { status: 404 })
 
     members.splice(idx, 1)
+    await savePersistedState('team_members')
     return NextResponse.json({ success: true, message: 'Team member removed' })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Failed to delete member' }, { status: 400 })

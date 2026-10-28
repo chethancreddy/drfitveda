@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb, DEFAULT_PROFESSIONAL_ROLES, ProfessionalRoleOption } from '@/lib/mock-db'
+import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 
 function getAdminRole(req: NextRequest, user: any) {
   let role = (user as any)?.user_metadata?.role || (user as any)?.role
@@ -17,6 +18,7 @@ function getAdminRole(req: NextRequest, user: any) {
 
 export async function GET() {
   try {
+    await loadPersistedState()
     if (!mockDb.state.professional_roles || mockDb.state.professional_roles.length === 0) {
       mockDb.state.professional_roles = [...DEFAULT_PROFESSIONAL_ROLES]
     }
@@ -32,10 +34,11 @@ export async function POST(req: NextRequest) {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     const role = getAdminRole(req, user)
-    if (!['admin', 'super_admin'].includes(role)) {
+    if (!['admin', 'super_admin', 'operations_manager'].includes(role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
+    await loadPersistedState()
     const body = await req.json()
     const { label, value, category, description, icon, is_active, display_order } = body
 
@@ -70,6 +73,7 @@ export async function POST(req: NextRequest) {
     }
 
     mockDb.state.professional_roles.push(newRole)
+    await savePersistedState('professional_roles')
 
     return NextResponse.json({ role: newRole, success: true }, { status: 201 })
   } catch {
@@ -82,10 +86,11 @@ export async function PUT(req: NextRequest) {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     const role = getAdminRole(req, user)
-    if (!['admin', 'super_admin'].includes(role)) {
+    if (!['admin', 'super_admin', 'operations_manager'].includes(role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
+    await loadPersistedState()
     const body = await req.json()
     const { id, label, value, category, description, icon, is_active, display_order } = body
 
@@ -114,6 +119,7 @@ export async function PUT(req: NextRequest) {
     }
 
     mockDb.state.professional_roles[idx] = updated
+    await savePersistedState('professional_roles')
 
     return NextResponse.json({ role: updated, success: true })
   } catch {
@@ -126,10 +132,11 @@ export async function DELETE(req: NextRequest) {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     const role = getAdminRole(req, user)
-    if (!['admin', 'super_admin'].includes(role)) {
+    if (!['admin', 'super_admin', 'operations_manager'].includes(role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
+    await loadPersistedState()
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
 
@@ -144,6 +151,7 @@ export async function DELETE(req: NextRequest) {
     mockDb.state.professional_roles = mockDb.state.professional_roles.filter(
       (r: ProfessionalRoleOption) => r.id !== id
     )
+    await savePersistedState('professional_roles')
 
     return NextResponse.json({ success: true })
   } catch {

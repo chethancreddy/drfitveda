@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 
 function getAuthRole(req: NextRequest, user: any) {
   let role = (user as any)?.user_metadata?.role || (user as any)?.role
@@ -18,6 +19,7 @@ function getAuthRole(req: NextRequest, user: any) {
 // GET /api/clinical-records?customer_id=...
 export async function GET(req: NextRequest) {
   try {
+    await loadPersistedState()
     const { searchParams } = new URL(req.url)
     const customerId = searchParams.get('customer_id')
 
@@ -47,6 +49,7 @@ export async function GET(req: NextRequest) {
 // Saves clinical vitals/BMS, blood reports (vitamins, cholesterol, etc.), digestive analysis, and diet chart
 export async function POST(req: NextRequest) {
   try {
+    await loadPersistedState()
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     const role = getAuthRole(req, user)
@@ -256,6 +259,16 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+
+    await savePersistedState([
+      'clinical_records',
+      'customer_profiles',
+      'food_profiles',
+      'plans',
+      'plan_versions',
+      'plan_items',
+      'notifications',
+    ])
 
     return NextResponse.json({
       success: true,

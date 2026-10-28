@@ -43,7 +43,7 @@ export default async function AdminDashboard() {
       <main className="app-main">
         <div className="page-header flex justify-between items-center">
           <div><h1 className="text-headline-md">Admin Dashboard</h1><p className="text-body-md text-muted">Platform overview</p></div>
-          <Link href="/admin/customers/new" className="btn btn-primary btn-sm">+ Customer</Link>
+          <Link href="/admin/customers?new=1" className="btn btn-primary btn-sm">+ Customer</Link>
         </div>
 
         <div className="grid-4" style={{marginBottom:'var(--space-md)'}}>

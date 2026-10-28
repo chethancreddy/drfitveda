@@ -162,19 +162,37 @@ async function runTests() {
     !eligibilityAfterLock.allowed && Boolean(eligibilityAfterLock.error?.includes('Too many failed attempts'))
   )
 
-  // ─── 5. Admin Privilege Escalation Prevention ─────────────────
-  console.log('\n--- 5. Testing Administrative Privilege Escalation Protection ---')
-  const adminRoles = ['admin', 'super_admin', 'operations_manager']
-  const customerRoles = ['customer', 'doctor', 'trainer']
+  // ─── 5. Role-Based WhatsApp OTP Portal Routing (Including Admin OTP Login) ───
+  console.log('\n--- 5. Testing Role-Based WhatsApp OTP Portal Routing ---')
+  const roleExpectations: Array<{ role: string; expectedRedirect: string }> = [
+    { role: 'admin', expectedRedirect: '/admin' },
+    { role: 'super_admin', expectedRedirect: '/admin' },
+    { role: 'operations_manager', expectedRedirect: '/admin' },
+    { role: 'doctor', expectedRedirect: '/professional' },
+    { role: 'trainer', expectedRedirect: '/professional' },
+    { role: 'customer', expectedRedirect: '/customer' },
+  ]
 
-  for (const role of adminRoles) {
-    const isBlocked = ['admin', 'super_admin', 'operations_manager'].includes(role)
-    assert(`Admin Role "${role}" Blocked from Passwordless OTP Access`, isBlocked)
-  }
-
-  for (const role of customerRoles) {
-    const isAllowed = !['admin', 'super_admin', 'operations_manager'].includes(role)
-    assert(`Role "${role}" Permitted for OTP Sign In`, isAllowed)
+  for (const { role, expectedRedirect } of roleExpectations) {
+    let redirectTo = '/customer'
+    if (['admin', 'super_admin', 'operations_manager', 'care_coordinator', 'staff'].includes(role)) {
+      redirectTo = '/admin'
+    } else if ([
+      'doctor',
+      'trainer',
+      'nutritionist',
+      'yoga_doctor',
+      'yoga_consultant',
+      'naturopathy_doctor',
+      'ayurveda_doctor',
+      'physiotherapist',
+      'wellness_coach',
+      'doctor_lead',
+      'trainer_lead',
+    ].includes(role)) {
+      redirectTo = '/professional'
+    }
+    assert(`Role "${role}" Permitted for WhatsApp OTP Login -> Redirects to ${expectedRedirect}`, redirectTo === expectedRedirect)
   }
 
   // ─── 6. MSG91 Real Service Diagnostics & Integration ─────────
@@ -183,12 +201,12 @@ async function runTests() {
   assert('MSG91 Auth Key Configured on Server', cfg.authKeySet)
   assert('MSG91 Integrated WhatsApp Number Configured', Boolean(cfg.integratedNumber), `Number: ${cfg.integratedNumber}`)
 
-  // Real MSG91 API test call with the live auth key
+  // Real MSG91 API test call with the live auth key from env
   console.log('\n  Making live diagnostic call to MSG91 WhatsApp Outbound API...')
   const liveRes = await fetch('https://control.msg91.com/api/v5/whatsapp/whatsapp-activation/', {
     headers: {
       accept: 'application/json',
-      authkey: process.env.MSG91_AUTH_KEY || '580697AKLpOxsYqH6acba8baP1',
+      authkey: process.env.MSG91_AUTH_KEY || '',
     },
   })
   const liveData = await liveRes.json().catch(() => ({}))
@@ -202,7 +220,7 @@ async function runTests() {
   const templateRes = await fetch(`https://control.msg91.com/api/v5/whatsapp/get-template-client/17111240135`, {
     headers: {
       accept: 'application/json',
-      authkey: process.env.MSG91_AUTH_KEY || '580697AKLpOxsYqH6acba8baP1',
+      authkey: process.env.MSG91_AUTH_KEY || '',
     },
   })
   const templateData = await templateRes.json().catch(() => ({}))

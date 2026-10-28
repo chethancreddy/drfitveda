@@ -75,6 +75,12 @@ export default function AdminCustomersPage() {
 
   useEffect(() => {
     loadAllData()
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('new') === '1') {
+        setShowOnboardModal(true)
+      }
+    }
   }, [])
 
   async function loadAllData() {

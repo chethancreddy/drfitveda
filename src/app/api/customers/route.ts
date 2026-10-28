@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 
 function getRole(req: NextRequest, user: any) {
   let role = (user as any)?.user_metadata?.role || (user as any)?.role
@@ -17,6 +18,7 @@ function getRole(req: NextRequest, user: any) {
 
 export async function GET(req: NextRequest) {
   try {
+    await loadPersistedState()
     const customers = mockDb.state.customers || []
     const profiles = mockDb.state.customer_profiles || []
     const userProfiles = mockDb.state.user_profiles || []
@@ -58,10 +60,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    await loadPersistedState()
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     const role = getRole(req, user)
-    if (!['admin', 'super_admin'].includes(role)) {
+    if (!['admin', 'super_admin', 'operations_manager', 'care_coordinator'].includes(role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
@@ -168,6 +171,13 @@ export async function POST(req: NextRequest) {
         created_at: new Date().toISOString(),
       })
     }
+
+    await savePersistedState([
+      'user_profiles',
+      'customers',
+      'customer_profiles',
+      'professional_assignments',
+    ])
 
     return NextResponse.json({ customer: newCustomer, success: true }, { status: 201 })
   } catch {

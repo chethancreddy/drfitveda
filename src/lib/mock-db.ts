@@ -665,6 +665,22 @@ class MockDatabase {
         },
       ],
       audit_logs: [],
+      training_retention_config: [
+        {
+          id: 'trc-001',
+          config_key: 'default_retention_policy',
+          retention_mode: 'grace_period',
+          grace_period_hours: 24,
+          max_recordings_per_customer: 3,
+          auto_delete_enabled: true,
+          retention_days: 30,
+          updated_at: new Date('2024-01-01').toISOString(),
+        },
+      ],
+      consent_records: [],
+      data_subject_requests: [],
+      financial_transactions: [],
+      contact_inquiries: [],
       settings: {
         platform_name: 'Dr Fit Veda',
         tagline: 'Naturopathy · Clinical Nutrition · Yoga · Certified Fitness',

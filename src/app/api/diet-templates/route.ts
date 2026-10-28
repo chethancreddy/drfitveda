@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 
 export const DEFAULT_DIET_TEMPLATES = [
   {
@@ -304,6 +305,7 @@ export const DEFAULT_DIET_TEMPLATES = [
 // GET /api/diet-templates — List all templates
 export async function GET() {
   try {
+    await loadPersistedState()
     if (!mockDb.state.diet_templates || mockDb.state.diet_templates.length === 0) {
       mockDb.state.diet_templates = DEFAULT_DIET_TEMPLATES
     }
@@ -320,6 +322,7 @@ export async function GET() {
 // POST /api/diet-templates — Save new custom template from doctor
 export async function POST(req: NextRequest) {
   try {
+    await loadPersistedState()
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -373,6 +376,7 @@ export async function POST(req: NextRequest) {
     }
 
     mockDb.state.diet_templates.unshift(newTemplate)
+    await savePersistedState('diet_templates')
 
     return NextResponse.json({
       success: true,

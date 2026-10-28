@@ -54,6 +54,10 @@ export default function LoginPage() {
   const [emailSent, setEmailSent] = useState(false)
   const [emailCountdown, setEmailCountdown] = useState(0)
 
+  // Stateless OTP session tokens for serverless resilience
+  const [whatsappOtpToken, setWhatsappOtpToken] = useState<string | null>(null)
+  const [emailOtpToken, setEmailOtpToken] = useState<string | null>(null)
+
   // Countdown timers for OTP resend cooldown
   useEffect(() => {
     if (whatsappCountdown <= 0) return
@@ -143,6 +147,9 @@ export default function LoginPage() {
   // Reset Password Modal State
   const [showResetModal, setShowResetModal] = useState(false)
   const [resetIdentifier, setResetIdentifier] = useState('')
+  const [resetOtpSent, setResetOtpSent] = useState(false)
+  const [resetOtpCode, setResetOtpCode] = useState('')
+  const [resetOtpToken, setResetOtpToken] = useState<string | null>(null)
   const [resetNewPassword, setResetNewPassword] = useState('')
   const [resetConfirmPassword, setResetConfirmPassword] = useState('')
   const [resetLoading, setResetLoading] = useState(false)
@@ -209,6 +216,7 @@ export default function LoginPage() {
       setWhatsappFullPhone(validation.fullPhone)
       setWhatsappDisplay(data.display || validation.fullPhone)
       setWhatsappCountdown(data.cooldownSeconds || 60)
+      if (data.otpToken) setWhatsappOtpToken(data.otpToken)
       setSuccessMsg(data.message || `Verification code sent to WhatsApp: ${data.display || validation.fullPhone}`)
     } catch (err: any) {
       setError(err.message || 'Failed to send WhatsApp OTP')
@@ -244,6 +252,7 @@ export default function LoginPage() {
       if (!res.ok) throw new Error(data.error || 'Failed to resend WhatsApp OTP.')
 
       setWhatsappCountdown(data.cooldownSeconds || 60)
+      if (data.otpToken) setWhatsappOtpToken(data.otpToken)
       setSuccessMsg(`A fresh verification code has been dispatched to WhatsApp (${whatsappDisplay || targetPhone}).`)
     } catch (err: any) {
       setError(err.message || 'Failed to resend WhatsApp OTP')
@@ -276,6 +285,7 @@ export default function LoginPage() {
           phone: targetPhone,
           channel: 'whatsapp',
           otp: cleanCode,
+          otpToken: whatsappOtpToken || undefined,
           action: 'verify_otp',
         }),
       })
@@ -321,6 +331,7 @@ export default function LoginPage() {
       setEmailSent(true)
       setEmailDisplay(data.display || cleanInput)
       setEmailCountdown(data.cooldownSeconds || 60)
+      if (data.otpToken) setEmailOtpToken(data.otpToken)
       setSuccessMsg(data.message || `Verification code sent to ${data.display || cleanInput}`)
     } catch (err: any) {
       setError(err.message || 'Failed to send Email OTP')
@@ -352,6 +363,7 @@ export default function LoginPage() {
       if (!res.ok) throw new Error(data.error || 'Failed to resend Email OTP')
 
       setEmailCountdown(data.cooldownSeconds || 60)
+      if (data.otpToken) setEmailOtpToken(data.otpToken)
       setSuccessMsg(`A fresh verification code has been sent to ${emailDisplay}.`)
     } catch (err: any) {
       setError(err.message || 'Failed to resend Email OTP')
@@ -380,6 +392,7 @@ export default function LoginPage() {
           email: emailIdentifier.trim(),
           channel: 'email',
           otp: cleanCode,
+          otpToken: emailOtpToken || undefined,
           action: 'verify_otp',
         }),
       })
@@ -395,11 +408,48 @@ export default function LoginPage() {
     }
   }
 
+  // Request Reset Password OTP Handler
+  const handleRequestResetOtp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!resetIdentifier.trim()) {
+      setResetStatus({ type: 'error', message: 'User ID or Email is required' })
+      return
+    }
+    setResetLoading(true)
+    setResetStatus(null)
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: resetIdentifier.trim(),
+          action: 'request_otp',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to send verification code')
+      setResetOtpSent(true)
+      if (data.otpToken) setResetOtpToken(data.otpToken)
+      setResetStatus({
+        type: 'success',
+        message: data.message || 'Verification code sent! Enter the 6-digit code below.',
+      })
+    } catch (err: any) {
+      setResetStatus({ type: 'error', message: err.message || 'Failed to request verification code' })
+    } finally {
+      setResetLoading(false)
+    }
+  }
+
   // Reset Password Handler
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!resetIdentifier) {
       setResetStatus({ type: 'error', message: 'User ID or Email is required' })
+      return
+    }
+    if (!resetOtpCode.trim() || resetOtpCode.trim().length !== 6) {
+      setResetStatus({ type: 'error', message: 'Please enter the 6-digit verification code' })
       return
     }
     if (resetNewPassword !== resetConfirmPassword) {
@@ -420,6 +470,8 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           identifier: resetIdentifier,
+          otp: resetOtpCode.trim(),
+          otpToken: resetOtpToken || undefined,
           new_password: resetNewPassword,
           action: 'reset_password',
         }),
@@ -439,6 +491,9 @@ export default function LoginPage() {
       setTimeout(() => {
         setShowResetModal(false)
         setResetStatus(null)
+        setResetOtpSent(false)
+        setResetOtpCode('')
+        setResetOtpToken(null)
       }, 1800)
     } catch (err: any) {
       setResetStatus({ type: 'error', message: err.message || 'Error resetting password' })
@@ -1291,7 +1346,7 @@ export default function LoginPage() {
               </div>
             )}
 
-            <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <form onSubmit={resetOtpSent ? handleResetPassword : handleRequestResetOtp} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
                 <label className="text-body-sm" style={{ fontWeight: 600, display: 'block', marginBottom: 4 }}>
                   User ID / Email / Phone *
@@ -1299,6 +1354,7 @@ export default function LoginPage() {
                 <input
                   type="text"
                   required
+                  disabled={resetOtpSent}
                   value={resetIdentifier}
                   onChange={e => setResetIdentifier(e.target.value)}
                   placeholder="e.g. doctor@drfitveda.com"
@@ -1307,41 +1363,61 @@ export default function LoginPage() {
                 />
               </div>
 
-              <div>
-                <label className="text-body-sm" style={{ fontWeight: 600, display: 'block', marginBottom: 4 }}>
-                  New Password (min 6 characters) *
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={resetNewPassword}
-                  onChange={e => setResetNewPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="form-input"
-                  style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--color-border)', borderRadius: 6 }}
-                />
-              </div>
+              {resetOtpSent && (
+                <>
+                  <div>
+                    <label className="text-body-sm" style={{ fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                      6-Digit Verification Code (OTP) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={6}
+                      value={resetOtpCode}
+                      onChange={e => setResetOtpCode(e.target.value.replace(/\D/g, ''))}
+                      placeholder="123456"
+                      className="form-input"
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--color-border)', borderRadius: 6, letterSpacing: 4, fontWeight: 700 }}
+                    />
+                  </div>
 
-              <div>
-                <label className="text-body-sm" style={{ fontWeight: 600, display: 'block', marginBottom: 4 }}>
-                  Confirm New Password *
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={resetConfirmPassword}
-                  onChange={e => setResetConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="form-input"
-                  style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--color-border)', borderRadius: 6 }}
-                />
-              </div>
+                  <div>
+                    <label className="text-body-sm" style={{ fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                      New Password (min 6 characters) *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={resetNewPassword}
+                      onChange={e => setResetNewPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="form-input"
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--color-border)', borderRadius: 6 }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-body-sm" style={{ fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                      Confirm New Password *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={resetConfirmPassword}
+                      onChange={e => setResetConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="form-input"
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--color-border)', borderRadius: 6 }}
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="flex justify-end" style={{ gap: 10, marginTop: 8 }}>
                 <button
                   type="button"
                   className="btn btn-ghost"
-                  onClick={() => { setShowResetModal(false); setResetStatus(null); }}
+                  onClick={() => { setShowResetModal(false); setResetStatus(null); setResetOtpSent(false); setResetOtpCode(''); }}
                 >
                   Cancel
                 </button>
@@ -1350,7 +1426,7 @@ export default function LoginPage() {
                   disabled={resetLoading}
                   className="btn btn-primary"
                 >
-                  {resetLoading ? 'Resetting…' : 'Save New Password'}
+                  {resetLoading ? 'Processing…' : resetOtpSent ? 'Verify & Save New Password' : 'Send Verification Code'}
                 </button>
               </div>
             </form>

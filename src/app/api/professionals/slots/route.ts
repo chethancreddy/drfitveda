@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState } from '@/lib/persistent-store'
 
 // GET /api/professionals/slots — returns professionals with capacity and free slot availability
 export async function GET(req: NextRequest) {
   try {
+    await loadPersistedState()
     const professionals = mockDb.state.professionals || []
     const assignments = mockDb.state.professional_assignments || []
 

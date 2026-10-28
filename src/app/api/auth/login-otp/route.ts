@@ -11,6 +11,7 @@ import { msg91EmailService } from '@/lib/services/msg91-email.service'
 import { msg91WhatsAppService } from '@/lib/services/msg91-whatsapp.service'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { MOCK_USERS, mockDb } from '@/lib/mock-db'
+import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 
 // ============================================================
 // POST /api/auth/login-otp — MSG91 OTP Authentication Engine
@@ -87,14 +88,27 @@ export async function POST(req: NextRequest) {
         // Record successful dispatch for rate-limiting & 60s cooldown
         recordOtpSend(norm.normalized)
 
-        return NextResponse.json({
+        const response = NextResponse.json({
           success: true,
           message: result.message,
           type: 'whatsapp',
           display: norm.display,
           cooldownSeconds: 60,
           requestId: result.requestId,
+          otpToken: result.otpToken,
         })
+
+        if (result.otpToken) {
+          response.cookies.set('drf_otp_token', result.otpToken, {
+            path: '/',
+            httpOnly: true,
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 300,
+          })
+        }
+
+        return response
       } else {
         // Dispatch via MSG91 Email Service
         const result = await msg91EmailService.sendOtp(norm.normalized)
@@ -106,14 +120,27 @@ export async function POST(req: NextRequest) {
         // Record successful dispatch for rate-limiting & 60s cooldown
         recordOtpSend(norm.normalized)
 
-        return NextResponse.json({
+        const response = NextResponse.json({
           success: true,
           message: result.message,
           type: 'email',
           display: norm.display,
           cooldownSeconds: 60,
           devMode: result.devMode || false,
+          otpToken: result.otpToken,
         })
+
+        if (result.otpToken) {
+          response.cookies.set('drf_otp_token', result.otpToken, {
+            path: '/',
+            httpOnly: true,
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 300,
+          })
+        }
+
+        return response
       }
     }
 
@@ -124,12 +151,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Please enter the 6-digit verification code.' }, { status: 400 })
       }
 
+      const otpToken = req.cookies.get('drf_otp_token')?.value || body.otpToken
+
       // Verify with the appropriate MSG91 channel service
       let verifyResult: { success: boolean; message: string }
       if (norm.type === 'phone') {
-        verifyResult = await msg91WhatsAppService.verifyOtp(norm.normalized, cleanOtp)
+        verifyResult = await msg91WhatsAppService.verifyOtp(norm.normalized, cleanOtp, otpToken)
       } else {
-        verifyResult = await msg91EmailService.verifyOtp(norm.normalized, cleanOtp)
+        verifyResult = await msg91EmailService.verifyOtp(norm.normalized, cleanOtp, otpToken)
       }
 
       if (!verifyResult.success) {
@@ -150,160 +179,144 @@ export async function POST(req: NextRequest) {
       recordOtpSuccess(norm.normalized)
 
       // ─── USER IDENTIFICATION & ACCOUNT MAPPING ─────────────────
+      await loadPersistedState()
       let targetUser: any = null
-      const isPlaceholder = !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder')
 
-      if (!isPlaceholder) {
-        try {
-          const svc = await createServiceRoleClient()
-
-          if (norm.type === 'email') {
-            // Search user_profiles / auth by email
-            const { data: profile } = await (svc as any)
-              .from('user_profiles')
-              .select('id, role, full_name, phone, is_active')
-              .ilike('email', norm.normalized)
-              .single()
-
-            if (profile) {
-              targetUser = {
-                id: profile.id,
-                role: profile.role,
-                full_name: profile.full_name || 'Member',
-                email: norm.normalized,
-                phone: profile.phone || '',
-              }
-            }
-          } else {
-            // Search user_profiles by phone (checking e164, normalized, and display)
-            const phoneQueries = [
-              norm.e164Phone,
-              norm.normalized,
-              norm.display,
-              norm.e164Phone ? norm.e164Phone.replace('+', '') : '',
-            ].filter(Boolean)
-
-            const { data: profile } = await (svc as any)
-              .from('user_profiles')
-              .select('id, role, full_name, phone, is_active')
-              .or(phoneQueries.map(p => `phone.eq.${p}`).join(','))
-              .single()
-
-            if (profile) {
-              targetUser = {
-                id: profile.id,
-                role: profile.role,
-                full_name: profile.full_name || 'Member',
-                email: `${norm.normalized}@users.drfitveda.com`,
-                phone: profile.phone,
-              }
-            }
+      // 1. Check persisted Admin Profile first
+      if (mockDb.state.admin_profile) {
+        const ap = mockDb.state.admin_profile
+        if (norm.type === 'email' && ap.email && ap.email.toLowerCase() === norm.normalized.toLowerCase()) {
+          targetUser = {
+            id: ap.id || MOCK_USERS.admin.id,
+            role: ap.role || 'admin',
+            full_name: ap.full_name || MOCK_USERS.admin.full_name,
+            email: ap.email,
+            phone: ap.phone || MOCK_USERS.admin.phone,
           }
-
-          // If no existing account found, provision a new customer
-          if (!targetUser) {
-            const newUserId = (crypto as any).randomUUID ? (crypto as any).randomUUID() : `u-${Date.now()}`
-            const userEmail = norm.type === 'email' ? norm.normalized : `${norm.normalized}@users.drfitveda.com`
-            const userPhone = norm.type === 'phone' ? norm.e164Phone : null
-
-            await (svc as any).from('user_profiles').insert({
-              id: newUserId,
-              role: 'customer',
-              full_name: 'Customer',
-              phone: userPhone,
-              is_active: true,
-            })
-
-            await (svc as any).from('customers').insert({
-              user_id: newUserId,
-              membership_status: 'inactive',
-              is_active: true,
-            })
-
+        } else if (norm.type === 'phone' && ap.phone) {
+          const apPhoneNorm = normalizeIdentifier(ap.phone, 'whatsapp').normalized
+          if (apPhoneNorm && apPhoneNorm === norm.normalized) {
             targetUser = {
-              id: newUserId,
-              role: 'customer',
-              full_name: 'Customer',
-              email: userEmail,
-              phone: userPhone || '',
+              id: ap.id || MOCK_USERS.admin.id,
+              role: ap.role || 'admin',
+              full_name: ap.full_name || MOCK_USERS.admin.full_name,
+              email: ap.email || MOCK_USERS.admin.email,
+              phone: ap.phone,
             }
           }
-        } catch {
-          // If error during DB query, fallback to mock user matching
         }
       }
 
-      // Local / Mock fallback lookup
+      // 2. Check core MOCK_USERS (admin, doctor, trainer, coordinator, customer)
       if (!targetUser) {
         if (norm.type === 'email') {
-          targetUser = Object.values(MOCK_USERS).find(u => u.email.toLowerCase() === norm.normalized)
+          targetUser = Object.values(MOCK_USERS).find(
+            u => u.email.toLowerCase() === norm.normalized.toLowerCase()
+          ) || null
         } else {
           targetUser = Object.values(MOCK_USERS).find(u => {
             if (!u.phone) return false
             const userPhoneNorm = normalizeIdentifier(u.phone, 'whatsapp').normalized
             return userPhoneNorm === norm.normalized
-          })
+          }) || null
         }
+      }
 
-        // Search mockDb user_profiles
-        if (!targetUser && mockDb.state.user_profiles) {
-          const profileMatch = mockDb.state.user_profiles.find((p: any) => {
-            if (norm.type === 'email') {
-              return p.email && p.email.toLowerCase() === norm.normalized
-            }
-            if (!p.phone) return false
-            const pPhoneNorm = normalizeIdentifier(p.phone, 'whatsapp').normalized
-            return pPhoneNorm === norm.normalized
-          })
-          if (profileMatch) {
-            targetUser = {
-              id: profileMatch.id,
-              role: profileMatch.role,
-              full_name: profileMatch.full_name,
-              email: norm.type === 'email' ? norm.normalized : `${norm.normalized}@users.drfitveda.com`,
-              phone: profileMatch.phone,
-            }
+      // 3. Check persisted team_members
+      if (!targetUser && Array.isArray(mockDb.state.team_members)) {
+        const tmMatch = mockDb.state.team_members.find((m: any) => {
+          if (norm.type === 'email') {
+            return m.email && m.email.toLowerCase() === norm.normalized.toLowerCase()
           }
-        }
-
-        // New customer default if no user matched
-        if (!targetUser) {
-          const newUserId = `u-otp-${Date.now()}`
+          if (!m.phone) return false
+          return normalizeIdentifier(m.phone, 'whatsapp').normalized === norm.normalized
+        })
+        if (tmMatch) {
           targetUser = {
-            id: newUserId,
-            role: 'customer',
-            full_name: 'Customer',
-            email: norm.type === 'email' ? norm.normalized : `${norm.normalized}@users.drfitveda.com`,
-            phone: norm.type === 'phone' ? (norm.e164Phone || '') : '',
-          }
-          if (mockDb.state.user_profiles) {
-            mockDb.state.user_profiles.push({
-              id: newUserId,
-              role: 'customer',
-              full_name: 'Customer',
-              email: targetUser.email,
-              phone: targetUser.phone,
-              is_active: true,
-            })
+            id: tmMatch.user_id || tmMatch.id,
+            role: tmMatch.role || 'care_coordinator',
+            full_name: tmMatch.full_name,
+            email: tmMatch.email || `${norm.normalized}@users.drfitveda.com`,
+            phone: tmMatch.phone || '',
           }
         }
       }
 
-      // ─── CRITICAL SECURITY CHECK: ADMIN ESCALATION PROHIBITION ──
-      // Requirement: Do not allow WhatsApp or Email OTP verification alone to grant administrative privileges.
-      if (['admin', 'super_admin', 'operations_manager'].includes(targetUser.role)) {
-        return NextResponse.json(
-          {
-            error: 'Administrative accounts require password authentication. Please use the "User ID & Password" tab to sign in.',
-            requiresPasswordAuth: true,
-          },
-          { status: 403 }
-        )
+      // 4. Check persisted user_profiles
+      if (!targetUser && Array.isArray(mockDb.state.user_profiles)) {
+        const profileMatch = mockDb.state.user_profiles.find((p: any) => {
+          if (norm.type === 'email') {
+            return p.email && p.email.toLowerCase() === norm.normalized.toLowerCase()
+          }
+          if (!p.phone) return false
+          const pPhoneNorm = normalizeIdentifier(p.phone, 'whatsapp').normalized
+          return pPhoneNorm === norm.normalized
+        })
+        if (profileMatch) {
+          targetUser = {
+            id: profileMatch.id,
+            role: profileMatch.role || 'customer',
+            full_name: profileMatch.full_name || 'Member',
+            email: profileMatch.email || (norm.type === 'email' ? norm.normalized : `${norm.normalized}@users.drfitveda.com`),
+            phone: profileMatch.phone || '',
+          }
+        }
       }
 
-      // Determine appropriate landing portal
+      // 5. Auto-provision new customer if no existing account matched
+      if (!targetUser) {
+        const newUserId = `u-otp-${Date.now()}`
+        const newEmail = norm.type === 'email' ? norm.normalized : `${norm.normalized}@users.drfitveda.com`
+        const newPhone = norm.type === 'phone' ? (norm.e164Phone || '') : ''
+
+        targetUser = {
+          id: newUserId,
+          role: 'customer',
+          full_name: 'Customer',
+          email: newEmail,
+          phone: newPhone,
+        }
+
+        if (!mockDb.state.user_profiles) mockDb.state.user_profiles = []
+        mockDb.state.user_profiles.push({
+          id: newUserId,
+          role: 'customer',
+          full_name: 'Customer',
+          email: newEmail,
+          phone: newPhone,
+          is_active: true,
+          created_at: new Date().toISOString(),
+        })
+
+        if (!mockDb.state.customers) mockDb.state.customers = []
+        mockDb.state.customers.push({
+          id: `c-otp-${Date.now()}`,
+          user_id: newUserId,
+          membership_status: 'inactive',
+          is_active: true,
+          created_at: new Date().toISOString(),
+        })
+
+        await savePersistedState(['user_profiles', 'customers'])
+      }
+
+      // Determine appropriate landing portal (Admin, Professional, or Customer)
       let redirectTo = '/customer'
-      if (['doctor', 'trainer', 'nutritionist', 'yoga_doctor', 'naturopathy_doctor'].includes(targetUser.role)) {
+      if (['admin', 'super_admin', 'operations_manager', 'care_coordinator', 'staff'].includes(targetUser.role)) {
+        redirectTo = '/admin'
+      } else if ([
+        'doctor',
+        'trainer',
+        'nutritionist',
+        'yoga_doctor',
+        'yoga_consultant',
+        'naturopathy_doctor',
+        'ayurveda_doctor',
+        'physiotherapist',
+        'wellness_coach',
+        'doctor_lead',
+        'trainer_lead',
+      ].includes(targetUser.role)) {
         redirectTo = '/professional'
       }
 
@@ -329,6 +342,9 @@ export async function POST(req: NextRequest) {
         sameSite: 'lax',
         maxAge: 86400 * 7, // 7 days
       })
+
+      // Invalidate consumed OTP session cookie
+      response.cookies.delete('drf_otp_token')
 
       return response
     }

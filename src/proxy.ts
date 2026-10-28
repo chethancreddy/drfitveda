@@ -1,12 +1,23 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import type { UserRole } from '@/lib/supabase/types'
 
 // Route → required roles map
-const ROUTE_ROLES: Record<string, UserRole[]> = {
+const ROUTE_ROLES: Record<string, string[]> = {
   '/customer': ['customer'],
-  '/professional': ['doctor','naturopathy_doctor','nutritionist','trainer','yoga_doctor','yoga_consultant'],
-  '/admin': ['admin','super_admin'],
+  '/professional': [
+    'doctor',
+    'naturopathy_doctor',
+    'ayurveda_doctor',
+    'nutritionist',
+    'trainer',
+    'yoga_doctor',
+    'yoga_consultant',
+    'physiotherapist',
+    'wellness_coach',
+    'doctor_lead',
+    'trainer_lead',
+  ],
+  '/admin': ['admin', 'super_admin', 'operations_manager', 'care_coordinator', 'staff'],
 }
 
 const PUBLIC_ROUTES = [
@@ -16,7 +27,7 @@ const PUBLIC_ROUTES = [
   '/privacy', '/terms', '/cookies', '/refund-policy', '/disclaimer', '/data-request',
 ]
 
-function matchRoute(pathname: string): UserRole[] | null {
+function matchRoute(pathname: string): string[] | null {
   for (const [prefix, roles] of Object.entries(ROUTE_ROLES)) {
     if (pathname.startsWith(prefix)) return roles
   }
@@ -47,12 +58,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
-  // 1. Check for demo session cookie (local development testing)
+  // 1. Check for session cookie
   const demoCookie = request.cookies.get('drf_session')?.value
   if (demoCookie) {
     try {
       const session = JSON.parse(decodeURIComponent(demoCookie))
-      const userRole = session.role as UserRole
+      const userRole = String(session.role || '')
       const requiredRoles = matchRoute(pathname)
 
       if (requiredRoles && !requiredRoles.includes(userRole)) {
@@ -64,7 +75,7 @@ export async function proxy(request: NextRequest) {
     } catch {}
   }
 
-  // 2. If placeholder Supabase and no demo session, redirect to login
+  // 2. If placeholder Supabase and no session, redirect to login
   const isPlaceholder = !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder')
   if (isPlaceholder) {
     const loginUrl = request.nextUrl.clone()
@@ -115,8 +126,8 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    if (!requiredRoles.includes(profile.role as UserRole)) {
-      const roleHome = getRoleHome(profile.role as UserRole)
+    if (!requiredRoles.includes(String(profile.role))) {
+      const roleHome = getRoleHome(String(profile.role))
       return NextResponse.redirect(new URL(roleHome, request.url))
     }
   }
@@ -124,9 +135,9 @@ export async function proxy(request: NextRequest) {
   return supabaseResponse
 }
 
-function getRoleHome(role: UserRole): string {
+function getRoleHome(role: string): string {
   if (role === 'customer') return '/customer'
-  if (['admin','super_admin'].includes(role)) return '/admin'
+  if (['admin', 'super_admin', 'operations_manager', 'care_coordinator', 'staff'].includes(role)) return '/admin'
   return '/professional'
 }
 

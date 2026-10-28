@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 
 export async function GET(req: NextRequest) {
   try {
+    await loadPersistedState()
     const settings = mockDb.state.settings || {
       platform_name: 'Dr Fit Veda',
       tagline: 'Naturopathy · Clinical Nutrition · Yoga · Certified Fitness',
@@ -44,10 +46,11 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    if (!['admin', 'super_admin'].includes(role)) {
+    if (!['admin', 'super_admin', 'operations_manager'].includes(role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
+    await loadPersistedState()
     const body = await req.json()
     if (body.professional_roles) {
       mockDb.state.professional_roles = body.professional_roles
@@ -60,6 +63,8 @@ export async function PUT(req: NextRequest) {
       ...settingsData,
       updated_at: new Date().toISOString(),
     }
+
+    await savePersistedState(['settings', 'professional_roles'])
 
     return NextResponse.json({
       settings: mockDb.state.settings,

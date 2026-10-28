@@ -17,7 +17,8 @@ export async function PATCH(
 
     const svc = await createServiceRoleClient()
     const { data: profile } = await (svc as any).from('user_profiles').select('role').eq('id', user.id).single()
-    if (!['admin', 'super_admin'].includes(profile?.role)) {
+    const role = profile?.role || (user as any).app_metadata?.role || (user as any).user_metadata?.role || (user as any).role
+    if (!['admin', 'super_admin', 'operations_manager'].includes(role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

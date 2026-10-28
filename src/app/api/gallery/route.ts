@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 
 // ============================================================
 // GET /api/gallery — List customer's workout and transformation videos
@@ -92,6 +93,7 @@ export async function POST(request: Request) {
 
     mockDb.state.gallery_videos = mockDb.state.gallery_videos || []
     mockDb.state.gallery_videos.unshift(newVideo)
+    await savePersistedState('gallery_videos')
 
     return NextResponse.json({ success: true, video: newVideo })
   } catch (err: any) {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 
 export interface FoodItemCatalog {
   id: string
@@ -342,6 +343,7 @@ export const DEFAULT_FOOD_CATALOG: FoodItemCatalog[] = [
 // ============================================================
 export async function GET(request: Request) {
   try {
+    await loadPersistedState()
     const { searchParams } = new URL(request.url)
     const q = searchParams.get('q')?.toLowerCase() || ''
     const category = searchParams.get('category') || ''
@@ -378,6 +380,7 @@ export async function GET(request: Request) {
 // ============================================================
 export async function POST(request: Request) {
   try {
+    await loadPersistedState()
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -419,6 +422,7 @@ export async function POST(request: Request) {
     }
 
     mockDb.state.food_catalog.unshift(newItem)
+    await savePersistedState('food_catalog')
 
     return NextResponse.json({ success: true, food: newItem })
   } catch (err: any) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 
 function getRole(req: NextRequest, user: any) {
   let role = (user as any)?.user_metadata?.role || (user as any)?.role
@@ -17,6 +18,7 @@ function getRole(req: NextRequest, user: any) {
 
 export async function GET() {
   try {
+    await loadPersistedState()
     const pros = mockDb.state.professionals || []
     return NextResponse.json({ professionals: pros })
   } catch {
@@ -26,10 +28,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    await loadPersistedState()
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     const role = getRole(req, user)
-    if (!['admin', 'super_admin'].includes(role)) {
+    if (!['admin', 'super_admin', 'operations_manager'].includes(role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
@@ -66,6 +69,7 @@ export async function POST(req: NextRequest) {
 
     if (!mockDb.state.professionals) mockDb.state.professionals = []
     mockDb.state.professionals.push(newPro)
+    await savePersistedState(['professionals', 'user_profiles'])
 
     return NextResponse.json({ professional: newPro, success: true }, { status: 201 })
   } catch {

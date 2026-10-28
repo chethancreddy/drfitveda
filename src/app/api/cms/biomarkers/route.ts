@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 
 const DEFAULT_BIOMARKERS = [
   { id: 'bm-uric-acid', name: 'Uric Acid Level', code: 'uric_acid', category: 'Metabolic & Renal', unit: 'mg/dL', normal_range: '3.5 - 7.2 mg/dL', min: 3.5, max: 7.2, description: 'Gout, purine breakdown, joint health', is_active: true },
@@ -25,6 +26,7 @@ const DEFAULT_BIOMARKERS = [
 
 export async function GET() {
   try {
+    await loadPersistedState()
     if (!mockDb.state.clinical_biomarkers || mockDb.state.clinical_biomarkers.length === 0) {
       mockDb.state.clinical_biomarkers = DEFAULT_BIOMARKERS
     }
@@ -41,12 +43,19 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
-    const role = (user as any)?.user_metadata?.role || (user as any)?.role
+    let role = (user as any)?.user_metadata?.role || (user as any)?.role
+    if (!role) {
+      const cookie = req.cookies.get('drf_session')?.value
+      if (cookie) {
+        try { role = JSON.parse(decodeURIComponent(cookie)).role } catch {}
+      }
+    }
 
-    if (role && !['admin', 'super_admin'].includes(role)) {
+    if (!role || !['admin', 'super_admin', 'operations_manager'].includes(role)) {
       return NextResponse.json({ error: 'Unauthorized: CMS management requires Admin access only.' }, { status: 403 })
     }
 
+    await loadPersistedState()
     const body = await req.json()
     const { name, code, category, unit, normal_range, min, max, description, is_active } = body
 
@@ -73,6 +82,7 @@ export async function POST(req: NextRequest) {
         description: description || mockDb.state.clinical_biomarkers[existingIdx].description,
         is_active: is_active !== undefined ? is_active : true,
       }
+      await savePersistedState('clinical_biomarkers')
       return NextResponse.json({
         success: true,
         message: 'Biomarker updated successfully',
@@ -95,6 +105,7 @@ export async function POST(req: NextRequest) {
     }
 
     mockDb.state.clinical_biomarkers.push(newBiomarker)
+    await savePersistedState('clinical_biomarkers')
 
     return NextResponse.json({
       success: true,

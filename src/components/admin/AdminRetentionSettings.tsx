@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 
 interface RetentionConfig {
   id?: string
@@ -17,16 +16,27 @@ export default function AdminRetentionSettings({ config }: { config: RetentionCo
 
   const save = async () => {
     setSaving(true); setSaved(false); setError(null)
-    const supabase = createClient()
-    const { error: err } = await (supabase as any)
-      .from('training_retention_config')
-      .upsert({
-        config_key: 'default_retention_policy',
-        retention_mode: mode,
-        grace_period_hours: mode === 'grace_period' ? hours : null,
-      }, { onConflict: 'config_key' })
-    if (err) { setError(err.message) } else { setSaved(true); setTimeout(() => setSaved(false), 3000) }
-    setSaving(false)
+    try {
+      const res = await fetch('/api/admin/training-retention-config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          retention_mode: mode,
+          grace_period_hours: mode === 'grace_period' ? hours : null,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error || 'Failed to save retention settings')
+      } else {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 3000)
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Network error saving retention settings')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (

@@ -114,17 +114,15 @@ export default function AdminProfessionalsPage() {
         body: JSON.stringify(editingPro),
       })
 
-      if (!res.ok) throw new Error('Save failed')
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || 'Failed to save professional')
+      }
       showToast(isNew ? 'Professional added successfully!' : 'Professional updated!')
       setEditingPro(null)
       await loadProfessionals()
-    } catch {
-      // Demo fallback
-      if (editingPro.id) {
-        setProfessionals(prev => prev.map(p => p.id === editingPro.id ? { ...p, ...editingPro } as Professional : p))
-      }
-      showToast('Changes saved locally')
-      setEditingPro(null)
+    } catch (err: any) {
+      showToast(err?.message || 'Error saving professional. Please try again.')
     }
     setSaving(false)
   }

@@ -6,6 +6,7 @@
 // ============================================================
 
 import crypto from 'crypto'
+import { createOtpSessionToken, verifyOtpSessionToken } from './otp-security'
 
 export interface Msg91WhatsAppSendResult {
   success: boolean
@@ -13,6 +14,7 @@ export interface Msg91WhatsAppSendResult {
   requestId?: string
   devMode?: boolean
   templateNeeded?: boolean
+  otpToken?: string
 }
 
 export interface Msg91WhatsAppVerifyResult {
@@ -51,7 +53,7 @@ class Msg91WhatsAppService {
   }
 
   private get authKey(): string | null {
-    return this.getEnv('MSG91_AUTH_KEY') || '580697AKLpOxsYqH6acba8baP1'
+    return this.getEnv('MSG91_AUTH_KEY')
   }
 
   /**
@@ -147,6 +149,7 @@ class Msg91WhatsAppService {
 
     // Generate secure 6-digit OTP
     const generatedOtp = crypto.randomInt(100000, 1000000).toString()
+    const otpToken = createOtpSessionToken(cleanMobile, generatedOtp)
 
     // Store in backend memory cache with 5 minutes validity
     this.store.set(cleanMobile, {
@@ -227,6 +230,7 @@ class Msg91WhatsAppService {
           success: true,
           message: 'Verification code sent to your WhatsApp.',
           requestId: data.request_id,
+          otpToken,
         }
       }
 
@@ -254,7 +258,7 @@ class Msg91WhatsAppService {
    * @param msg91Mobile Normalized mobile (e.g. 919876543210)
    * @param otp 6-digit numeric OTP code
    */
-  public async verifyOtp(msg91Mobile: string, otp: string): Promise<Msg91WhatsAppVerifyResult> {
+  public async verifyOtp(msg91Mobile: string, otp: string, otpToken?: string): Promise<Msg91WhatsAppVerifyResult> {
     const cleanMobile = msg91Mobile.replace(/\D/g, '')
     const cleanOtp = String(otp || '').trim()
 
@@ -265,7 +269,32 @@ class Msg91WhatsAppService {
       }
     }
 
-    // 1. Check server-side store (supports Outbound template dispatch and injected testing)
+    // 1. Primary verification: Stateless signed token (immune to serverless container restarts)
+    if (otpToken) {
+      const tokenVerification = verifyOtpSessionToken(cleanMobile, cleanOtp, otpToken)
+      if (tokenVerification.valid) {
+        this.store.delete(cleanMobile)
+        return {
+          success: true,
+          message: 'WhatsApp OTP verified successfully',
+        }
+      }
+      if (tokenVerification.reason === 'expired') {
+        this.store.delete(cleanMobile)
+        return {
+          success: false,
+          message: 'Verification code has expired. Please request a new code.',
+        }
+      }
+      if (tokenVerification.reason === 'already_used') {
+        return {
+          success: false,
+          message: 'This verification code has already been used. Please request a new code.',
+        }
+      }
+    }
+
+    // 2. Check server-side store (supports Outbound template dispatch and injected testing)
     const localRecord = this.store.get(cleanMobile)
     if (localRecord) {
       if (Date.now() > localRecord.expiresAt) {

@@ -1,8 +1,5 @@
-// ============================================================
-// Dr Fit Veda — OTP Security & Rate Limiting Engine
-// Enforces Indian phone normalization, 60s cooldowns,
-// request rate limits, and brute-force attempt lockout.
-// ============================================================
+import crypto from 'crypto'
+
 
 export interface NormalizedPhone {
   isValid: boolean
@@ -383,4 +380,79 @@ export function isIpRateLimited(ip: string): boolean {
 
   record.count += 1
   return record.count > MAX_IP_REQUESTS_PER_HOUR
+}
+
+// ─── Stateless Serverless OTP Token Helpers (HMAC-SHA256) ───
+const consumedTokens = new Set<string>()
+
+/**
+ * Creates a cryptographically signed, stateless OTP session token.
+ * This guarantees OTP verification works seamlessly across serverless Lambda instances.
+ */
+export function createOtpSessionToken(identifier: string, otp: string, ttlMs: number = 5 * 60 * 1000): string {
+  const cleanId = identifier.toLowerCase().trim()
+  const cleanOtp = otp.trim()
+  const expiresAt = Date.now() + ttlMs
+  const salt = crypto.randomBytes(8).toString('hex')
+  const secret = process.env.CRON_SECRET || process.env.MSG91_AUTH_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || 'drfitveda-otp-hmac-fallback-v1'
+  const sig = crypto
+    .createHmac('sha256', secret)
+    .update(`${cleanId}:${cleanOtp}:${expiresAt}:${salt}`)
+    .digest('hex')
+
+  const payload = { id: cleanId, exp: expiresAt, salt, sig }
+  return Buffer.from(JSON.stringify(payload)).toString('base64url')
+}
+
+/**
+ * Verifies the stateless OTP session token against the provided code.
+ * Strictly verifies identity, expiration, signature, and enforces single-use.
+ */
+export function verifyOtpSessionToken(
+  identifier: string,
+  otp: string,
+  token: string
+): { valid: boolean; reason?: 'expired' | 'mismatch' | 'invalid' | 'already_used' } {
+  if (!token || typeof token !== 'string') return { valid: false, reason: 'invalid' }
+
+  let payload: { id: string; exp: number; salt: string; sig: string }
+  try {
+    payload = JSON.parse(Buffer.from(token, 'base64url').toString('utf8'))
+  } catch {
+    return { valid: false, reason: 'invalid' }
+  }
+
+  const { id, exp, salt, sig } = payload
+  if (!id || !exp || !salt || !sig) return { valid: false, reason: 'invalid' }
+
+  if (consumedTokens.has(sig)) {
+    return { valid: false, reason: 'already_used' }
+  }
+
+  const cleanId = identifier.toLowerCase().trim()
+  const cleanOtp = otp.trim()
+
+  if (cleanId !== id) return { valid: false, reason: 'mismatch' }
+  if (Date.now() > exp) return { valid: false, reason: 'expired' }
+
+  const secret = process.env.CRON_SECRET || process.env.MSG91_AUTH_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || 'drfitveda-otp-hmac-fallback-v1'
+  const expectedSig = crypto
+    .createHmac('sha256', secret)
+    .update(`${cleanId}:${cleanOtp}:${exp}:${salt}`)
+    .digest('hex')
+
+  try {
+    const b1 = Buffer.from(sig, 'hex')
+    const b2 = Buffer.from(expectedSig, 'hex')
+    if (b1.length === b2.length && crypto.timingSafeEqual(b1, b2)) {
+      consumedTokens.add(sig)
+      if (typeof setTimeout !== 'undefined') {
+        const timer = setTimeout(() => consumedTokens.delete(sig), 5 * 60 * 1000)
+        ;(timer as any).unref?.()
+      }
+      return { valid: true }
+    }
+  } catch {}
+
+  return { valid: false, reason: 'invalid' }
 }
