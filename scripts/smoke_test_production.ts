@@ -23,7 +23,7 @@ if (fs.existsSync(envPath)) {
   })
 }
 
-import { createOtpSessionToken } from '../src/lib/services/otp-security'
+import { createOtpSessionToken, normalizeIdentifier } from '../src/lib/services/otp-security'
 
 const PROD_URL = 'https://drfitveda.com'
 
@@ -40,7 +40,7 @@ async function waitForDeploymentCutover(maxWaitSeconds = 150): Promise<boolean> 
       const res = await fetch(`${PROD_URL}/sw.js`, { cache: 'no-store' })
       if (res.status === 200) {
         const text = await res.text()
-        if (text.includes('drfitveda-shell-v1')) {
+        if (text.includes('Dr Fit Veda — Production Service Worker')) {
           console.log(`  [LIVE] New Phase 2 deployment cutover confirmed on ${PROD_URL} (/sw.js HTTP 200)!`)
           return true
         }
@@ -202,7 +202,8 @@ async function runSmokeTests() {
     expectedRedirect: string
   ) {
     const id = payload.email || payload.phone || ''
-    const otpToken = createOtpSessionToken(id, '842619')
+    const norm = normalizeIdentifier(id, payload.channel)
+    const otpToken = createOtpSessionToken(norm.normalized, '842619')
     const res = await fetch(`${PROD_URL}/api/auth/login-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
