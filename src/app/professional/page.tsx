@@ -40,14 +40,14 @@ export default async function ProfessionalDashboard() {
   return (
     <div className="app-layout">
       <ProfessionalSidebar
-        userName={professional?.full_name || 'Dr. Ananya Verma'}
-        userRole={professional?.role || 'doctor'}
+        userName={professional?.full_name || (user as any)?.user_metadata?.full_name || 'Dr. Ananya Verma'}
+        userRole={professional?.role || (user as any)?.user_metadata?.role || 'doctor'}
       />
 
       <main className="app-main">
         <div className="page-header flex justify-between items-center" style={{ flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 className="text-headline-md">Welcome, {professional?.full_name?.split(' ')[0] ?? 'Doctor'}</h1>
+            <h1 className="text-headline-md">Welcome, {(professional?.full_name || (user as any)?.user_metadata?.full_name || 'Doctor').split(' ')[0]}</h1>
             <p className="text-body-md text-muted">{(assignments as unknown[])?.length ?? 0} active patient assignments under your care.</p>
           </div>
           <div className="flex gap-xs">

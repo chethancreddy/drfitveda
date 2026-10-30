@@ -60,8 +60,13 @@ export default function PublicFooter() {
           <div>
             <div className="text-label-md" style={{color:'white',marginBottom:12}}>Platform Access</div>
             <div style={{marginBottom:8}}>
-              <Link href="/login" className="text-body-sm" style={{color:'rgba(255,255,255,0.7)',textDecoration:'none'}}>
-                Patient &amp; Doctor Sign In
+              <Link href="/login" className="text-body-sm" style={{color:'rgba(255,255,255,0.85)',textDecoration:'none',fontWeight:600}}>
+                👤 Patient &amp; Member Sign In
+              </Link>
+            </div>
+            <div style={{marginBottom:8}}>
+              <Link href="/login?portal=professional" className="text-body-sm" style={{color:'#6ee7b7',textDecoration:'none',fontWeight:600}}>
+                🩺 Doctor &amp; Trainer Portal Login
               </Link>
             </div>
             <div style={{marginBottom:8}}>

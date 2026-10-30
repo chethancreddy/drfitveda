@@ -44,8 +44,8 @@ export default async function ProfessionalCustomersPage() {
   return (
     <div className="app-layout">
       <ProfessionalSidebar
-        userName={professional?.full_name || 'Dr. Ananya Verma'}
-        userRole={professional?.role || 'doctor'}
+        userName={professional?.full_name || (user as any)?.user_metadata?.full_name || 'Dr. Ananya Verma'}
+        userRole={professional?.role || (user as any)?.user_metadata?.role || 'doctor'}
       />
 
       <main className="app-main">

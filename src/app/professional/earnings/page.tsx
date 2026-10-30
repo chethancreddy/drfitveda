@@ -34,13 +34,17 @@ export default async function EarningsPage() {
   const { data: professional } = await (supabase as any)
     .from('professionals').select('id, full_name, role').eq('user_id', user.id).single() as
     { data: { id: string; full_name: string; role: string } | null }
-  if (!professional) redirect('/login')
 
-  const { data: raw } = await (supabase as any)
-    .from('payouts')
-    .select('id, payout_type, amount, currency, status, service_date, paid_at, customers:customer_id(user_profiles(full_name))')
-    .eq('professional_id', professional.id)
-    .order('created_at', { ascending: false })
+  const proName = professional?.full_name || (user as any)?.user_metadata?.full_name || 'Specialist'
+  const proRole = professional?.role || (user as any)?.user_metadata?.role || 'doctor'
+
+  const { data: raw } = professional
+    ? await (supabase as any)
+        .from('payouts')
+        .select('id, payout_type, amount, currency, status, service_date, paid_at, customers:customer_id(user_profiles(full_name))')
+        .eq('professional_id', professional.id)
+        .order('created_at', { ascending: false })
+    : { data: [] }
 
   const payouts = (raw as Payout[] | null) ?? []
   const totalPaid = payouts.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0)
@@ -50,15 +54,15 @@ export default async function EarningsPage() {
   return (
     <div className="app-layout">
       <ProfessionalSidebar
-        userName={professional.full_name}
-        userRole={professional.role}
+        userName={proName}
+        userRole={proRole}
       />
 
       <main className="app-main">
         <div className="page-header flex justify-between items-center" style={{ flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h1 className="text-headline-md">My Earnings &amp; Payouts</h1>
-            <p className="text-body-md text-muted">Compensation ledger for {professional.full_name}</p>
+            <p className="text-body-md text-muted">Compensation ledger for {proName}</p>
           </div>
           <Link href="/professional/customers" className="btn btn-secondary btn-sm">
             🩺 My Patients

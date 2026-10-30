@@ -9,7 +9,7 @@ function getRole(req: NextRequest, user: any) {
     const cookie = req.cookies.get('drf_session')?.value
     if (cookie) {
       try { role = JSON.parse(decodeURIComponent(cookie)).role } catch {
-        try { role = JSON.parse(cookie).role } catch {}
+        try { role = JSON.parse(cookie).role } catch { }
       }
     }
   }
@@ -34,25 +34,44 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     const idx = pros.findIndex((p: any) => p.id === id || p.user_id === id)
     if (idx === -1) return NextResponse.json({ error: 'Professional not found' }, { status: 404 })
 
+    const updatedEmail =
+      body.email !== undefined ? String(body.email).trim().toLowerCase() : pros[idx].email
+    const updatedPhone =
+      body.phone !== undefined ? String(body.phone).trim() : pros[idx].phone
+
     pros[idx] = {
       ...pros[idx],
       ...body,
+      email: updatedEmail,
+      phone: updatedPhone,
       id: pros[idx].id,
       user_id: pros[idx].user_id,
       updated_at: new Date().toISOString(),
     }
 
-    // Update user profile if full_name or role changed
-    if (body.full_name || body.role) {
-      const userProfiles = mockDb.state.user_profiles || []
-      const uIdx = userProfiles.findIndex((up: any) => up.id === pros[idx].user_id)
-      if (uIdx !== -1) {
-        userProfiles[uIdx] = {
-          ...userProfiles[uIdx],
-          full_name: body.full_name || userProfiles[uIdx].full_name,
-          role: body.role || userProfiles[uIdx].role,
-        }
+    // Always synchronize linked user_profiles entry (full_name, role, email, phone, is_active)
+    if (!mockDb.state.user_profiles) mockDb.state.user_profiles = []
+    const userProfiles = mockDb.state.user_profiles
+    const uIdx = userProfiles.findIndex((up: any) => up.id === pros[idx].user_id)
+    if (uIdx !== -1) {
+      userProfiles[uIdx] = {
+        ...userProfiles[uIdx],
+        full_name: pros[idx].full_name || userProfiles[uIdx].full_name,
+        role: pros[idx].role || userProfiles[uIdx].role,
+        email: updatedEmail ?? userProfiles[uIdx].email ?? '',
+        phone: updatedPhone ?? userProfiles[uIdx].phone ?? '',
+        is_active: pros[idx].is_active !== undefined ? pros[idx].is_active : userProfiles[uIdx].is_active,
       }
+    } else {
+      userProfiles.push({
+        id: pros[idx].user_id,
+        role: pros[idx].role || 'doctor',
+        full_name: pros[idx].full_name || 'Specialist',
+        email: updatedEmail || '',
+        phone: updatedPhone || '',
+        is_active: pros[idx].is_active !== undefined ? pros[idx].is_active : true,
+        created_at: new Date().toISOString(),
+      })
     }
 
     await savePersistedState(['professionals', 'user_profiles'])

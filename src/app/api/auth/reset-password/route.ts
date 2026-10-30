@@ -3,6 +3,7 @@ import { MOCK_USERS, mockDb } from '@/lib/mock-db'
 import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 import { createOtpSessionToken, verifyOtpSessionToken } from '@/lib/services/otp-security'
 import { msg91EmailService } from '@/lib/services/msg91-email.service'
+import { resolveAccountByIdentifier } from '@/lib/auth-resolver'
 
 // In-memory OTP fallback for reset requests
 const activeResetOtps: Record<string, { otp: string; expiresAt: number }> = {}
@@ -19,38 +20,8 @@ export async function POST(request: NextRequest) {
 
     const key = identifier.toLowerCase().trim()
 
-    // 1. Find user in admin_profile, MOCK_USERS, team_members, or user_profiles
-    let foundUser: any = null
-    if (mockDb.state.admin_profile && (
-      mockDb.state.admin_profile.email?.toLowerCase() === key ||
-      mockDb.state.admin_profile.id?.toLowerCase() === key
-    )) {
-      foundUser = mockDb.state.admin_profile
-    }
-
-    if (!foundUser) {
-      foundUser = Object.values(MOCK_USERS).find(u =>
-        u.email.toLowerCase() === key ||
-        u.id.toLowerCase() === key ||
-        u.phone.replace(/\s+/g, '') === key.replace(/\s+/g, '')
-      )
-    }
-
-    if (!foundUser && mockDb.state.team_members) {
-      foundUser = mockDb.state.team_members.find((tm: any) =>
-        tm.email?.toLowerCase() === key ||
-        tm.id?.toLowerCase() === key ||
-        (tm.phone && tm.phone.replace(/\s+/g, '') === key.replace(/\s+/g, ''))
-      )
-    }
-
-    if (!foundUser && mockDb.state.user_profiles) {
-      foundUser = mockDb.state.user_profiles.find((up: any) =>
-        up.email?.toLowerCase() === key ||
-        up.id?.toLowerCase() === key ||
-        (up.phone && up.phone.replace(/\s+/g, '') === key.replace(/\s+/g, ''))
-      )
-    }
+    // 1. Find user across admin_profile, professionals, team_members, MOCK_USERS, or user_profiles
+    const foundUser = resolveAccountByIdentifier(identifier)
 
     if (!foundUser) {
       return NextResponse.json({ error: 'No matching account found for this identifier.' }, { status: 404 })
@@ -151,16 +122,25 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      if (Array.isArray(mockDb.state.professionals)) {
+        const proIdx = mockDb.state.professionals.findIndex(
+          (p: any) => p.user_id === foundUser.id || p.id === foundUser.professional_id || p.email?.toLowerCase() === key
+        )
+        if (proIdx >= 0) {
+          mockDb.state.professionals[proIdx].password = new_password
+        }
+      }
+
       if (Array.isArray(mockDb.state.user_profiles)) {
-        const upIdx = mockDb.state.user_profiles.findIndex((up: any) =>
-          up.email?.toLowerCase() === key || up.id?.toLowerCase() === key
+        const upIdx = mockDb.state.user_profiles.findIndex(
+          (up: any) => up.id === foundUser.id || up.email?.toLowerCase() === key || up.id?.toLowerCase() === key
         )
         if (upIdx >= 0) {
           mockDb.state.user_profiles[upIdx].password = new_password
         }
       }
 
-      await savePersistedState(['admin_profile', 'team_members', 'user_profiles'])
+      await savePersistedState(['admin_profile', 'professionals', 'team_members', 'user_profiles'])
       delete activeResetOtps[key]
 
       const res = NextResponse.json({

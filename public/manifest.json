@@ -1,15 +1,60 @@
 {
-  "name": "Dr Fit Veda",
+  "id": "/",
+  "name": "Dr Fit Veda — Doctor-Guided Lifestyle Management",
   "short_name": "DrFitVeda",
-  "description": "Doctor-guided fitness, yoga, nutrition and lifestyle management",
+  "description": "Doctor-guided fitness, therapeutic yoga, clinical nutrition and 90-day holistic lifestyle management.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#FDFAF6",
   "theme_color": "#5C8CB5",
   "orientation": "portrait-primary",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "prefer_related_applications": false,
   "icons": [
-    { "src": "/logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
-  "categories": ["health", "fitness", "lifestyle"]
+  "shortcuts": [
+    {
+      "name": "Patient Sign In",
+      "short_name": "Patient Login",
+      "description": "Sign in to access your daily plan, check-ins, and consultations",
+      "url": "/login",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Doctor & Trainer Portal",
+      "short_name": "Doctor Login",
+      "description": "Direct login for DrFitVeda doctors, trainers, and nutritionists",
+      "url": "/login?portal=professional",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Membership Plans",
+      "short_name": "Plans",
+      "description": "Explore 90-day doctor-guided transformation programs",
+      "url": "/memberships",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    }
+  ],
+  "categories": ["health", "fitness", "medical", "lifestyle"]
 }

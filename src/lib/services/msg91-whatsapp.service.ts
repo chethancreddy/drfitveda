@@ -48,7 +48,7 @@ class Msg91WhatsAppService {
           return val
         }
       }
-    } catch {}
+    } catch { }
     return null
   }
 

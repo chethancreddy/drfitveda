@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import CustomerBottomNav from '@/components/customer/CustomerBottomNav'
+import CustomerSignOutButton from '@/components/customer/CustomerSignOutButton'
 import ProfileEditForm from '@/components/customer/ProfileEditForm'
 
 export const metadata: Metadata = { title: 'My Health Profile' }
@@ -53,7 +54,7 @@ export default async function CustomerProfilePage() {
           </div>
           <div className="flex items-center gap-xs">
             <Link href="/customer/documents" className="btn btn-secondary btn-sm">Documents</Link>
-            <Link href="/login" className="btn btn-ghost btn-sm">Sign Out 🚪</Link>
+            <CustomerSignOutButton />
           </div>
         </div>
       </header>

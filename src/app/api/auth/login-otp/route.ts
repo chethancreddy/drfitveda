@@ -9,9 +9,9 @@ import {
 } from '@/lib/services/otp-security'
 import { msg91EmailService } from '@/lib/services/msg91-email.service'
 import { msg91WhatsAppService } from '@/lib/services/msg91-whatsapp.service'
-import { createServiceRoleClient } from '@/lib/supabase/server'
-import { MOCK_USERS, mockDb } from '@/lib/mock-db'
+import { mockDb } from '@/lib/mock-db'
 import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
+import { resolveAccountByIdentifier, getDashboardForRole } from '@/lib/auth-resolver'
 
 // ============================================================
 // POST /api/auth/login-otp — MSG91 OTP Authentication Engine
@@ -180,90 +180,9 @@ export async function POST(req: NextRequest) {
 
       // ─── USER IDENTIFICATION & ACCOUNT MAPPING ─────────────────
       await loadPersistedState()
-      let targetUser: any = null
+      let targetUser: any = resolveAccountByIdentifier(norm.normalized)
 
-      // 1. Check persisted Admin Profile first
-      if (mockDb.state.admin_profile) {
-        const ap = mockDb.state.admin_profile
-        if (norm.type === 'email' && ap.email && ap.email.toLowerCase() === norm.normalized.toLowerCase()) {
-          targetUser = {
-            id: ap.id || MOCK_USERS.admin.id,
-            role: ap.role || 'admin',
-            full_name: ap.full_name || MOCK_USERS.admin.full_name,
-            email: ap.email,
-            phone: ap.phone || MOCK_USERS.admin.phone,
-          }
-        } else if (norm.type === 'phone' && ap.phone) {
-          const apPhoneNorm = normalizeIdentifier(ap.phone, 'whatsapp').normalized
-          if (apPhoneNorm && apPhoneNorm === norm.normalized) {
-            targetUser = {
-              id: ap.id || MOCK_USERS.admin.id,
-              role: ap.role || 'admin',
-              full_name: ap.full_name || MOCK_USERS.admin.full_name,
-              email: ap.email || MOCK_USERS.admin.email,
-              phone: ap.phone,
-            }
-          }
-        }
-      }
-
-      // 2. Check core MOCK_USERS (admin, doctor, trainer, coordinator, customer)
-      if (!targetUser) {
-        if (norm.type === 'email') {
-          targetUser = Object.values(MOCK_USERS).find(
-            u => u.email.toLowerCase() === norm.normalized.toLowerCase()
-          ) || null
-        } else {
-          targetUser = Object.values(MOCK_USERS).find(u => {
-            if (!u.phone) return false
-            const userPhoneNorm = normalizeIdentifier(u.phone, 'whatsapp').normalized
-            return userPhoneNorm === norm.normalized
-          }) || null
-        }
-      }
-
-      // 3. Check persisted team_members
-      if (!targetUser && Array.isArray(mockDb.state.team_members)) {
-        const tmMatch = mockDb.state.team_members.find((m: any) => {
-          if (norm.type === 'email') {
-            return m.email && m.email.toLowerCase() === norm.normalized.toLowerCase()
-          }
-          if (!m.phone) return false
-          return normalizeIdentifier(m.phone, 'whatsapp').normalized === norm.normalized
-        })
-        if (tmMatch) {
-          targetUser = {
-            id: tmMatch.user_id || tmMatch.id,
-            role: tmMatch.role || 'care_coordinator',
-            full_name: tmMatch.full_name,
-            email: tmMatch.email || `${norm.normalized}@users.drfitveda.com`,
-            phone: tmMatch.phone || '',
-          }
-        }
-      }
-
-      // 4. Check persisted user_profiles
-      if (!targetUser && Array.isArray(mockDb.state.user_profiles)) {
-        const profileMatch = mockDb.state.user_profiles.find((p: any) => {
-          if (norm.type === 'email') {
-            return p.email && p.email.toLowerCase() === norm.normalized.toLowerCase()
-          }
-          if (!p.phone) return false
-          const pPhoneNorm = normalizeIdentifier(p.phone, 'whatsapp').normalized
-          return pPhoneNorm === norm.normalized
-        })
-        if (profileMatch) {
-          targetUser = {
-            id: profileMatch.id,
-            role: profileMatch.role || 'customer',
-            full_name: profileMatch.full_name || 'Member',
-            email: profileMatch.email || (norm.type === 'email' ? norm.normalized : `${norm.normalized}@users.drfitveda.com`),
-            phone: profileMatch.phone || '',
-          }
-        }
-      }
-
-      // 5. Auto-provision new customer if no existing account matched
+      // Auto-provision new customer ONLY if no Admin, Doctor, Trainer, Team Member, or Customer matched
       if (!targetUser) {
         const newUserId = `u-otp-${Date.now()}`
         const newEmail = norm.type === 'email' ? norm.normalized : `${norm.normalized}@users.drfitveda.com`
@@ -298,27 +217,13 @@ export async function POST(req: NextRequest) {
         })
 
         await savePersistedState(['user_profiles', 'customers'])
+      } else if (targetUser.source === 'professionals') {
+        // Persist reconciled user_profiles so the professional's profile stays in sync in Supabase
+        await savePersistedState(['user_profiles', 'professionals'])
       }
 
-      // Determine appropriate landing portal (Admin, Professional, or Customer)
-      let redirectTo = '/customer'
-      if (['admin', 'super_admin', 'operations_manager', 'care_coordinator', 'staff'].includes(targetUser.role)) {
-        redirectTo = '/admin'
-      } else if ([
-        'doctor',
-        'trainer',
-        'nutritionist',
-        'yoga_doctor',
-        'yoga_consultant',
-        'naturopathy_doctor',
-        'ayurveda_doctor',
-        'physiotherapist',
-        'wellness_coach',
-        'doctor_lead',
-        'trainer_lead',
-      ].includes(targetUser.role)) {
-        redirectTo = '/professional'
-      }
+      // Determine appropriate landing portal (Admin -> /admin, Doctor/Trainer -> /professional, Customer -> /customer)
+      const redirectTo = getDashboardForRole(targetUser.role)
 
       // Create secure user session payload
       const sessionPayload = {

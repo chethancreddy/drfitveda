@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     if (!role) {
       const cookie = req.cookies.get('drf_session')?.value
       if (cookie) {
-        try { role = JSON.parse(decodeURIComponent(cookie)).role } catch {}
+        try { role = JSON.parse(decodeURIComponent(cookie)).role } catch { }
       }
     }
 

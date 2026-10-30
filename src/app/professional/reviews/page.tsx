@@ -27,14 +27,18 @@ export default async function ProfessionalReviewsPage() {
   const { data: professional } = await (supabase as any)
     .from('professionals').select('id, full_name, role').eq('user_id', user.id).single() as
     { data: { id: string; full_name: string; role: string } | null }
-  if (!professional) redirect('/login')
 
-  const { data: raw } = await (supabase as any)
-    .from('weekly_reviews')
-    .select('id, review_date, status, next_review_date, customers:customer_id(user_profiles(full_name))')
-    .eq('doctor_id', professional.id)
-    .order('review_date', { ascending: false })
-    .limit(100)
+  const proName = professional?.full_name || (user as any)?.user_metadata?.full_name || 'Specialist'
+  const proRole = professional?.role || (user as any)?.user_metadata?.role || 'doctor'
+
+  const { data: raw } = professional
+    ? await (supabase as any)
+        .from('weekly_reviews')
+        .select('id, review_date, status, next_review_date, customers:customer_id(user_profiles(full_name))')
+        .eq('doctor_id', professional.id)
+        .order('review_date', { ascending: false })
+        .limit(100)
+    : { data: [] }
 
   const reviews = (raw as Review[] | null) ?? []
   const due = reviews.filter(r => r.status === 'due')
@@ -44,15 +48,15 @@ export default async function ProfessionalReviewsPage() {
   return (
     <div className="app-layout">
       <ProfessionalSidebar
-        userName={professional.full_name}
-        userRole={professional.role}
+        userName={proName}
+        userRole={proRole}
       />
 
       <main className="app-main">
         <div className="page-header flex justify-between items-center" style={{ flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h1 className="text-headline-md">Weekly Doctor Reviews</h1>
-            <p className="text-body-md text-muted">Weekly adherence evaluations and biomarker tracking by {professional.full_name}</p>
+            <p className="text-body-md text-muted">Weekly adherence evaluations and biomarker tracking by {proName}</p>
           </div>
           <Link href="/professional/customers" className="btn btn-secondary btn-sm">
             🩺 Patient Intake Records

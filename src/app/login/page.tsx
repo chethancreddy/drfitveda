@@ -27,6 +27,7 @@ const POPULAR_COUNTRY_CODES = [
 ]
 
 export default function LoginPage() {
+  const [portalMode, setPortalMode] = useState<'customer' | 'professional' | 'admin'>('customer')
   const [activeTab, setActiveTab] = useState<'password' | 'whatsapp_otp' | 'email_otp'>('whatsapp_otp')
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
@@ -35,6 +36,18 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+
+  // Detect ?portal=professional or ?role=doctor|trainer from URL
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const portal = (params.get('portal') || params.get('role') || '').toLowerCase()
+    if (portal === 'professional' || portal === 'doctor' || portal === 'trainer') {
+      setPortalMode('professional')
+    } else if (portal === 'admin' || portal === 'staff') {
+      setPortalMode('admin')
+    }
+  }, [])
 
   // WhatsApp OTP State (with editable Country Code, defaults to India +91)
   const [countryCode, setCountryCode] = useState('+91')
@@ -505,24 +518,25 @@ export default function LoginPage() {
   return (
     <div
       style={{
-        minHeight: '100vh',
+        minHeight: '100dvh',
         background: 'linear-gradient(160deg, #2d2417 0%, #1c150c 50%, #0d0a06 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 'var(--space-md)',
+        padding: 'clamp(12px, 4vw, 24px)',
+        overflowX: 'hidden',
       }}
     >
-      <div style={{ width: '100%', maxWidth: 490 }}>
+      <div style={{ width: '100%', maxWidth: 480, minWidth: 0 }}>
         {/* Logo Card */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 'var(--space-md)' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
           <Link
             href="/"
             style={{
               display: 'inline-flex',
               background: 'white',
-              padding: '10px 24px',
-              borderRadius: '16px',
+              padding: '8px 20px',
+              borderRadius: '14px',
               boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
               alignItems: 'center',
             }}
@@ -530,7 +544,7 @@ export default function LoginPage() {
             <img
               src="/logo.png"
               alt="Dr Fit Veda"
-              style={{ height: 48, width: 'auto', maxWidth: 240, objectFit: 'contain' }}
+              style={{ height: 42, width: 'auto', maxWidth: 210, objectFit: 'contain' }}
             />
           </Link>
         </div>
@@ -539,23 +553,106 @@ export default function LoginPage() {
         <div
           className="card"
           style={{
-            padding: 'var(--space-lg)',
+            padding: 'clamp(16px, 5vw, 28px)',
             boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
             background: 'white',
             borderRadius: '16px',
+            overflow: 'hidden',
           }}
         >
+          {/* Role / Portal Quick Switcher */}
+          <div
+            role="tablist"
+            aria-label="Account type"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1.15fr 0.85fr',
+              gap: 4,
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: 10,
+              padding: 4,
+              marginBottom: 14,
+            }}
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={portalMode === 'customer'}
+              onClick={() => setPortalMode('customer')}
+              style={{
+                padding: '7px 6px',
+                borderRadius: 7,
+                border: 'none',
+                background: portalMode === 'customer' ? '#0f172a' : 'transparent',
+                color: portalMode === 'customer' ? 'white' : '#475569',
+                fontWeight: portalMode === 'customer' ? 700 : 600,
+                fontSize: 12,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              👤 Patient
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={portalMode === 'professional'}
+              onClick={() => setPortalMode('professional')}
+              style={{
+                padding: '7px 6px',
+                borderRadius: 7,
+                border: 'none',
+                background: portalMode === 'professional' ? '#059669' : 'transparent',
+                color: portalMode === 'professional' ? 'white' : '#047857',
+                fontWeight: portalMode === 'professional' ? 700 : 600,
+                fontSize: 12,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              🩺 Doctor / Trainer
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={portalMode === 'admin'}
+              onClick={() => setPortalMode('admin')}
+              style={{
+                padding: '7px 6px',
+                borderRadius: 7,
+                border: 'none',
+                background: portalMode === 'admin' ? '#0d9488' : 'transparent',
+                color: portalMode === 'admin' ? 'white' : '#475569',
+                fontWeight: portalMode === 'admin' ? 700 : 600,
+                fontSize: 12,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              🛡️ Admin
+            </button>
+          </div>
+
           {/* Header */}
-          <div style={{ marginBottom: 'var(--space-md)' }}>
-            <h1 className="text-headline-sm" style={{ margin: 0, color: '#0f172a' }}>
-              Sign In to Your Account
+          <div style={{ marginBottom: 14 }}>
+            <h1 className="text-headline-sm" style={{ margin: 0, color: '#0f172a', fontSize: 21 }}>
+              {portalMode === 'professional'
+                ? 'Doctor & Trainer Portal Sign In'
+                : portalMode === 'admin'
+                ? 'Admin & Operations Sign In'
+                : 'Sign In to Your Account'}
             </h1>
-            <p className="text-body-sm text-muted" style={{ margin: '4px 0 0 0' }}>
-              Access Doctor Consultations, Daily Naturopathy Plans &amp; Training
+            <p className="text-body-sm text-muted" style={{ margin: '4px 0 0 0', fontSize: 13 }}>
+              {portalMode === 'professional'
+                ? 'Sign in with your registered clinical email or WhatsApp number to open your Specialist Dashboard directly.'
+                : portalMode === 'admin'
+                ? 'Authorized Super Admin, Operations Manager & Care Coordinator access.'
+                : 'Access Doctor Consultations, Daily Naturopathy Plans & Live Training.'}
             </p>
           </div>
 
-          {/* Navigation Tabs: Password, WhatsApp OTP, Email OTP */}
+          {/* Navigation Tabs: WhatsApp OTP, Email OTP, Password */}
           <div
             style={{
               display: 'flex',
@@ -575,7 +672,8 @@ export default function LoginPage() {
               }}
               style={{
                 flex: 1,
-                padding: '8px 6px',
+                minHeight: 38,
+                padding: '8px 4px',
                 borderRadius: 6,
                 border: 'none',
                 background: activeTab === 'whatsapp_otp' ? 'white' : 'transparent',
@@ -588,6 +686,7 @@ export default function LoginPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 4,
+                whiteSpace: 'nowrap',
               }}
             >
               <span>💬</span> WhatsApp OTP
@@ -602,7 +701,8 @@ export default function LoginPage() {
               }}
               style={{
                 flex: 1,
-                padding: '8px 6px',
+                minHeight: 38,
+                padding: '8px 4px',
                 borderRadius: 6,
                 border: 'none',
                 background: activeTab === 'email_otp' ? 'white' : 'transparent',
@@ -615,6 +715,7 @@ export default function LoginPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 4,
+                whiteSpace: 'nowrap',
               }}
             >
               <span>✉️</span> Email OTP
@@ -629,7 +730,8 @@ export default function LoginPage() {
               }}
               style={{
                 flex: 1,
-                padding: '8px 6px',
+                minHeight: 38,
+                padding: '8px 4px',
                 borderRadius: 6,
                 border: 'none',
                 background: activeTab === 'password' ? 'white' : 'transparent',
@@ -642,6 +744,7 @@ export default function LoginPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 4,
+                whiteSpace: 'nowrap',
               }}
             >
               <span>🔑</span> Password
@@ -693,11 +796,18 @@ export default function LoginPage() {
                       Registered Mobile Number *
                     </label>
 
-                    {/* Side-by-side Country Code & Mobile Number Input */}
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
-                      {/* Country Code: Default +91, easily selectable or editable */}
+                    {/* Side-by-side Country Code & Mobile Number Input — Compact & Vertically Aligned */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: 8,
+                        alignItems: 'center',
+                        width: '100%',
+                      }}
+                    >
+                      {/* Country Code: Default +91, compact 100px width, exact 48px height */}
                       {!isCustomCode ? (
-                        <div style={{ width: 140, flexShrink: 0 }}>
+                        <div style={{ flex: '0 0 100px', width: 100, height: 48, position: 'relative' }}>
                           <select
                             value={countryCode}
                             onChange={e => {
@@ -708,18 +818,27 @@ export default function LoginPage() {
                                 setCountryCode(e.target.value)
                               }
                             }}
+                            aria-label="Country Code"
                             className="form-input"
                             style={{
                               width: '100%',
-                              height: '100%',
-                              padding: '11px 8px',
+                              height: 48,
+                              minHeight: 48,
+                              padding: '0 22px 0 8px',
                               border: '1px solid var(--color-border)',
-                              borderRadius: 6,
-                              fontSize: 13.5,
+                              borderRadius: 8,
+                              fontSize: 16,
+                              lineHeight: '22px',
                               fontWeight: 600,
                               background: '#f8fafc',
                               color: '#0f172a',
                               cursor: 'pointer',
+                              boxSizing: 'border-box',
+                              appearance: 'none',
+                              WebkitAppearance: 'none',
+                              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23475569' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
+                              backgroundRepeat: 'no-repeat',
+                              backgroundPosition: 'right 7px center',
                             }}
                             title="Country Code (defaults to +91 India)"
                           >
@@ -728,31 +847,36 @@ export default function LoginPage() {
                                 {c.flag} {c.code}
                               </option>
                             ))}
-                            <option value="custom">✏️ Other Code</option>
+                            <option value="custom">✏️ Other</option>
                           </select>
                         </div>
                       ) : (
-                        <div style={{ width: 140, flexShrink: 0, display: 'flex', gap: 4 }}>
+                        <div style={{ flex: '0 0 104px', width: 104, height: 48, display: 'flex', alignItems: 'center', gap: 4 }}>
                           <input
-                            type="text"
+                            type="tel"
                             value={customCountryCode}
                             onChange={e => {
                               let val = e.target.value.trim()
                               if (!val.startsWith('+')) val = `+${val.replace(/\+/g, '')}`
                               setCustomCountryCode(val)
                             }}
-                            placeholder="+..."
+                            placeholder="+91"
                             maxLength={5}
+                            aria-label="Custom Country Code"
                             className="form-input"
                             style={{
-                              width: '100%',
-                              padding: '11px 8px',
+                              width: 72,
+                              height: 48,
+                              minHeight: 48,
+                              padding: '0 6px',
                               border: '1px solid #059669',
-                              borderRadius: 6,
-                              fontSize: 14,
+                              borderRadius: 8,
+                              fontSize: 16,
+                              lineHeight: '22px',
                               fontWeight: 700,
                               textAlign: 'center',
                               color: '#0f172a',
+                              boxSizing: 'border-box',
                             }}
                             title="Enter country code (e.g. +91)"
                             autoFocus
@@ -764,13 +888,20 @@ export default function LoginPage() {
                               setCountryCode('+91')
                             }}
                             style={{
+                              width: 28,
+                              height: 48,
                               background: '#f1f5f9',
                               border: '1px solid #cbd5e1',
-                              borderRadius: 6,
-                              padding: '0 8px',
+                              borderRadius: 8,
+                              padding: 0,
                               fontSize: 12,
                               cursor: 'pointer',
                               color: '#475569',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              boxSizing: 'border-box',
                             }}
                             title="Reset to default (+91)"
                           >
@@ -779,11 +910,12 @@ export default function LoginPage() {
                         </div>
                       )}
 
-                      {/* Mobile Number Input */}
-                      <div style={{ flex: 1, position: 'relative' }}>
+                      {/* Mobile Number Input — Full Remaining Width, Identical 48px Height */}
+                      <div style={{ flex: '1 1 auto', minWidth: 0, height: 48, position: 'relative' }}>
                         <input
                           type="tel"
                           inputMode="numeric"
+                          autoComplete="tel-national"
                           required
                           value={whatsappMobile}
                           onChange={e => handleMobileInputChange(e.target.value)}
@@ -791,14 +923,29 @@ export default function LoginPage() {
                           className="form-input"
                           style={{
                             width: '100%',
-                            padding: '11px 14px 11px 36px',
+                            height: 48,
+                            minHeight: 48,
+                            padding: '0 12px 0 34px',
                             border: '1px solid var(--color-border)',
-                            borderRadius: 6,
-                            fontSize: 14,
-                            letterSpacing: '0.5px',
+                            borderRadius: 8,
+                            fontSize: 16,
+                            lineHeight: '22px',
+                            letterSpacing: '0.4px',
+                            boxSizing: 'border-box',
                           }}
                         />
-                        <span style={{ position: 'absolute', left: 11, top: 11, fontSize: 16, color: '#059669' }}>
+                        <span
+                          style={{
+                            position: 'absolute',
+                            left: 10,
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            fontSize: 15,
+                            lineHeight: 1,
+                            color: '#059669',
+                            pointerEvents: 'none',
+                          }}
+                        >
                           💬
                         </span>
                       </div>
@@ -1012,17 +1159,20 @@ export default function LoginPage() {
                         required
                         value={emailIdentifier}
                         onChange={e => setEmailIdentifier(e.target.value)}
-                        placeholder="e.g. yourname@domain.com"
+                        placeholder={portalMode === 'professional' ? 'e.g. doctor@drfitveda.com' : 'e.g. yourname@domain.com'}
                         className="form-input"
                         style={{
                           width: '100%',
-                          padding: '11px 14px 11px 38px',
+                          height: 48,
+                          minHeight: 48,
+                          padding: '0 14px 0 38px',
                           border: '1px solid var(--color-border)',
-                          borderRadius: 6,
-                          fontSize: 14,
+                          borderRadius: 8,
+                          fontSize: 16,
+                          boxSizing: 'border-box',
                         }}
                       />
-                      <span style={{ position: 'absolute', left: 12, top: 11, fontSize: 16, color: '#94a3b8' }}>
+                      <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 16, lineHeight: 1, color: '#94a3b8' }}>
                         ✉️
                       </span>
                     </div>
@@ -1177,17 +1327,20 @@ export default function LoginPage() {
                     required
                     value={identifier}
                     onChange={e => setIdentifier(e.target.value)}
-                    placeholder="e.g. admin@drfitveda.com or +91 98765 43210"
+                    placeholder="e.g. doctor@drfitveda.com or +91 98765 43210"
                     className="form-input"
                     style={{
                       width: '100%',
-                      padding: '10px 12px 10px 38px',
+                      height: 48,
+                      minHeight: 48,
+                      padding: '0 12px 0 38px',
                       border: '1px solid var(--color-border)',
-                      borderRadius: 6,
-                      fontSize: 14,
+                      borderRadius: 8,
+                      fontSize: 16,
+                      boxSizing: 'border-box',
                     }}
                   />
-                  <span style={{ position: 'absolute', left: 12, top: 10, fontSize: 16, color: '#94a3b8' }}>👤</span>
+                  <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 16, lineHeight: 1, color: '#94a3b8' }}>👤</span>
                 </div>
               </div>
 
@@ -1227,20 +1380,24 @@ export default function LoginPage() {
                     className="form-input"
                     style={{
                       width: '100%',
-                      padding: '10px 38px 10px 38px',
+                      height: 48,
+                      minHeight: 48,
+                      padding: '0 40px 0 38px',
                       border: '1px solid var(--color-border)',
-                      borderRadius: 6,
-                      fontSize: 14,
+                      borderRadius: 8,
+                      fontSize: 16,
+                      boxSizing: 'border-box',
                     }}
                   />
-                  <span style={{ position: 'absolute', left: 12, top: 10, fontSize: 16, color: '#94a3b8' }}>🔒</span>
+                  <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 16, lineHeight: 1, color: '#94a3b8' }}>🔒</span>
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     style={{
                       position: 'absolute',
-                      right: 12,
-                      top: 8,
+                      right: 10,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
                       background: 'transparent',
                       border: 'none',
                       cursor: 'pointer',

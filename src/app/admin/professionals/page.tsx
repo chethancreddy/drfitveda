@@ -215,6 +215,12 @@ export default function AdminProfessionalsPage() {
                     </div>
                     {p.qualification && <div className="text-body-sm text-primary" style={{ fontWeight: 600, marginTop: 2 }}>{p.qualification}</div>}
                     {p.specialization && <div className="text-caption text-muted" style={{ marginTop: 1 }}>Specialization: {p.specialization}</div>}
+                    {(p.email || p.phone) && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 4, fontSize: 12, color: '#475569' }}>
+                        {p.email && <span>✉️ <strong>{p.email}</strong></span>}
+                        {p.phone && <span>📞 <strong>{p.phone}</strong></span>}
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -262,7 +268,7 @@ export default function AdminProfessionalsPage() {
               </div>
 
               <form onSubmit={saveProfessional} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12 }}>
+                <div className="form-row">
                   <label className="form-field">
                     <span className="form-label">Full Name *</span>
                     <input
@@ -327,7 +333,7 @@ export default function AdminProfessionalsPage() {
                   />
                 </label>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="form-row">
                   <label className="form-field">
                     <span className="form-label">Contact Phone</span>
                     <input

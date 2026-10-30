@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import PwaRegistrar from '@/components/pwa/PwaRegistrar'
 
 export const metadata: Metadata = {
   title: { template: '%s | Dr Fit Veda', default: 'Dr Fit Veda — Doctor-Guided Lifestyle Management' },
@@ -21,7 +22,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
   themeColor: '#5C8CB5',
 }
 
@@ -31,8 +33,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="icon" href="/logo.png" type="image/png" />
         <link rel="apple-touch-icon" href="/logo.png" />
+        <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body>{children}</body>
+      <body>
+        <PwaRegistrar />
+        {children}
+      </body>
     </html>
   )
 }

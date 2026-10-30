@@ -23,7 +23,7 @@ const ROUTE_ROLES: Record<string, string[]> = {
 const PUBLIC_ROUTES = [
   '/', '/programs', '/memberships', '/how-it-works', '/yoga', '/nutrition',
   '/womens-wellness', '/about', '/testimonials', '/faq', '/contact',
-  '/login', '/register', '/auth',
+  '/login', '/register', '/auth', '/offline',
   '/privacy', '/terms', '/cookies', '/refund-policy', '/disclaimer', '/data-request',
 ]
 
@@ -136,9 +136,13 @@ export async function proxy(request: NextRequest) {
 }
 
 function getRoleHome(role: string): string {
-  if (role === 'customer') return '/customer'
-  if (['admin', 'super_admin', 'operations_manager', 'care_coordinator', 'staff'].includes(role)) return '/admin'
-  return '/professional'
+  if (['admin', 'super_admin', 'operations_manager', 'care_coordinator', 'staff'].includes(role)) {
+    return '/admin'
+  }
+  if (ROUTE_ROLES['/professional'].includes(role)) {
+    return '/professional'
+  }
+  return '/customer'
 }
 
 export const config = {

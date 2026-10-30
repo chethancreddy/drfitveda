@@ -6,6 +6,7 @@ import { TrainingRecordingService } from '@/lib/services/recording.service'
 import LatestTrainingSession from '@/components/customer/LatestTrainingSession'
 import DailyCheckIn from '@/components/customer/DailyCheckIn'
 import CustomerBottomNav from '@/components/customer/CustomerBottomNav'
+import CustomerSignOutButton from '@/components/customer/CustomerSignOutButton'
 
 export const metadata: Metadata = { title: 'Dashboard' }
 
@@ -82,6 +83,7 @@ export default async function CustomerDashboard() {
             </Link>
             <Link href="/customer/notifications" className="btn btn-icon btn-ghost" aria-label="Notifications">🔔</Link>
             <Link href="/customer/profile" className="btn btn-icon btn-ghost" aria-label="Profile">👤</Link>
+            <CustomerSignOutButton compact />
           </div>
         </div>
       </header>

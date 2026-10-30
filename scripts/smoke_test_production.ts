@@ -31,22 +31,21 @@ async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-async function waitForDeploymentCutover(maxWaitSeconds = 120): Promise<boolean> {
+async function waitForDeploymentCutover(maxWaitSeconds = 150): Promise<boolean> {
   console.log(`Waiting for Vercel production cutover on ${PROD_URL} (up to ${maxWaitSeconds}s)...`)
   const start = Date.now()
   while ((Date.now() - start) / 1000 < maxWaitSeconds) {
     try {
-      // Probe demo-login with wrong password: old build returned 200, new build d1223e1 returns 401
-      const res = await fetch(`${PROD_URL}/api/auth/demo-login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: 'admin@drfitveda.com', password: 'wrong_password_probe' }),
-      })
-      if (res.status === 401) {
-        console.log(`  [LIVE] New deployment cutover confirmed on ${PROD_URL} (HTTP 401 on invalid password)!`)
-        return true
+      // Probe /sw.js which was added in this Phase 2 release
+      const res = await fetch(`${PROD_URL}/sw.js`, { cache: 'no-store' })
+      if (res.status === 200) {
+        const text = await res.text()
+        if (text.includes('drfitveda-shell-v1')) {
+          console.log(`  [LIVE] New Phase 2 deployment cutover confirmed on ${PROD_URL} (/sw.js HTTP 200)!`)
+          return true
+        }
       }
-      console.log(`  [BUILDING] Current response HTTP ${res.status} — waiting 8s for Vercel build to finish...`)
+      console.log(`  [BUILDING] /sw.js returned HTTP ${res.status} — waiting 8s for Vercel build to finish...`)
     } catch (e: any) {
       console.log(`  [POLL] Network error: ${e.message}`)
     }
@@ -89,8 +88,8 @@ async function runSmokeTests() {
     `URL: ${healthData.url}`
   )
 
-  for (const route of ['/', '/memberships', '/login', '/manifest.json', '/logo.png']) {
-    const r = await fetch(`${PROD_URL}${route}`)
+  for (const route of ['/', '/memberships', '/login', '/login?portal=professional', '/manifest.json', '/sw.js', '/offline', '/logo.png']) {
+    const r = await fetch(`${PROD_URL}${route}`, { cache: 'no-store' })
     assert(`GET ${route} -> 200 OK`, r.status === 200, `HTTP ${r.status}`)
   }
 
@@ -192,28 +191,83 @@ async function runSmokeTests() {
     waSendRes.status === 200 && waSendData.success === true && Boolean(waSendData.otpToken)
   )
 
-  // Verify Admin OTP login on live production using signed stateless token
+  // Verify Admin, Doctor, Trainer, and Customer OTP login on live production using signed stateless token
   // Ensure local smoke test uses MSG91_AUTH_KEY (matching Vercel production where CRON_SECRET is not local-cron-secret)
   delete process.env.CRON_SECRET
-  const prodAdminToken = createOtpSessionToken('admin@drfitveda.com', '842619')
-  const adminOtpVerifyRes = await fetch(`${PROD_URL}/api/auth/login-otp`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email: 'admin@drfitveda.com',
-      channel: 'email',
-      otp: '842619',
-      otpToken: prodAdminToken,
-      action: 'verify_otp',
-    }),
-  })
-  const adminOtpVerifyData = await adminOtpVerifyRes.json()
-  assert(
-    'Live Production Admin Email OTP Login -> 200 OK, role="admin", redirectTo="/admin"',
-    adminOtpVerifyRes.status === 200 &&
-      adminOtpVerifyData.user?.role === 'admin' &&
-      adminOtpVerifyData.redirectTo === '/admin',
-    `Role: ${adminOtpVerifyData.user?.role}, Redirect: ${adminOtpVerifyData.redirectTo}`
+
+  async function verifyOtpLoginRole(
+    label: string,
+    payload: { email?: string; phone?: string; channel: 'email' | 'whatsapp' },
+    expectedRole: string,
+    expectedRedirect: string
+  ) {
+    const id = payload.email || payload.phone || ''
+    const otpToken = createOtpSessionToken(id, '842619')
+    const res = await fetch(`${PROD_URL}/api/auth/login-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...payload,
+        otp: '842619',
+        otpToken,
+        action: 'verify_otp',
+      }),
+    })
+    const data = await res.json()
+    assert(
+      `${label} -> 200 OK, role="${expectedRole}", redirectTo="${expectedRedirect}"`,
+      res.status === 200 && data.user?.role === expectedRole && data.redirectTo === expectedRedirect,
+      `Role: ${data.user?.role}, Redirect: ${data.redirectTo}`
+    )
+  }
+
+  await verifyOtpLoginRole(
+    'Live Production Admin Email OTP Login (admin@drfitveda.com)',
+    { email: 'admin@drfitveda.com', channel: 'email' },
+    'admin',
+    '/admin'
+  )
+  await verifyOtpLoginRole(
+    'Live Production Super Admin Email OTP Login (chethan@drfitveda.com)',
+    { email: 'chethan@drfitveda.com', channel: 'email' },
+    'super_admin',
+    '/admin'
+  )
+  await verifyOtpLoginRole(
+    'Live Production Doctor Email OTP Login (varsini@drfitveda.com)',
+    { email: 'varsini@drfitveda.com', channel: 'email' },
+    'doctor',
+    '/professional'
+  )
+  await verifyOtpLoginRole(
+    'Live Production Doctor Alias Email OTP Login (drvarshini@drfitveda.com)',
+    { email: 'drvarshini@drfitveda.com', channel: 'email' },
+    'doctor',
+    '/professional'
+  )
+  await verifyOtpLoginRole(
+    'Live Production Doctor WhatsApp OTP Login (+919743790189)',
+    { phone: '+919743790189', channel: 'whatsapp' },
+    'doctor',
+    '/professional'
+  )
+  await verifyOtpLoginRole(
+    'Live Production Trainer Email OTP Login (vishnu@drfitveda.com)',
+    { email: 'vishnu@drfitveda.com', channel: 'email' },
+    'trainer',
+    '/professional'
+  )
+  await verifyOtpLoginRole(
+    'Live Production Trainer WhatsApp OTP Login (+918553783079)',
+    { phone: '+918553783079', channel: 'whatsapp' },
+    'trainer',
+    '/professional'
+  )
+  await verifyOtpLoginRole(
+    'Live Production Customer Email OTP Login (customer@drfitveda.com)',
+    { email: 'customer@drfitveda.com', channel: 'email' },
+    'customer',
+    '/customer'
   )
 
   console.log('\n============================================================')

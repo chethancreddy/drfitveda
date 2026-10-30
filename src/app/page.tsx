@@ -25,7 +25,7 @@ export default function HomePage() {
           position: 'relative',
         }}>
           <div className="container">
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(320px, 1fr))',gap:40,alignItems:'center'}}>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',gap:32,alignItems:'center'}}>
               <div style={{maxWidth:'620px'}}>
                 <span className="chip chip-accent" style={{marginBottom:'var(--space-sm)',display:'inline-flex'}}>
                   🌿 Physician-Led Holistic Health System
@@ -36,7 +36,7 @@ export default function HomePage() {
                 <p className="text-body-lg" style={{color:'rgba(255,255,255,0.85)',marginBottom:'var(--space-lg)',maxWidth:'540px',lineHeight:1.6}}>
                   No fads. No guesswork. A synchronized team of doctors, trainers, and clinical nutritionists diagnoses your body, builds your custom regimen, guides live workouts, and fine-tunes your plan every week.
                 </p>
-                <div className="flex gap-sm" style={{flexWrap:'wrap',marginBottom:'var(--space-lg)'}}>
+                <div className="flex gap-sm" style={{flexWrap:'wrap',marginBottom:'var(--space-sm)'}}>
                   <Link href="/memberships" className="btn btn-lg" style={{
                     background:'var(--color-tertiary)',
                     color:'var(--color-on-surface)',
@@ -47,6 +47,28 @@ export default function HomePage() {
                   </Link>
                   <Link href="/how-it-works" className="btn btn-lg btn-secondary" style={{color:'white',borderColor:'rgba(255,255,255,0.45)'}}>
                     The 7-Step Story →
+                  </Link>
+                </div>
+
+                {/* Direct Portal Login Quick-Links for Patients, Doctors & Trainers */}
+                <div style={{
+                  display:'flex',
+                  flexWrap:'wrap',
+                  alignItems:'center',
+                  gap:10,
+                  marginBottom:'var(--space-lg)',
+                  padding:'10px 14px',
+                  background:'rgba(255,255,255,0.08)',
+                  border:'1px solid rgba(255,255,255,0.16)',
+                  borderRadius:12,
+                }}>
+                  <span style={{fontSize:12.5,color:'rgba(255,255,255,0.75)'}}>Already registered?</span>
+                  <Link href="/login" style={{fontSize:13,fontWeight:700,color:'var(--color-tertiary)',textDecoration:'underline'}}>
+                    Patient Sign In →
+                  </Link>
+                  <span style={{color:'rgba(255,255,255,0.3)'}}>•</span>
+                  <Link href="/login?portal=professional" style={{fontSize:13,fontWeight:700,color:'#6ee7b7',textDecoration:'underline'}}>
+                    🩺 Doctor &amp; Trainer Login →
                   </Link>
                 </div>
 
@@ -162,7 +184,7 @@ export default function HomePage() {
           <div className="container">
             <div style={{
               display:'grid',
-              gridTemplateColumns:'repeat(auto-fit, minmax(320px, 1fr))',
+              gridTemplateColumns:'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
               gap:'var(--space-xl)',
               alignItems:'center'
             }}>

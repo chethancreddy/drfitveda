@@ -79,10 +79,12 @@ class MockDatabase {
 
     this.state = {
       user_profiles: [
-        { id: MOCK_USERS.customer.id, role: 'customer', full_name: MOCK_USERS.customer.full_name, phone: MOCK_USERS.customer.phone, is_active: true },
-        { id: MOCK_USERS.doctor.id, role: 'doctor', full_name: MOCK_USERS.doctor.full_name, phone: MOCK_USERS.doctor.phone, is_active: true },
-        { id: MOCK_USERS.trainer.id, role: 'trainer', full_name: MOCK_USERS.trainer.full_name, phone: MOCK_USERS.trainer.phone, is_active: true },
-        { id: MOCK_USERS.admin.id, role: 'admin', full_name: MOCK_USERS.admin.full_name, phone: MOCK_USERS.admin.phone, is_active: true },
+        { id: MOCK_USERS.customer.id, role: 'customer', full_name: MOCK_USERS.customer.full_name, email: MOCK_USERS.customer.email, phone: MOCK_USERS.customer.phone, is_active: true },
+        { id: MOCK_USERS.doctor.id, role: 'doctor', full_name: MOCK_USERS.doctor.full_name, email: MOCK_USERS.doctor.email, phone: MOCK_USERS.doctor.phone, is_active: true },
+        { id: MOCK_USERS.trainer.id, role: 'trainer', full_name: MOCK_USERS.trainer.full_name, email: MOCK_USERS.trainer.email, phone: MOCK_USERS.trainer.phone, is_active: true },
+        { id: MOCK_USERS.admin.id, role: 'admin', full_name: MOCK_USERS.admin.full_name, email: MOCK_USERS.admin.email, phone: MOCK_USERS.admin.phone, is_active: true },
+        { id: 'u-doc-003', role: 'doctor', full_name: 'Dr. Rajesh Deshmukh', email: 'rajesh@drfitveda.com', phone: '+91 98765 43220', is_active: true },
+        { id: 'u-trn-004', role: 'trainer', full_name: 'Pooja Hegde', email: 'pooja@drfitveda.com', phone: '+91 98765 43221', is_active: true },
       ],
       team_members: [
         {
@@ -131,6 +133,8 @@ class MockDatabase {
           user_id: MOCK_USERS.doctor.id,
           role: 'doctor',
           full_name: 'Dr. Ananya Verma',
+          email: MOCK_USERS.doctor.email,
+          phone: MOCK_USERS.doctor.phone,
           qualification: 'BNYS (Naturopathy & Yoga Doctor)',
           specialization: 'Naturopathic Medicine & Clinical Nutrition',
           max_caseload: 25,
@@ -150,6 +154,8 @@ class MockDatabase {
           user_id: MOCK_USERS.trainer.id,
           role: 'trainer',
           full_name: 'Vikram Singh',
+          email: MOCK_USERS.trainer.email,
+          phone: MOCK_USERS.trainer.phone,
           qualification: "Gold's Gym Certified Master Trainer",
           specialization: 'Functional Movement & Strength',
           max_caseload: 30,
@@ -170,6 +176,8 @@ class MockDatabase {
           user_id: 'u-doc-003',
           role: 'doctor',
           full_name: 'Dr. Rajesh Deshmukh',
+          email: 'rajesh@drfitveda.com',
+          phone: '+91 98765 43220',
           qualification: 'BNYS, MD (Acupressure & Yoga Therapy)',
           specialization: 'Metabolic Disorders & Hypertension',
           max_caseload: 20,
@@ -188,6 +196,8 @@ class MockDatabase {
           user_id: 'u-trn-004',
           role: 'trainer',
           full_name: 'Pooja Hegde',
+          email: 'pooja@drfitveda.com',
+          phone: '+91 98765 43221',
           qualification: 'Gold’s Gym & ACE Certified Trainer',
           specialization: 'Women Posture & Core Stability',
           max_caseload: 25,

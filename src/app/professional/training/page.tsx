@@ -30,13 +30,17 @@ export default async function ProfessionalTrainingPage() {
     .select('id, full_name, role')
     .eq('user_id', user.id)
     .single() as { data: { id: string; full_name: string; role: string } | null }
-  if (!professional) redirect('/login')
 
-  const { data: sessRaw } = await (supabase as any)
-    .from('training_sessions')
-    .select('id, scheduled_at, started_at, ended_at, status, meeting_url, recording_url, customers:customer_id(user_profiles(full_name)), training_recordings(id, recording_status, is_active)')
-    .eq('trainer_id', professional.id)
-    .order('scheduled_at', { ascending: false })
+  const proName = professional?.full_name || (user as any)?.user_metadata?.full_name || 'Specialist'
+  const proRole = professional?.role || (user as any)?.user_metadata?.role || 'trainer'
+
+  const { data: sessRaw } = professional
+    ? await (supabase as any)
+        .from('training_sessions')
+        .select('id, scheduled_at, started_at, ended_at, status, meeting_url, recording_url, customers:customer_id(user_profiles(full_name)), training_recordings(id, recording_status, is_active)')
+        .eq('trainer_id', professional.id)
+        .order('scheduled_at', { ascending: false })
+    : { data: [] }
 
   const sessions = (sessRaw as Sess[] | null) ?? []
 
@@ -49,15 +53,15 @@ export default async function ProfessionalTrainingPage() {
   return (
     <div className="app-layout">
       <ProfessionalSidebar
-        userName={professional.full_name}
-        userRole={professional.role}
+        userName={proName}
+        userRole={proRole}
       />
 
       <main className="app-main">
         <div className="page-header flex justify-between items-center" style={{ flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h1 className="text-headline-md">Live Training &amp; Zoho Meeting</h1>
-            <p className="text-body-md text-muted">Sessions and video calls conducted for {professional.full_name}</p>
+            <p className="text-body-md text-muted">Sessions and video calls conducted for {proName}</p>
           </div>
           <Link href="/professional/training/new" className="btn btn-primary">+ New Session</Link>
         </div>

@@ -39,29 +39,56 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { full_name, role: proRole, qualification, specialization, is_available, is_active, phone, email } = body
 
-    const userId = `u-pro-${Date.now()}`
-    const proId = `p0000000-0000-0000-0000-${Date.now().toString().slice(-12)}`
+    const cleanEmail = String(email || '').trim().toLowerCase()
+    const cleanPhone = String(phone || '').trim()
+    const targetRole = proRole || 'trainer'
 
-    // Create user profile
     if (!mockDb.state.user_profiles) mockDb.state.user_profiles = []
-    mockDb.state.user_profiles.push({
-      id: userId,
-      role: proRole || 'trainer',
-      full_name: full_name || 'New Professional',
-      phone: phone || '',
-      email: email || '',
-      is_active: is_active !== undefined ? is_active : true,
-      created_at: new Date().toISOString(),
+
+    // Check if an existing user_profile already has this email or phone (e.g. if they logged in earlier)
+    const existingProfileIdx = mockDb.state.user_profiles.findIndex((up: any) => {
+      if (cleanEmail && up.email && up.email.trim().toLowerCase() === cleanEmail) return true
+      if (cleanPhone && up.phone && up.phone.replace(/\D/g, '') === cleanPhone.replace(/\D/g, '')) return true
+      return false
     })
 
-    // Create professional record
+    const userId =
+      existingProfileIdx >= 0 && mockDb.state.user_profiles[existingProfileIdx]?.id
+        ? mockDb.state.user_profiles[existingProfileIdx].id
+        : `u-pro-${Date.now()}`
+    const proId = `p0000000-0000-0000-0000-${Date.now().toString().slice(-12)}`
+
+    if (existingProfileIdx >= 0) {
+      mockDb.state.user_profiles[existingProfileIdx] = {
+        ...mockDb.state.user_profiles[existingProfileIdx],
+        role: targetRole,
+        full_name: full_name || mockDb.state.user_profiles[existingProfileIdx].full_name || 'New Professional',
+        phone: cleanPhone || mockDb.state.user_profiles[existingProfileIdx].phone || '',
+        email: cleanEmail || mockDb.state.user_profiles[existingProfileIdx].email || '',
+        is_active: is_active !== undefined ? is_active : true,
+      }
+    } else {
+      mockDb.state.user_profiles.push({
+        id: userId,
+        role: targetRole,
+        full_name: full_name || 'New Professional',
+        phone: cleanPhone,
+        email: cleanEmail,
+        is_active: is_active !== undefined ? is_active : true,
+        created_at: new Date().toISOString(),
+      })
+    }
+
+    // Create professional record with email and phone included
     const newPro = {
       id: proId,
       user_id: userId,
-      role: proRole || 'trainer',
+      role: targetRole,
       full_name: full_name || 'New Professional',
       qualification: qualification || '',
       specialization: specialization || '',
+      phone: cleanPhone,
+      email: cleanEmail,
       is_available: is_available !== undefined ? is_available : true,
       is_active: is_active !== undefined ? is_active : true,
       created_at: new Date().toISOString(),
