@@ -1,48 +1,99 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
 import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
+import {
+  inspectRecordDependencies,
+  recordAdminAuditLog,
+  verifyAdminAccess,
+} from '@/lib/services/admin-record-governance'
 
-export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
   try {
     await loadPersistedState()
     const resolvedParams = await Promise.resolve(context.params)
     const { id } = resolvedParams
 
-    const supabase = await createServerSupabaseClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    let role = (user as any)?.user_metadata?.role || (user as any)?.role
-    if (!role) {
-      const cookie = req.cookies.get('drf_session')?.value
-      if (cookie) {
-        try {
-          const parsed = JSON.parse(decodeURIComponent(cookie))
-          role = parsed.role
-        } catch {
-          try {
-            const parsed = JSON.parse(cookie)
-            role = parsed.role
-          } catch {}
-        }
-      }
+    const plans: any[] = mockDb.state.memberships ?? []
+    const plan = plans.find((m: any) => m.id === id)
+    if (!plan) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    const dep = await inspectRecordDependencies('memberships', id)
+    return NextResponse.json({ membership: plan, dependencyCheck: dep })
+  } catch {
+    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+  }
+}
+
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
+  try {
+    const auth = await verifyAdminAccess(req, ['admin', 'super_admin', 'operations_manager'])
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: auth.status })
     }
 
-    if (!['admin', 'super_admin', 'operations_manager'].includes(role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
-
+    const resolvedParams = await Promise.resolve(context.params)
+    const { id } = resolvedParams
     const body = await req.json()
 
-    // Update in mock-db (historical records are separate payouts — untouched)
     const plans: any[] = mockDb.state.memberships ?? []
     const idx = plans.findIndex((m: any) => m.id === id)
     if (idx === -1) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    // Preserve id and created_at to avoid historical tampering
-    plans[idx] = { ...plans[idx], ...body, id, created_at: plans[idx].created_at }
+    const prevStatus = plans[idx].is_archived
+      ? 'archived'
+      : plans[idx].is_active !== false
+        ? 'active'
+        : 'inactive'
+
+    if (body.restore === true) {
+      plans[idx] = {
+        ...plans[idx],
+        is_archived: false,
+        deleted_at: null,
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      }
+    } else {
+      plans[idx] = {
+        ...plans[idx],
+        ...body,
+        id,
+        created_at: plans[idx].created_at,
+        updated_at: new Date().toISOString(),
+      }
+    }
+
     await savePersistedState('memberships')
-    return NextResponse.json({ membership: plans[idx] })
+
+    const newStatus = plans[idx].is_archived
+      ? 'archived'
+      : plans[idx].is_active !== false
+        ? 'active'
+        : 'inactive'
+
+    const actionType =
+      body.restore === true
+        ? 'restore'
+        : prevStatus !== newStatus
+          ? newStatus === 'active'
+            ? 'activate'
+            : newStatus === 'archived'
+              ? 'archive'
+              : 'deactivate'
+          : 'update'
+
+    await recordAdminAuditLog({
+      actorId: auth.userId,
+      actorName: auth.userName,
+      module: 'memberships',
+      recordId: id,
+      recordName: plans[idx].name,
+      previousStatus: prevStatus,
+      newStatus,
+      actionType,
+    })
+
+    return NextResponse.json({ membership: plans[idx], success: true })
   } catch {
     return NextResponse.json({ error: 'Bad request' }, { status: 400 })
   }
@@ -50,41 +101,80 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 
 export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
   try {
-    await loadPersistedState()
+    const auth = await verifyAdminAccess(req, ['admin', 'super_admin', 'operations_manager'])
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: auth.status })
+    }
+
     const resolvedParams = await Promise.resolve(context.params)
     const { id } = resolvedParams
-
-    const supabase = await createServerSupabaseClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    let role = (user as any)?.user_metadata?.role || (user as any)?.role
-    if (!role) {
-      const cookie = req.cookies.get('drf_session')?.value
-      if (cookie) {
-        try {
-          const parsed = JSON.parse(decodeURIComponent(cookie))
-          role = parsed.role
-        } catch {
-          try {
-            const parsed = JSON.parse(cookie)
-            role = parsed.role
-          } catch {}
-        }
-      }
-    }
-
-    if (!['admin', 'super_admin', 'operations_manager'].includes(role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
+    const { searchParams } = new URL(req.url)
+    const forceArchive = searchParams.get('mode') === 'archive'
 
     const plans: any[] = mockDb.state.memberships ?? []
     const idx = plans.findIndex((m: any) => m.id === id)
     if (idx === -1) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    // Soft-delete — preserve historical data
-    plans[idx] = { ...plans[idx], is_active: false }
+    const target = plans[idx]
+    const prevStatus = target.is_archived ? 'archived' : target.is_active !== false ? 'active' : 'inactive'
+    const dep = await inspectRecordDependencies('memberships', id)
+
+    if (dep?.canPermanentDelete && !forceArchive) {
+      plans.splice(idx, 1)
+      await savePersistedState('memberships')
+
+      await recordAdminAuditLog({
+        actorId: auth.userId,
+        actorName: auth.userName,
+        module: 'memberships',
+        recordId: id,
+        recordName: target.name,
+        previousStatus: prevStatus,
+        newStatus: 'deleted',
+        actionType: 'permanent_delete',
+        detail: `Membership plan "${target.name}" permanently deleted (0 subscribers/orders).`,
+      })
+
+      return NextResponse.json({
+        ok: true,
+        success: true,
+        deleted: true,
+        archived: false,
+        message: `Membership plan "${target.name}" permanently deleted.`,
+      })
+    }
+
+    // Soft-delete / Archive — preserve historical subscriptions and invoices
+    const nowIso = new Date().toISOString()
+    plans[idx] = {
+      ...target,
+      is_active: false,
+      is_archived: true,
+      deleted_at: nowIso,
+      updated_at: nowIso,
+    }
     await savePersistedState('memberships')
-    return NextResponse.json({ ok: true })
+
+    await recordAdminAuditLog({
+      actorId: auth.userId,
+      actorName: auth.userName,
+      module: 'memberships',
+      recordId: id,
+      recordName: target.name,
+      previousStatus: prevStatus,
+      newStatus: 'archived',
+      actionType: 'archive',
+      detail: `Membership plan "${target.name}" archived safely. Existing subscribers retain historical plan details.`,
+    })
+
+    return NextResponse.json({
+      ok: true,
+      success: true,
+      deleted: false,
+      archived: true,
+      membership: plans[idx],
+      message: `Membership plan "${target.name}" archived safely.`,
+    })
   } catch {
     return NextResponse.json({ error: 'Bad request' }, { status: 400 })
   }

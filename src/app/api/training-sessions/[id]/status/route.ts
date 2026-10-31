@@ -5,6 +5,7 @@
 // ============================================================
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { syncSessionRemindersForTrainingSession } from '@/lib/services/whatsapp-notification.service'
 
 export async function PATCH(
   req: NextRequest,
@@ -35,14 +36,15 @@ export async function PATCH(
 
     if (!prof && !isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    const { status } = await req.json() as { status: string }
+    const body = await req.json() as { status?: string; scheduled_at?: string; trainer_id?: string }
+    const status = body.status || 'scheduled'
     const allowed = ['scheduled', 'live', 'completed', 'cancelled']
     if (!allowed.includes(status)) return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
 
     // Verify session belongs to this trainer (unless admin)
     const { data: session } = await (svc as any)
       .from('training_sessions')
-      .select('id, trainer_id, status')
+      .select('id, customer_id, trainer_id, scheduled_at, meeting_url, status')
       .eq('id', id)
       .single()
     if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
@@ -50,14 +52,22 @@ export async function PATCH(
 
     const now = new Date().toISOString()
     const patch: Record<string, string | null> = { status, updated_at: now }
+    if (body.scheduled_at !== undefined) patch.scheduled_at = body.scheduled_at
+    if (body.trainer_id !== undefined && isAdmin) patch.trainer_id = body.trainer_id
     if (status === 'live')      patch.started_at = now
     if (status === 'completed') patch.ended_at   = now
 
-    const { error } = await (svc as any)
+    const { data: updatedSession, error } = await (svc as any)
       .from('training_sessions')
       .update(patch)
       .eq('id', id)
+      .select()
+      .single()
     if (error) throw new Error(error.message)
+
+    if (updatedSession) {
+      await syncSessionRemindersForTrainingSession(updatedSession)
+    }
 
     await (svc as any).from('audit_logs').insert({
       user_id: user.id,

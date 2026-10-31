@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
 import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
+import {
+  inspectRecordDependencies,
+  recordAdminAuditLog,
+  verifyAdminAccess,
+} from '@/lib/services/admin-record-governance'
 
 const DEFAULT_BIOMARKERS = [
   { id: 'bm-uric-acid', name: 'Uric Acid Level', code: 'uric_acid', category: 'Metabolic & Renal', unit: 'mg/dL', normal_range: '3.5 - 7.2 mg/dL', min: 3.5, max: 7.2, description: 'Gout, purine breakdown, joint health', is_active: true },
@@ -28,7 +32,7 @@ export async function GET() {
   try {
     await loadPersistedState()
     if (!mockDb.state.clinical_biomarkers || mockDb.state.clinical_biomarkers.length === 0) {
-      mockDb.state.clinical_biomarkers = DEFAULT_BIOMARKERS
+      mockDb.state.clinical_biomarkers = [...DEFAULT_BIOMARKERS]
     }
     return NextResponse.json({
       success: true,
@@ -41,53 +45,91 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createServerSupabaseClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    let role = (user as any)?.user_metadata?.role || (user as any)?.role
-    if (!role) {
-      const cookie = req.cookies.get('drf_session')?.value
-      if (cookie) {
-        try { role = JSON.parse(decodeURIComponent(cookie)).role } catch { }
-      }
-    }
-
-    if (!role || !['admin', 'super_admin', 'operations_manager'].includes(role)) {
-      return NextResponse.json({ error: 'Unauthorized: CMS management requires Admin access only.' }, { status: 403 })
+    const auth = await verifyAdminAccess(req, ['admin', 'super_admin', 'operations_manager'])
+    if (!auth.authorized) {
+      return NextResponse.json(
+        { error: auth.error || 'Unauthorized: CMS management requires Admin access only.' },
+        { status: auth.status }
+      )
     }
 
     await loadPersistedState()
     const body = await req.json()
-    const { name, code, category, unit, normal_range, min, max, description, is_active } = body
+    const { id, name, code, category, unit, normal_range, min, max, description, is_active, restore } = body
 
-    if (!name || !unit) {
-      return NextResponse.json({ error: 'Name and Unit are required' }, { status: 400 })
+    if (!mockDb.state.clinical_biomarkers || mockDb.state.clinical_biomarkers.length === 0) {
+      mockDb.state.clinical_biomarkers = [...DEFAULT_BIOMARKERS]
     }
 
-    if (!mockDb.state.clinical_biomarkers) {
-      mockDb.state.clinical_biomarkers = DEFAULT_BIOMARKERS
-    }
-
-    const generatedCode = code || name.toLowerCase().replace(/[^a-z0-9]/g, '_')
-    const existingIdx = mockDb.state.clinical_biomarkers.findIndex((b: any) => b.code === generatedCode || (b.id && b.id === body.id))
+    const generatedCode = code || (name ? name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '')
+    const existingIdx = mockDb.state.clinical_biomarkers.findIndex(
+      (b: any) => (id && b.id === id) || (generatedCode && b.code === generatedCode)
+    )
 
     if (existingIdx >= 0) {
-      mockDb.state.clinical_biomarkers[existingIdx] = {
-        ...mockDb.state.clinical_biomarkers[existingIdx],
-        name,
-        category: category || mockDb.state.clinical_biomarkers[existingIdx].category,
-        unit,
-        normal_range: normal_range || mockDb.state.clinical_biomarkers[existingIdx].normal_range,
-        min: min !== undefined ? Number(min) : mockDb.state.clinical_biomarkers[existingIdx].min,
-        max: max !== undefined ? Number(max) : mockDb.state.clinical_biomarkers[existingIdx].max,
-        description: description || mockDb.state.clinical_biomarkers[existingIdx].description,
-        is_active: is_active !== undefined ? is_active : true,
+      const existing = mockDb.state.clinical_biomarkers[existingIdx]
+      const prevStatus = existing.is_archived ? 'archived' : existing.is_active !== false ? 'active' : 'inactive'
+      const nowIso = new Date().toISOString()
+
+      if (restore === true) {
+        mockDb.state.clinical_biomarkers[existingIdx] = {
+          ...existing,
+          is_archived: false,
+          deleted_at: null,
+          is_active: true,
+          updated_at: nowIso,
+        }
+      } else {
+        mockDb.state.clinical_biomarkers[existingIdx] = {
+          ...existing,
+          name: name !== undefined ? name : existing.name,
+          category: category || existing.category,
+          unit: unit !== undefined ? unit : existing.unit,
+          normal_range: normal_range !== undefined ? normal_range : existing.normal_range,
+          min: min !== undefined ? Number(min) : existing.min,
+          max: max !== undefined ? Number(max) : existing.max,
+          description: description !== undefined ? description : existing.description,
+          is_active: is_active !== undefined ? Boolean(is_active) : existing.is_active,
+          is_archived: body.is_archived !== undefined ? Boolean(body.is_archived) : Boolean(existing.is_archived),
+          updated_at: nowIso,
+        }
       }
+
       await savePersistedState('clinical_biomarkers')
+
+      const updated = mockDb.state.clinical_biomarkers[existingIdx]
+      const newStatus = updated.is_archived ? 'archived' : updated.is_active !== false ? 'active' : 'inactive'
+      const actionType =
+        restore === true
+          ? 'restore'
+          : prevStatus !== newStatus
+            ? newStatus === 'active'
+              ? 'activate'
+              : newStatus === 'archived'
+                ? 'archive'
+                : 'deactivate'
+            : 'update'
+
+      await recordAdminAuditLog({
+        actorId: auth.userId,
+        actorName: auth.userName,
+        module: 'cms_biomarkers',
+        recordId: updated.id,
+        recordName: updated.name,
+        previousStatus: prevStatus,
+        newStatus,
+        actionType,
+      })
+
       return NextResponse.json({
         success: true,
         message: 'Biomarker updated successfully',
-        biomarker: mockDb.state.clinical_biomarkers[existingIdx],
+        biomarker: updated,
       })
+    }
+
+    if (!name || !unit) {
+      return NextResponse.json({ error: 'Name and Unit are required' }, { status: 400 })
     }
 
     const newBiomarker = {
@@ -100,19 +142,122 @@ export async function POST(req: NextRequest) {
       min: min !== undefined ? Number(min) : 0,
       max: max !== undefined ? Number(max) : 100,
       description: description || 'Custom clinical biomarker parameter',
-      is_active: is_active !== undefined ? is_active : true,
+      is_active: is_active !== undefined ? Boolean(is_active) : true,
+      is_archived: false,
       is_custom: true,
+      created_at: new Date().toISOString(),
     }
 
     mockDb.state.clinical_biomarkers.push(newBiomarker)
     await savePersistedState('clinical_biomarkers')
 
-    return NextResponse.json({
-      success: true,
-      message: 'New clinical biomarker parameter added to CMS and Doctor intake',
-      biomarker: newBiomarker,
-    }, { status: 201 })
+    await recordAdminAuditLog({
+      actorId: auth.userId,
+      actorName: auth.userName,
+      module: 'cms_biomarkers',
+      recordId: newBiomarker.id,
+      recordName: newBiomarker.name,
+      previousStatus: 'none',
+      newStatus: newBiomarker.is_active ? 'active' : 'inactive',
+      actionType: 'create',
+    })
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'New clinical biomarker parameter added to CMS and Doctor intake',
+        biomarker: newBiomarker,
+      },
+      { status: 201 }
+    )
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Error saving biomarker' }, { status: 400 })
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const auth = await verifyAdminAccess(req, ['admin', 'super_admin', 'operations_manager'])
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: auth.status })
+    }
+
+    await loadPersistedState()
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get('id')
+    const forceArchive = searchParams.get('mode') === 'archive'
+
+    if (!id) {
+      return NextResponse.json({ error: 'Biomarker ID is required' }, { status: 400 })
+    }
+
+    if (!mockDb.state.clinical_biomarkers || mockDb.state.clinical_biomarkers.length === 0) {
+      mockDb.state.clinical_biomarkers = [...DEFAULT_BIOMARKERS]
+    }
+
+    const list = mockDb.state.clinical_biomarkers
+    const idx = list.findIndex((b: any) => b.id === id || b.code === id)
+    if (idx === -1) {
+      return NextResponse.json({ error: 'Biomarker not found' }, { status: 404 })
+    }
+
+    const target = list[idx]
+    const prevStatus = target.is_archived ? 'archived' : target.is_active !== false ? 'active' : 'inactive'
+    const dep = await inspectRecordDependencies('cms_biomarkers', target.id)
+    const nowIso = new Date().toISOString()
+
+    if (dep?.canPermanentDelete && !forceArchive) {
+      list.splice(idx, 1)
+      await savePersistedState('clinical_biomarkers')
+
+      await recordAdminAuditLog({
+        actorId: auth.userId,
+        actorName: auth.userName,
+        module: 'cms_biomarkers',
+        recordId: target.id,
+        recordName: target.name,
+        previousStatus: prevStatus,
+        newStatus: 'deleted',
+        actionType: 'permanent_delete',
+      })
+
+      return NextResponse.json({
+        success: true,
+        deleted: true,
+        archived: false,
+        message: `Biomarker "${target.name}" permanently deleted.`,
+      })
+    }
+
+    // Soft Delete / Archive
+    list[idx] = {
+      ...target,
+      is_active: false,
+      is_archived: true,
+      deleted_at: nowIso,
+      updated_at: nowIso,
+    }
+    await savePersistedState('clinical_biomarkers')
+
+    await recordAdminAuditLog({
+      actorId: auth.userId,
+      actorName: auth.userName,
+      module: 'cms_biomarkers',
+      recordId: target.id,
+      recordName: target.name,
+      previousStatus: prevStatus,
+      newStatus: 'archived',
+      actionType: 'archive',
+    })
+
+    return NextResponse.json({
+      success: true,
+      deleted: false,
+      archived: true,
+      biomarker: list[idx],
+      message: `Biomarker "${target.name}" archived safely.`,
+    })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Failed to delete biomarker' }, { status: 400 })
   }
 }

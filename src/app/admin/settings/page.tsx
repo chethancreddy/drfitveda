@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import AdminSidebar from '@/components/admin/AdminSidebar'
+import AdminRecordDeleteModal from '@/components/admin/AdminRecordDeleteModal'
 
 interface PlatformSettings {
   platform_name: string
@@ -25,6 +26,8 @@ export interface ProfessionalRole {
   description?: string
   icon?: string
   is_active: boolean
+  is_archived?: boolean
+  archived_at?: string | null
   display_order: number
 }
 
@@ -73,6 +76,9 @@ export default function AdminSettingsPage() {
   const [editingSection, setEditingSection] = useState<'identity' | 'google_meet' | null>(null)
   const [formData, setFormData] = useState<Partial<PlatformSettings>>({})
   const [editingRole, setEditingRole] = useState<Partial<ProfessionalRole> | null>(null)
+  const [viewingRole, setViewingRole] = useState<ProfessionalRole | null>(null)
+  const [deletingRole, setDeletingRole] = useState<ProfessionalRole | null>(null)
+  const [roleStatusFilter, setRoleStatusFilter] = useState<'all' | 'active' | 'inactive' | 'archived'>('all')
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
 
@@ -96,7 +102,7 @@ export default function AdminSettingsPage() {
 
   async function loadRoles() {
     try {
-      const res = await fetch('/api/settings/roles')
+      const res = await fetch('/api/settings/roles?include_archived=true', { cache: 'no-store' })
       if (res.ok) {
         const data = await res.json()
         if (data.roles) setRoles(data.roles)
@@ -245,28 +251,55 @@ export default function AdminSettingsPage() {
         body: JSON.stringify(updated),
       })
       if (res.ok) {
-        setRoles(prev => prev.map(r => r.id === role.id ? updated : r))
         showToast(`✓ Role ${updated.is_active ? 'activated' : 'deactivated'}`)
+        await loadRoles()
       }
     } catch {
       showToast('Failed to update status')
     }
   }
 
-  async function handleDeleteRole(role: ProfessionalRole) {
-    if (!confirm(`Are you sure you want to delete "${role.label}"?`)) return
+  async function handleRestoreRole(role: ProfessionalRole) {
     try {
-      const res = await fetch(`/api/settings/roles?id=${role.id}`, {
-        method: 'DELETE',
+      const res = await fetch('/api/settings/roles', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: role.id, restore: true, is_active: true }),
       })
       if (res.ok) {
-        setRoles(prev => prev.filter(r => r.id !== role.id))
-        showToast('✓ Role deleted successfully')
+        showToast(`✓ Role "${role.label}" restored!`)
+        await loadRoles()
       }
     } catch {
-      showToast('Failed to delete role')
+      showToast('Failed to restore role')
     }
   }
+
+  async function confirmDeleteRole(options?: { forceArchive?: boolean; reassignToId?: string; resolveActive?: boolean }) {
+    if (!deletingRole) return
+    const params = new URLSearchParams({ id: deletingRole.id })
+    if (options?.reassignToId) params.set('reassign_to_value', options.reassignToId)
+    const res = await fetch(`/api/settings/roles?${params.toString()}`, {
+      method: 'DELETE',
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to delete role')
+    }
+    showToast(data.message || '✓ Role removed safely')
+    setDeletingRole(null)
+    await loadRoles()
+  }
+
+  const filteredRoles = useMemo(() => {
+    return roles.filter(r => {
+      if (roleStatusFilter === 'active' && (!r.is_active || r.is_archived)) return false
+      if (roleStatusFilter === 'inactive' && (r.is_active || r.is_archived)) return false
+      if (roleStatusFilter === 'archived' && !r.is_archived) return false
+      if (roleStatusFilter === 'all' && r.is_archived) return false
+      return true
+    })
+  }, [roles, roleStatusFilter])
 
   return (
     <div className="app-layout">
@@ -419,6 +452,29 @@ export default function AdminSettingsPage() {
                 </div>
               </div>
 
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                <span className="text-caption text-muted">Filter Disciplines by Status:</span>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {(
+                    [
+                      { key: 'all', label: `All (${roles.filter(r => !r.is_archived).length})` },
+                      { key: 'active', label: `Active (${roles.filter(r => r.is_active && !r.is_archived).length})` },
+                      { key: 'inactive', label: `Inactive (${roles.filter(r => !r.is_active && !r.is_archived).length})` },
+                      { key: 'archived', label: `Archived (${roles.filter(r => r.is_archived).length})` },
+                    ] as const
+                  ).map(tab => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setRoleStatusFilter(tab.key)}
+                      className={`btn btn-sm ${roleStatusFilter === tab.key ? 'btn-primary' : 'btn-ghost'}`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="table-wrapper">
                 <table>
                   <thead>
@@ -433,9 +489,9 @@ export default function AdminSettingsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {roles.length > 0 ? (
-                      roles.map(r => (
-                        <tr key={r.id} style={{ opacity: r.is_active ? 1 : 0.6 }}>
+                    {filteredRoles.length > 0 ? (
+                      filteredRoles.map(r => (
+                        <tr key={r.id} style={{ opacity: r.is_active && !r.is_archived ? 1 : 0.65 }}>
                           <td>
                             <div style={{
                               width: 38, height: 38, borderRadius: '50%',
@@ -468,33 +524,54 @@ export default function AdminSettingsPage() {
                             </span>
                           </td>
                           <td>
-                            <span className={`badge badge-${r.is_active ? 'success' : 'neutral'}`}>
-                              {r.is_active ? 'Active' : 'Inactive'}
-                            </span>
+                            {r.is_archived ? (
+                              <span className="badge badge-neutral">Archived</span>
+                            ) : (
+                              <span className={`badge badge-${r.is_active ? 'success' : 'warning'}`}>
+                                {r.is_active ? 'Active' : 'Inactive'}
+                              </span>
+                            )}
                           </td>
                           <td style={{ textAlign: 'right' }}>
-                            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                              <button
+                                className="btn btn-ghost btn-sm"
+                                onClick={() => setViewingRole(r)}
+                                title="View role details"
+                              >
+                                View
+                              </button>
                               <button
                                 className="btn btn-ghost btn-sm"
                                 onClick={() => setEditingRole({ ...r })}
                                 title="Edit role"
                               >
-                                ✏️ Edit
+                                Edit
                               </button>
-                              <button
-                                className={`btn btn-sm ${r.is_active ? 'btn-outline' : 'btn-ghost'}`}
-                                onClick={() => handleToggleRoleStatus(r)}
-                                title={r.is_active ? 'Deactivate role' : 'Activate role'}
-                              >
-                                {r.is_active ? 'Deactivate' : 'Activate'}
-                              </button>
+                              {r.is_archived ? (
+                                <button
+                                  className="btn btn-outline btn-sm"
+                                  onClick={() => handleRestoreRole(r)}
+                                  title="Restore archived role"
+                                >
+                                  Restore
+                                </button>
+                              ) : (
+                                <button
+                                  className={`btn btn-sm ${r.is_active ? 'btn-outline' : 'btn-ghost'}`}
+                                  onClick={() => handleToggleRoleStatus(r)}
+                                  title={r.is_active ? 'Deactivate role' : 'Activate role'}
+                                >
+                                  {r.is_active ? 'Deactivate' : 'Activate'}
+                                </button>
+                              )}
                               <button
                                 className="btn btn-ghost btn-sm"
                                 style={{ color: 'var(--color-error)' }}
-                                onClick={() => handleDeleteRole(r)}
+                                onClick={() => setDeletingRole(r)}
                                 title="Delete role"
                               >
-                                🗑️
+                                Delete
                               </button>
                             </div>
                           </td>
@@ -504,7 +581,7 @@ export default function AdminSettingsPage() {
                       <tr>
                         <td colSpan={7}>
                           <div className="empty-state" style={{ padding: 'var(--space-md)' }}>
-                            No roles defined. Click &ldquo;➕ Add New Role&rdquo; to create your first discipline.
+                            No roles match the selected status filter.
                           </div>
                         </td>
                       </tr>
@@ -997,6 +1074,78 @@ export default function AdminSettingsPage() {
             </div>
           </div>
         )}
+
+        {/* View Role Modal */}
+        {viewingRole && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.55)',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16,
+            }}
+            onClick={() => setViewingRole(null)}
+          >
+            <div className="card" style={{ width: '100%', maxWidth: 480, padding: 'var(--space-lg)' }} onClick={e => e.stopPropagation()}>
+              <div className="flex justify-between items-center" style={{ marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 28 }}>{viewingRole.icon || '🩺'}</span>
+                  <div>
+                    <h3 className="text-headline-sm" style={{ margin: 0 }}>{viewingRole.label}</h3>
+                    <code style={{ fontSize: 12 }}>{viewingRole.value}</code>
+                  </div>
+                </div>
+                <button className="btn btn-icon btn-ghost" onClick={() => setViewingRole(null)}>✕</button>
+              </div>
+              <div style={{ padding: 12, background: 'var(--color-neutral)', borderRadius: 8, marginBottom: 12 }}>
+                <div className="text-caption text-muted">Category</div>
+                <div style={{ fontWeight: 700, textTransform: 'capitalize' }}>{viewingRole.category}</div>
+              </div>
+              <div style={{ padding: 12, background: 'var(--color-neutral)', borderRadius: 8, marginBottom: 14 }}>
+                <div className="text-caption text-muted">Clinical Scope &amp; Description</div>
+                <div className="text-body-sm" style={{ marginTop: 4 }}>{viewingRole.description || '—'}</div>
+              </div>
+              <div className="flex justify-end" style={{ gap: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() => {
+                    const r = viewingRole
+                    setViewingRole(null)
+                    setEditingRole({ ...r })
+                  }}
+                >
+                  Edit Role
+                </button>
+                <button type="button" className="btn btn-primary btn-sm" onClick={() => setViewingRole(null)}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Role Safety Modal */}
+        <AdminRecordDeleteModal
+          isOpen={!!deletingRole}
+          moduleKey="professional_roles"
+          moduleLabel="Professional Roles & Disciplines"
+          recordId={deletingRole?.id || ''}
+          recordName={deletingRole?.label || ''}
+          reassignmentLabel="Reassign Professionals Using This Role To (Optional)"
+          reassignmentOptions={roles
+            .filter(r => r.id !== deletingRole?.id && r.is_active && !r.is_archived)
+            .map(r => ({
+              id: r.value,
+              label: `${r.icon || '🩺'} ${r.label} (${r.value})`,
+            }))}
+          onClose={() => setDeletingRole(null)}
+          onConfirm={confirmDeleteRole}
+        />
 
         {/* Toast */}
         {toast && (

@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import AdminSidebar from '@/components/admin/AdminSidebar'
+import AdminRecordDeleteModal from '@/components/admin/AdminRecordDeleteModal'
 
 interface TeamMember {
   id: string
@@ -14,6 +15,8 @@ interface TeamMember {
   shift: string
   assigned_region: string
   is_active: boolean
+  is_archived?: boolean
+  archived_at?: string | null
   created_at?: string
 }
 
@@ -21,8 +24,12 @@ export default function AdminTeamPage() {
   const [members, setMembers] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(true)
   const [editingMember, setEditingMember] = useState<Partial<TeamMember> | null>(null)
+  const [viewingMember, setViewingMember] = useState<TeamMember | null>(null)
+  const [deletingMember, setDeletingMember] = useState<TeamMember | null>(null)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'archived'>('all')
 
   useEffect(() => {
     loadTeam()
@@ -31,7 +38,7 @@ export default function AdminTeamPage() {
   async function loadTeam() {
     setLoading(true)
     try {
-      const res = await fetch('/api/team')
+      const res = await fetch('/api/team?include_archived=true', { cache: 'no-store' })
       const data = await res.json()
       setMembers(data.team_members || [])
     } catch {
@@ -95,13 +102,59 @@ export default function AdminTeamPage() {
         body: JSON.stringify({ is_active: !member.is_active }),
       })
       if (res.ok) {
-        setMembers(prev => prev.map(m => m.id === member.id ? { ...m, is_active: !m.is_active } : m))
-        showToast(member.is_active ? 'Staff member deactivated' : 'Staff member activated')
+        showToast(member.is_active ? 'Staff member deactivated & access revoked' : 'Staff member activated')
+        await loadTeam()
       }
     } catch {
       showToast('Error toggling status')
     }
   }
+
+  async function restoreMember(member: TeamMember) {
+    try {
+      const res = await fetch(`/api/team/${member.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restore: true, is_active: true }),
+      })
+      if (res.ok) {
+        showToast(`Staff member "${member.full_name}" restored!`)
+        await loadTeam()
+      }
+    } catch {
+      showToast('Error restoring staff member')
+    }
+  }
+
+  async function confirmDeleteMember() {
+    if (!deletingMember) return
+    const res = await fetch(`/api/team/${deletingMember.id}`, {
+      method: 'DELETE',
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to delete staff member')
+    }
+    showToast(data.message || (data.archived ? 'Staff member archived safely' : 'Staff member permanently deleted'))
+    setDeletingMember(null)
+    await loadTeam()
+  }
+
+  const filteredMembers = useMemo(() => {
+    return members.filter(m => {
+      if (statusFilter === 'active' && (!m.is_active || m.is_archived)) return false
+      if (statusFilter === 'inactive' && (m.is_active || m.is_archived)) return false
+      if (statusFilter === 'archived' && !m.is_archived) return false
+      if (statusFilter === 'all' && m.is_archived) return false
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase()
+        const hay = `${m.full_name} ${m.email} ${m.phone || ''} ${m.role} ${m.department} ${m.assigned_region || ''}`.toLowerCase()
+        if (!hay.includes(q)) return false
+      }
+      return true
+    })
+  }, [members, statusFilter, searchQuery])
 
   const roleLabel: Record<string, string> = {
     operations_manager: 'Care Operations Manager',
@@ -118,6 +171,11 @@ export default function AdminTeamPage() {
     doctor_lead: 'warning',
     trainer_lead: 'secondary',
   }
+
+  const nonArchivedCount = members.filter(m => !m.is_archived).length
+  const activeCount = members.filter(m => m.is_active && !m.is_archived).length
+  const inactiveCount = members.filter(m => !m.is_active && !m.is_archived).length
+  const archivedCount = members.filter(m => m.is_archived).length
 
   return (
     <div className="app-layout">
@@ -140,23 +198,64 @@ export default function AdminTeamPage() {
         <div className="grid-4" style={{ marginBottom: 'var(--space-md)' }}>
           <div className="stat-card">
             <div className="stat-label">Total Team Members</div>
-            <div className="stat-value">{members.length}</div>
+            <div className="stat-value">{nonArchivedCount}</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">Active Coordinators</div>
             <div className="stat-value" style={{ color: '#059669' }}>
-              {members.filter(m => m.is_active && m.role === 'care_coordinator').length}
+              {members.filter(m => m.is_active && !m.is_archived && m.role === 'care_coordinator').length}
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-label">Operations Managers</div>
             <div className="stat-value" style={{ color: '#0d9488' }}>
-              {members.filter(m => m.is_active && m.role === 'operations_manager').length}
+              {members.filter(m => m.is_active && !m.is_archived && m.role === 'operations_manager').length}
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-label">Authorized Dispatchers</div>
-            <div className="stat-value">{members.filter(m => m.is_active).length}</div>
+            <div className="stat-value">{activeCount}</div>
+          </div>
+        </div>
+
+        {/* Search & Status Filter Bar */}
+        <div
+          className="card"
+          style={{
+            padding: '12px 16px',
+            marginBottom: 'var(--space-md)',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 10,
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <input
+            className="form-input"
+            style={{ flex: '1 1 260px', maxWidth: 420 }}
+            placeholder="🔍 Search by staff name, email, role, or department..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {(
+              [
+                { key: 'all', label: `All (${nonArchivedCount})` },
+                { key: 'active', label: `Active (${activeCount})` },
+                { key: 'inactive', label: `Inactive (${inactiveCount})` },
+                { key: 'archived', label: `Archived (${archivedCount})` },
+              ] as const
+            ).map(tab => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setStatusFilter(tab.key)}
+                className={`btn btn-sm ${statusFilter === tab.key ? 'btn-primary' : 'btn-ghost'}`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -174,12 +273,12 @@ export default function AdminTeamPage() {
                     <th>Department</th>
                     <th>Shift &amp; Region</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {members.length ? members.map(m => (
-                    <tr key={m.id}>
+                  {filteredMembers.length ? filteredMembers.map(m => (
+                    <tr key={m.id} style={{ opacity: m.is_active && !m.is_archived ? 1 : 0.7 }}>
                       <td>
                         <div style={{ fontWeight: 700, fontSize: 14 }}>{m.full_name}</div>
                         <div className="text-caption text-muted">{m.email} • {m.phone || 'No phone'}</div>
@@ -195,23 +294,54 @@ export default function AdminTeamPage() {
                         <div className="text-caption text-muted">{m.assigned_region}</div>
                       </td>
                       <td>
-                        <span className={`badge badge-${m.is_active ? 'success' : 'neutral'}`}>
-                          {m.is_active ? 'Active' : 'Inactive'}
-                        </span>
+                        {m.is_archived ? (
+                          <span className="badge badge-neutral">Archived</span>
+                        ) : (
+                          <span className={`badge badge-${m.is_active ? 'success' : 'warning'}`}>
+                            {m.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        )}
                       </td>
                       <td>
-                        <div style={{ display: 'flex', gap: 6 }}>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                           <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => setViewingMember(m)}
+                          >
+                            View
+                          </button>
+                          <button
+                            type="button"
                             className="btn btn-ghost btn-sm"
                             onClick={() => setEditingMember({ ...m })}
                           >
                             Edit
                           </button>
+                          {m.is_archived ? (
+                            <button
+                              type="button"
+                              className="btn btn-outline btn-sm"
+                              onClick={() => restoreMember(m)}
+                            >
+                              Restore
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className={`btn btn-sm ${m.is_active ? 'btn-outline' : 'btn-primary'}`}
+                              onClick={() => toggleActive(m)}
+                            >
+                              {m.is_active ? 'Deactivate' : 'Activate'}
+                            </button>
+                          )}
                           <button
-                            className={`btn btn-sm ${m.is_active ? 'btn-outline' : 'btn-primary'}`}
-                            onClick={() => toggleActive(m)}
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            style={{ color: '#dc2626' }}
+                            onClick={() => setDeletingMember(m)}
                           >
-                            {m.is_active ? 'Deactivate' : 'Activate'}
+                            Delete
                           </button>
                         </div>
                       </td>
@@ -220,7 +350,7 @@ export default function AdminTeamPage() {
                     <tr>
                       <td colSpan={6}>
                         <div className="empty-state" style={{ padding: 'var(--space-md)' }}>
-                          No staff members found. Click &quot;+ Add Staff / Coordinator&quot; above to create your team.
+                          No staff members match the current filter.
                         </div>
                       </td>
                     </tr>
@@ -234,9 +364,79 @@ export default function AdminTeamPage() {
         <div className="alert alert-info" style={{ marginTop: 'var(--space-md)' }}>
           <span>ℹ️</span>
           <span>
-            <strong>Role Permissions:</strong> Operations Managers and Care Coordinators have authorization to assign customers to Doctors and Trainers based on their open working slots and active caseload capacity.
+            <strong>Role Permissions:</strong> Operations Managers and Care Coordinators have authorization to assign customers to Doctors and Trainers based on their open working slots and active caseload capacity. Deactivated or archived staff immediately lose operational portal access.
           </span>
         </div>
+
+        {/* View Staff Member Modal */}
+        {viewingMember && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.55)',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16,
+            }}
+            onClick={() => setViewingMember(null)}
+          >
+            <div
+              className="card"
+              style={{ width: '100%', maxWidth: 500, padding: 'var(--space-lg)' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center" style={{ marginBottom: 14 }}>
+                <div>
+                  <h2 className="text-headline-sm">{viewingMember.full_name}</h2>
+                  <p className="text-caption text-muted">
+                    {roleLabel[viewingMember.role] || viewingMember.role.replace(/_/g, ' ')}
+                  </p>
+                </div>
+                <button className="btn btn-icon btn-ghost" onClick={() => setViewingMember(null)}>✕</button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+                <div style={{ padding: 10, background: 'var(--color-neutral)', borderRadius: 8 }}>
+                  <div className="text-caption text-muted">Email</div>
+                  <div className="text-body-sm" style={{ fontWeight: 600 }}>{viewingMember.email}</div>
+                </div>
+                <div style={{ padding: 10, background: 'var(--color-neutral)', borderRadius: 8 }}>
+                  <div className="text-caption text-muted">Phone</div>
+                  <div className="text-body-sm" style={{ fontWeight: 600 }}>{viewingMember.phone || 'Not set'}</div>
+                </div>
+                <div style={{ padding: 10, background: 'var(--color-neutral)', borderRadius: 8 }}>
+                  <div className="text-caption text-muted">Department</div>
+                  <div className="text-body-sm" style={{ fontWeight: 600 }}>{viewingMember.department}</div>
+                </div>
+                <div style={{ padding: 10, background: 'var(--color-neutral)', borderRadius: 8 }}>
+                  <div className="text-caption text-muted">Shift &amp; Region</div>
+                  <div className="text-body-sm" style={{ fontWeight: 600 }}>{viewingMember.shift}</div>
+                  <div className="text-caption text-muted">{viewingMember.assigned_region}</div>
+                </div>
+              </div>
+
+              <div className="flex justify-end" style={{ gap: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() => {
+                    const m = viewingMember
+                    setViewingMember(null)
+                    setEditingMember({ ...m })
+                  }}
+                >
+                  Edit Profile
+                </button>
+                <button type="button" className="btn btn-primary btn-sm" onClick={() => setViewingMember(null)}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal: Add / Edit Staff */}
         {editingMember && (
@@ -369,6 +569,17 @@ export default function AdminTeamPage() {
             </div>
           </div>
         )}
+
+        {/* Delete / Archive Safety Modal */}
+        <AdminRecordDeleteModal
+          isOpen={!!deletingMember}
+          moduleKey="team"
+          moduleLabel="Operations Team & Care Staff"
+          recordId={deletingMember?.id || ''}
+          recordName={deletingMember?.full_name || ''}
+          onClose={() => setDeletingMember(null)}
+          onConfirm={confirmDeleteMember}
+        />
 
         {/* Toast */}
         {toast && (

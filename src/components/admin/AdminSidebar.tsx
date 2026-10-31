@@ -9,8 +9,10 @@ export const ADMIN_NAV_LINKS = [
   { href: '/admin/customers', icon: '👥', label: 'Customers', shortLabel: 'Patients' },
   { href: '/admin/professionals', icon: '👨‍⚕️', label: 'Professionals', shortLabel: 'Doctors' },
   { href: '/admin/assignments', icon: '🔗', label: 'Assignments', shortLabel: 'Assign' },
+  { href: '/admin/notifications', icon: '💬', label: 'WhatsApp Alerts', shortLabel: 'Alerts' },
   { href: '/admin/team', icon: '👔', label: 'Operations Team', shortLabel: 'Team' },
   { href: '/admin/memberships', icon: '💳', label: 'Memberships', shortLabel: 'Plans' },
+  { href: '/admin/consultations', icon: '🩺', label: 'Consultation Services', shortLabel: 'Consults' },
   { href: '/admin/training', icon: '🎥', label: 'Training', shortLabel: 'Training' },
   { href: '/admin/finance', icon: '💰', label: 'Finance', shortLabel: 'Finance' },
   { href: '/admin/payouts', icon: '💵', label: 'Payouts', shortLabel: 'Payouts' },
@@ -347,8 +349,8 @@ export default function AdminSidebar() {
           ADMIN_NAV_LINKS[0], // Dashboard
           ADMIN_NAV_LINKS[1], // Customers
           ADMIN_NAV_LINKS[2], // Professionals
-          ADMIN_NAV_LINKS[5], // Memberships
-          ADMIN_NAV_LINKS[14], // Settings
+          ADMIN_NAV_LINKS[4], // WhatsApp Alerts
+          ADMIN_NAV_LINKS[ADMIN_NAV_LINKS.length - 1], // Settings
         ].map(l => {
           const isActive = pathname === l.href || (l.href !== '/admin' && pathname.startsWith(l.href))
           return (

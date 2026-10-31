@@ -1,20 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
 import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
-
-function getRole(req: NextRequest, user: any) {
-  let role = (user as any)?.user_metadata?.role || (user as any)?.role
-  if (!role) {
-    const cookie = req.cookies.get('drf_session')?.value
-    if (cookie) {
-      try { role = JSON.parse(decodeURIComponent(cookie)).role } catch {
-        try { role = JSON.parse(cookie).role } catch {}
-      }
-    }
-  }
-  return role
-}
+import {
+  inspectRecordDependencies,
+  recordAdminAuditLog,
+  syncCustomerStatusAndMemberships,
+  verifyAdminAccess,
+} from '@/lib/services/admin-record-governance'
 
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
   try {
@@ -33,6 +25,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     const professionals = mockDb.state.professionals || []
     const memberships = mockDb.state.memberships || []
     const trainingSessions = mockDb.state.training_sessions || []
+    const appointments = mockDb.state.appointments || []
 
     const userProfile = userProfiles.find((up: any) => up.id === customer.user_id) || {}
     const profile = profiles.find((cp: any) => cp.customer_id === customer.id) || {}
@@ -40,7 +33,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     const plan = memberships.find((m: any) => m.id === customer.membership_plan_id) || null
 
     const custAssignments = assignments
-      .filter((pa: any) => pa.customer_id === customer.id && pa.is_active)
+      .filter((pa: any) => pa.customer_id === customer.id && pa.is_active && !pa.is_archived)
       .map((pa: any) => {
         const pro = professionals.find((p: any) => p.id === pa.professional_id)
         return {
@@ -63,18 +56,21 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
         }
       })
 
+    const custAppointments = appointments.filter((a: any) => a.customer_id === customer.id)
+
     return NextResponse.json({
       customer: {
         ...customer,
-        full_name: userProfile.full_name || 'Customer',
-        email: userProfile.email || '',
-        phone: userProfile.phone || '',
+        full_name: userProfile.full_name || customer.full_name || 'Customer',
+        email: userProfile.email || customer.email || '',
+        phone: userProfile.phone || customer.phone || '',
         profile,
         food_profile: foodProfile,
         plan,
         assignments: custAssignments,
         sessions,
-      }
+        appointments: custAppointments,
+      },
     })
   } catch {
     return NextResponse.json({ error: 'Failed to fetch customer' }, { status: 500 })
@@ -83,70 +79,250 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
 
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
   try {
-    await loadPersistedState()
-    const resolvedParams = await Promise.resolve(context.params)
-    const { id } = resolvedParams
-
-    const supabase = await createServerSupabaseClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    const role = getRole(req, user)
-    if (!['admin', 'super_admin', 'operations_manager', 'care_coordinator'].includes(role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    const auth = await verifyAdminAccess(req, [
+      'admin',
+      'super_admin',
+      'operations_manager',
+      'care_coordinator',
+    ])
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: auth.status })
     }
 
+    const resolvedParams = await Promise.resolve(context.params)
+    const { id } = resolvedParams
     const body = await req.json()
+
     const customers = mockDb.state.customers || []
     const idx = customers.findIndex((c: any) => c.id === id || c.user_id === id)
     if (idx === -1) return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
 
     const customer = customers[idx]
+    const userProfiles = mockDb.state.user_profiles || []
+    const existingUp = userProfiles.find((up: any) => up.id === customer.user_id) || {}
+    const recordName = body.full_name || existingUp.full_name || customer.full_name || customer.id
+
+    const prevStatus = customer.is_archived
+      ? 'archived'
+      : customer.is_active !== false
+        ? 'active'
+        : 'inactive'
+
     const newMeetingUrl = body.zoho_meeting_url || body.google_meet_url || body.meeting_url
 
-    // Update customer fields (including dedicated zoho_meeting_url and membership_status)
-    customers[idx] = {
-      ...customer,
-      membership_status: body.membership_status !== undefined ? body.membership_status : customer.membership_status,
-      membership_plan_id: body.membership_plan_id !== undefined ? body.membership_plan_id : customer.membership_plan_id,
-      zoho_meeting_url: newMeetingUrl !== undefined ? newMeetingUrl : (customer.zoho_meeting_url || customer.google_meet_url),
-      google_meet_url: newMeetingUrl !== undefined ? newMeetingUrl : (customer.google_meet_url || customer.zoho_meeting_url),
-      meeting_url: newMeetingUrl !== undefined ? newMeetingUrl : (customer.meeting_url || customer.zoho_meeting_url || customer.google_meet_url),
-      meeting_provider: newMeetingUrl?.includes('zoho.com') ? 'zoho_meeting' : (customer.meeting_provider || 'zoho_meeting'),
-      is_active: body.is_active !== undefined ? body.is_active : customer.is_active,
-      updated_at: new Date().toISOString(),
+    // 1. Update core fields first
+    if (body.membership_plan_id !== undefined) {
+      customer.membership_plan_id = body.membership_plan_id || null
+    }
+    if (body.membership_expires_at !== undefined) {
+      customer.membership_expires_at = body.membership_expires_at
+    }
+    if (newMeetingUrl !== undefined) {
+      customer.zoho_meeting_url = newMeetingUrl
+      customer.google_meet_url = newMeetingUrl
+      customer.meeting_url = newMeetingUrl
+      customer.meeting_provider = newMeetingUrl?.includes('zoho.com')
+        ? 'zoho_meeting'
+        : customer.meeting_provider || 'zoho_meeting'
     }
 
-    // Update user profile full_name, email, phone if provided
-    if (body.full_name || body.email || body.phone) {
-      const userProfiles = mockDb.state.user_profiles || []
+    // 2. Handle Restore from Archive
+    if (body.restore === true) {
+      customer.is_archived = false
+      customer.deleted_at = null
+      syncCustomerStatusAndMemberships(customer, true, {
+        manualMembershipStatus: body.membership_status,
+      })
+    } else if (body.is_active !== undefined && Boolean(body.is_active) !== Boolean(customer.is_active)) {
+      // 3. Synchronize Customer Active/Inactive Status with Membership(s)
+      syncCustomerStatusAndMemberships(customer, Boolean(body.is_active), {
+        manualMembershipStatus: body.membership_status,
+      })
+    } else if (body.membership_status !== undefined) {
+      // Manual membership status update by Admin
+      customer.membership_status = body.membership_status
+      customer.membership_deactivated_by_status_sync = false
+    }
+
+    if (body.is_archived !== undefined) {
+      customer.is_archived = Boolean(body.is_archived)
+      if (customer.is_archived) {
+        customer.deleted_at = new Date().toISOString()
+        syncCustomerStatusAndMemberships(customer, false)
+      }
+    }
+
+    customer.updated_at = new Date().toISOString()
+    customers[idx] = customer
+
+    // 4. Update user_profiles (full_name, email, phone)
+    if (body.full_name !== undefined || body.email !== undefined || body.phone !== undefined) {
       const uIdx = userProfiles.findIndex((up: any) => up.id === customer.user_id)
       if (uIdx !== -1) {
         userProfiles[uIdx] = {
           ...userProfiles[uIdx],
-          full_name: body.full_name || userProfiles[uIdx].full_name,
+          full_name: body.full_name !== undefined ? body.full_name : userProfiles[uIdx].full_name,
           email: body.email !== undefined ? body.email : userProfiles[uIdx].email,
           phone: body.phone !== undefined ? body.phone : userProfiles[uIdx].phone,
+          is_active: customer.is_active,
+          updated_at: new Date().toISOString(),
         }
       }
     }
 
-    // Update customer profile if provided
+    // 5. Update customer_profiles biometrics if provided
     if (body.profile) {
       const profiles = mockDb.state.customer_profiles || []
       const pIdx = profiles.findIndex((cp: any) => cp.customer_id === customer.id)
       if (pIdx !== -1) {
+        const h = body.profile.height_cm !== undefined ? Number(body.profile.height_cm) : profiles[pIdx].height_cm
+        const w = body.profile.weight_kg !== undefined ? Number(body.profile.weight_kg) : profiles[pIdx].weight_kg
         profiles[pIdx] = {
           ...profiles[pIdx],
           ...body.profile,
-          bmi: body.profile.height_cm && body.profile.weight_kg 
-            ? Number((body.profile.weight_kg / ((body.profile.height_cm/100)*(body.profile.height_cm/100))).toFixed(1))
-            : profiles[pIdx].bmi,
+          height_cm: h,
+          weight_kg: w,
+          bmi: h && w ? Number((w / ((h / 100) * (h / 100))).toFixed(1)) : profiles[pIdx].bmi,
         }
       }
     }
 
     await savePersistedState(['customers', 'user_profiles', 'customer_profiles'])
+
+    const newStatus = customer.is_archived
+      ? 'archived'
+      : customer.is_active !== false
+        ? 'active'
+        : 'inactive'
+
+    const actionType =
+      body.restore === true
+        ? 'restore'
+        : prevStatus !== newStatus
+          ? newStatus === 'active'
+            ? 'activate'
+            : newStatus === 'archived'
+              ? 'archive'
+              : 'deactivate'
+          : 'update'
+
+    await recordAdminAuditLog({
+      actorId: auth.userId,
+      actorName: auth.userName,
+      module: 'customers',
+      recordId: customer.id,
+      recordName,
+      previousStatus: prevStatus,
+      newStatus,
+      actionType,
+      detail: `Customer "${recordName}" (${customer.id}) updated (${actionType}). Membership status: ${customer.membership_status}.`,
+    })
+
     return NextResponse.json({ customer: customers[idx], success: true })
   } catch {
     return NextResponse.json({ error: 'Failed to update customer' }, { status: 400 })
+  }
+}
+
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
+  try {
+    const auth = await verifyAdminAccess(req, ['admin', 'super_admin', 'operations_manager'])
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: auth.status })
+    }
+
+    const resolvedParams = await Promise.resolve(context.params)
+    const { id } = resolvedParams
+    const { searchParams } = new URL(req.url)
+    const forceArchive = searchParams.get('mode') === 'archive'
+
+    const customers = mockDb.state.customers || []
+    const idx = customers.findIndex((c: any) => c.id === id || c.user_id === id)
+    if (idx === -1) return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+
+    const customer = customers[idx]
+    const prevStatus = customer.is_archived
+      ? 'archived'
+      : customer.is_active !== false
+        ? 'active'
+        : 'inactive'
+
+    const dep = await inspectRecordDependencies('customers', customer.id)
+    const recordName = dep?.recordName || customer.id
+
+    if (dep?.canPermanentDelete && !forceArchive) {
+      // Safe permanent deletion — zero linked historical/financial records
+      customers.splice(idx, 1)
+      if (mockDb.state.customer_profiles) {
+        mockDb.state.customer_profiles = mockDb.state.customer_profiles.filter(
+          (cp: any) => cp.customer_id !== customer.id
+        )
+      }
+      if (mockDb.state.user_profiles) {
+        mockDb.state.user_profiles = mockDb.state.user_profiles.filter(
+          (up: any) => up.id !== customer.user_id
+        )
+      }
+      await savePersistedState(['customers', 'customer_profiles', 'user_profiles'])
+
+      await recordAdminAuditLog({
+        actorId: auth.userId,
+        actorName: auth.userName,
+        module: 'customers',
+        recordId: customer.id,
+        recordName,
+        previousStatus: prevStatus,
+        newStatus: 'deleted',
+        actionType: 'permanent_delete',
+        detail: `Customer "${recordName}" (${customer.id}) permanently deleted (0 dependencies).`,
+      })
+
+      return NextResponse.json({
+        success: true,
+        deleted: true,
+        archived: false,
+        message: `Customer "${recordName}" permanently deleted.`,
+      })
+    }
+
+    // Soft Delete / Archive — preserve all linked appointments, memberships, orders, and clinical records
+    syncCustomerStatusAndMemberships(customer, false)
+    customer.is_archived = true
+    customer.deleted_at = new Date().toISOString()
+    customers[idx] = customer
+
+    // Deactivate active assignments for this archived customer without deleting historical assignments
+    if (Array.isArray(mockDb.state.professional_assignments)) {
+      for (const pa of mockDb.state.professional_assignments) {
+        if (pa.customer_id === customer.id && pa.is_active) {
+          pa.is_active = false
+          pa.updated_at = new Date().toISOString()
+        }
+      }
+    }
+
+    await savePersistedState(['customers', 'user_profiles', 'professional_assignments'])
+
+    await recordAdminAuditLog({
+      actorId: auth.userId,
+      actorName: auth.userName,
+      module: 'customers',
+      recordId: customer.id,
+      recordName,
+      previousStatus: prevStatus,
+      newStatus: 'archived',
+      actionType: 'archive',
+      detail: `Customer "${recordName}" (${customer.id}) soft-deleted/archived to preserve linked clinical and membership history.`,
+    })
+
+    return NextResponse.json({
+      success: true,
+      deleted: false,
+      archived: true,
+      customer,
+      message: `Customer "${recordName}" archived safely. Historical records remain intact.`,
+    })
+  } catch {
+    return NextResponse.json({ error: 'Failed to delete or archive customer' }, { status: 400 })
   }
 }

@@ -32,6 +32,24 @@ export interface Msg91WhatsAppConfigStatus {
   missing: string[]
 }
 
+export interface Msg91WhatsAppTemplateSendOptions {
+  toMobile: string
+  templateName: string
+  bodyVariables: string[]
+  languageCode?: string
+  namespace?: string | null
+}
+
+export interface Msg91WhatsAppTemplateSendResult {
+  success: boolean
+  providerAccepted: boolean
+  requestId?: string
+  message: string
+  httpStatus?: number
+  permanentFailure?: boolean
+  errorCode?: string
+}
+
 class Msg91WhatsAppService {
   private getEnv(key: string): string | null {
     if (process.env[key]) return process.env[key]!
@@ -431,6 +449,218 @@ class Msg91WhatsAppService {
 
     // Otherwise, generate a fresh OTP and resend
     return this.sendOtp(cleanMobile)
+  }
+
+  /**
+   * 4. Send Transactional / Utility WhatsApp Template Message via MSG91 Outbound API
+   * Used for session reminders (15m before) and doctor/trainer assignment notifications.
+   * Does not interfere with the OTP store or OTP templates.
+   */
+  private simulatedFailureMode: 'none' | 'transient' | 'permanent' = 'none'
+
+  public _setSimulatedFailureModeForTesting(mode: 'none' | 'transient' | 'permanent') {
+    this.simulatedFailureMode = mode
+  }
+
+  public async sendTemplateMessage(
+    options: Msg91WhatsAppTemplateSendOptions
+  ): Promise<Msg91WhatsAppTemplateSendResult> {
+    const rawDigits = String(options.toMobile || '').replace(/\D/g, '')
+    let cleanMobile = rawDigits
+    if (cleanMobile.length === 10 && /^[6-9]\d{9}$/.test(cleanMobile)) {
+      cleanMobile = `91${cleanMobile}`
+    } else if (cleanMobile.length === 11 && cleanMobile.startsWith('0')) {
+      cleanMobile = `91${cleanMobile.slice(1)}`
+    }
+
+    if (!cleanMobile || cleanMobile.length < 10 || cleanMobile.length > 15) {
+      return {
+        success: false,
+        providerAccepted: false,
+        permanentFailure: true,
+        errorCode: 'INVALID_PHONE_NUMBER',
+        message: `Permanent failure: Invalid recipient WhatsApp number (${options.toMobile || 'empty'}).`,
+      }
+    }
+
+    if (!options.templateName || !options.templateName.trim()) {
+      return {
+        success: false,
+        providerAccepted: false,
+        permanentFailure: true,
+        errorCode: 'MISSING_TEMPLATE_NAME',
+        message: 'Permanent failure: WhatsApp template name is required.',
+      }
+    }
+
+    // Support deterministic failure simulation for reliability & retry testing
+    if (this.simulatedFailureMode === 'transient') {
+      return {
+        success: false,
+        providerAccepted: false,
+        permanentFailure: false,
+        httpStatus: 503,
+        errorCode: 'MSG91_TRANSIENT_UNAVAILABLE',
+        message: 'Simulated transient MSG91 provider timeout (HTTP 503). Eligible for retry with backoff.',
+      }
+    }
+
+    if (this.simulatedFailureMode === 'permanent') {
+      return {
+        success: false,
+        providerAccepted: false,
+        permanentFailure: true,
+        httpStatus: 400,
+        errorCode: 'TEMPLATE_REJECTED_OR_INVALID_NUMBER',
+        message: 'Simulated permanent MSG91 rejection: Template not approved or number not on WhatsApp.',
+      }
+    }
+
+    const status = this.getConfigurationStatus()
+    if (!status.authKeySet || !this.integratedNumber) {
+      return {
+        success: false,
+        providerAccepted: false,
+        permanentFailure: false,
+        errorCode: 'MSG91_NOT_CONFIGURED',
+        message: 'MSG91 WhatsApp credentials (MSG91_AUTH_KEY / MSG91_WHATSAPP_NUMBER) are not configured.',
+      }
+    }
+
+    // Build positional body_1 .. body_N components matching MSG91 WhatsApp Outbound API v5
+    const components: Record<string, { type: 'text'; value: string }> = {}
+    ;(options.bodyVariables || []).forEach((val, idx) => {
+      components[`body_${idx + 1}`] = {
+        type: 'text',
+        value: String(val ?? '-').trim() || '-',
+      }
+    })
+
+    const namespaceToUse = options.namespace !== undefined ? options.namespace : this.namespace
+    const payload = {
+      integrated_number: this.integratedNumber,
+      content_type: 'template',
+      payload: {
+        messaging_product: 'whatsapp',
+        type: 'template',
+        template: {
+          name: options.templateName,
+          language: {
+            code: options.languageCode || this.templateLang || 'en',
+            policy: 'deterministic',
+          },
+          ...(namespaceToUse ? { namespace: namespaceToUse } : {}),
+          to_and_components: [
+            {
+              to: [cleanMobile],
+              components,
+            },
+          ],
+        },
+      },
+    }
+
+    try {
+      const res = await fetch('https://control.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          authkey: this.authKey!,
+          accept: 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const data = await res.json().catch(() => ({}))
+
+      if (res.ok && (data.status === 'success' || data.type === 'success' || data.hasError === false)) {
+        return {
+          success: true,
+          providerAccepted: true,
+          requestId: data.request_id || data.data?.request_id || `msg91-${Date.now()}`,
+          httpStatus: res.status,
+          message: 'Accepted by MSG91 WhatsApp gateway for delivery.',
+        }
+      }
+
+      const rawError =
+        data.message ||
+        data.errors ||
+        (Array.isArray(data.errors) ? data.errors[0] : null) ||
+        `MSG91 HTTP ${res.status}`
+      const errStr = typeof rawError === 'string' ? rawError : JSON.stringify(rawError)
+      const lowerErr = errStr.toLowerCase()
+
+      const isPermanent =
+        res.status === 400 ||
+        res.status === 401 ||
+        res.status === 404 ||
+        lowerErr.includes('invalid') ||
+        lowerErr.includes('rejected') ||
+        lowerErr.includes('not exist') ||
+        lowerErr.includes('template')
+
+      return {
+        success: false,
+        providerAccepted: false,
+        httpStatus: res.status,
+        permanentFailure: isPermanent,
+        errorCode: `MSG91_HTTP_${res.status}`,
+        message: errStr,
+      }
+    } catch (err: any) {
+      return {
+        success: false,
+        providerAccepted: false,
+        permanentFailure: false,
+        errorCode: 'NETWORK_ERROR',
+        message: `Temporary network error contacting MSG91 WhatsApp gateway: ${err?.message || 'Unknown error'}`,
+      }
+    }
+  }
+
+  /**
+   * 5. Query MSG91 for live Meta approval status of all configured templates on the integrated number.
+   */
+  public async getTemplatesStatus(): Promise<
+    Array<{
+      name: string
+      category: string
+      namespace: string | null
+      status: string
+      templateId: string | null
+      msg91TemplateId: number | null
+      variables: string[]
+    }>
+  > {
+    if (!this.authKey || !this.integratedNumber) return []
+    try {
+      const res = await fetch(
+        `https://control.msg91.com/api/v5/whatsapp/get-template-client/${this.integratedNumber}`,
+        {
+          headers: {
+            accept: 'application/json',
+            authkey: this.authKey,
+          },
+        }
+      )
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !Array.isArray(data.data)) return []
+      return data.data.map((t: any) => {
+        const lang = t.languages?.[0] || {}
+        return {
+          name: t.name,
+          category: t.category,
+          namespace: t.namespace || null,
+          status: lang.status || 'unknown',
+          templateId: lang.id || null,
+          msg91TemplateId: lang.msg91_template_id || null,
+          variables: lang.variables || [],
+        }
+      })
+    } catch {
+      return []
+    }
   }
 
   /**

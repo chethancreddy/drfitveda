@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { TrainingRecordingService } from '@/lib/services/recording.service'
+import { runWhatsAppReminderScheduler } from '@/lib/services/whatsapp-notification.service'
 
 // GET /api/cron/cleanup-recordings
 // Called by Vercel Cron — protected by CRON_SECRET header
@@ -10,10 +11,14 @@ export async function GET(req: Request) {
   }
 
   try {
-    const result = await TrainingRecordingService.runCleanupJob()
+    const [result, reminderResult] = await Promise.all([
+      TrainingRecordingService.runCleanupJob(),
+      runWhatsAppReminderScheduler(),
+    ])
     return NextResponse.json({
       ok: true,
       ...result,
+      whatsappReminders: reminderResult,
       timestamp: new Date().toISOString()
     })
   } catch (e) {

@@ -2,10 +2,14 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState } from '@/lib/persistent-store'
 import CustomerBottomNav from '@/components/customer/CustomerBottomNav'
 import BookAppointmentModal from '@/components/customer/BookAppointmentModal'
 
 export const metadata: Metadata = { title: 'Doctor Consultations' }
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function CustomerConsultPage() {
   const supabase = await createServerSupabaseClient()
@@ -30,6 +34,11 @@ export default async function CustomerConsultPage() {
       status,
       notes,
       meeting_url,
+      consultation_service_id,
+      service_name,
+      service_price,
+      service_currency,
+      consultation_type,
       professionals (
         id,
         full_name,
@@ -53,17 +62,11 @@ export default async function CustomerConsultPage() {
     .eq('is_available', true)
     .order('full_name')
 
-  // Fetch consultation services from API (works with mock-db)
-  let consultationServices: any[] = []
-  try {
-    const csRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'}/api/consultation-services`, { cache: 'no-store' })
-    if (csRes.ok) {
-      const csData = await csRes.json()
-      consultationServices = csData.consultation_services ?? []
-    }
-  } catch {
-    // fallback: show nothing (not critical)
-  }
+  // Load persisted CMS consultation services directly
+  await loadPersistedState()
+  const consultationServices: any[] = [...(mockDb.state.consultation_services ?? [])]
+    .filter((s: any) => s.is_active !== false && !s.is_archived)
+    .sort((a: any, b: any) => (a.display_order ?? 99) - (b.display_order ?? 99))
 
   const apptList: any[] = appointments ?? []
   const profList: any[] = profs ?? []
@@ -71,7 +74,16 @@ export default async function CustomerConsultPage() {
   const upcoming = apptList.filter(a => a.status === 'scheduled' && new Date(a.scheduled_at) >= new Date())
   const past = apptList.filter(a => a.status !== 'scheduled' || new Date(a.scheduled_at) < new Date())
 
-  const CONSULT_ICON: Record<string, string> = { yoga: '🧘', pcod: '🩺', wellness: '💚' }
+  const CONSULT_ICON: Record<string, string> = {
+    doctor_consultation: '👨‍⚕️',
+    nutrition_consultation: '🥗',
+    yoga: '🧘',
+    womens_health: '🌸',
+    pcod: '🩺',
+    lifestyle_consultation: '🌿',
+    wellness: '💚',
+    other_services: '🏥',
+  }
 
   return (
     <div className="customer-layout">
@@ -103,20 +115,31 @@ export default async function CustomerConsultPage() {
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:'var(--space-sm)'}}>
               {consultationServices.map((c: any) => (
                 <div key={c.id} className="card" style={{padding:'var(--space-md)',border:'1px solid var(--color-border)',display:'flex',flexDirection:'column',gap:10}}>
-                  <div style={{fontSize:28}}>{CONSULT_ICON[c.category] ?? '🏥'}</div>
+                  <div style={{fontSize:28}}>{c.icon || CONSULT_ICON[c.category] || '🩺'}</div>
                   <div>
                     <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>{c.name}</div>
-                    <p className="text-caption text-muted" style={{lineHeight:1.5}}>{c.description}</p>
+                    {c.specialist_designation && (
+                      <div style={{fontSize:11.5,fontWeight:600,color:'#0d9488',marginBottom:4}}>
+                        👨‍⚕️ {c.specialist_designation}
+                      </div>
+                    )}
+                    <p className="text-caption text-muted" style={{lineHeight:1.5}}>
+                      {c.short_description || c.description}
+                    </p>
                   </div>
                   <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',paddingTop:10,borderTop:'1px dashed var(--color-border)',marginTop:'auto'}}>
                     <div>
-                      <span style={{fontWeight:800,fontSize:20,color:'var(--color-primary)'}}>₹{c.price}</span>
+                      <span style={{fontWeight:800,fontSize:20,color:'var(--color-primary)'}}>₹{Number(c.price || 0).toLocaleString('en-IN')}</span>
                       <span className="text-caption text-muted"> / {c.duration_min} min</span>
                     </div>
                     <BookAppointmentModal
                       professionals={profList.filter((p:any) => p.role === 'doctor')}
                       customerId={customer.id}
+                      consultationServiceId={c.id}
                       consultationType={c.name}
+                      durationMin={c.duration_min}
+                      servicePrice={c.price}
+                      serviceCurrency={c.currency || 'INR'}
                     />
                   </div>
                 </div>
@@ -159,6 +182,11 @@ export default async function CustomerConsultPage() {
                       <div className="text-body-sm">
                         ⏰ {dateObj.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })} ({a.duration_min} mins)
                       </div>
+                      {a.service_name && (
+                        <div className="text-body-sm" style={{fontWeight:600,color:'var(--color-primary)'}}>
+                          🩺 {a.service_name}{typeof a.service_price === 'number' ? ` (₹${a.service_price})` : ''}
+                        </div>
+                      )}
                     </div>
 
                     {a.notes && (

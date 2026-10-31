@@ -19,7 +19,7 @@ function getAdminSession(req: NextRequest, user: any) {
   const cookie = req.cookies.get('drf_session')?.value
   if (cookie) {
     try { sessionData = JSON.parse(decodeURIComponent(cookie)) } catch {
-      try { sessionData = JSON.parse(cookie) } catch {}
+      try { sessionData = JSON.parse(cookie) } catch { }
     }
   }
   if (!sessionData && user) {

@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import AdminSidebar from '@/components/admin/AdminSidebar'
+import AdminRecordDeleteModal from '@/components/admin/AdminRecordDeleteModal'
 
 interface Assignment {
   id: string
@@ -18,6 +19,9 @@ interface Assignment {
   assigned_by_coordinator_id?: string
   notes?: string
   is_active: boolean
+  is_archived?: boolean
+  archived_at?: string | null
+  created_at?: string
 }
 
 interface Customer {
@@ -27,6 +31,8 @@ interface Customer {
   phone?: string
   google_meet_url?: string
   membership_status?: string
+  is_active?: boolean
+  is_archived?: boolean
 }
 
 interface ProfessionalWithSlots {
@@ -36,6 +42,8 @@ interface ProfessionalWithSlots {
   qualification: string
   specialization: string
   is_available: boolean
+  is_active?: boolean
+  is_archived?: boolean
   current_caseload: number
   max_caseload: number
   remaining_capacity: number
@@ -51,6 +59,8 @@ interface TeamMember {
   full_name: string
   role: string
   department: string
+  is_active?: boolean
+  is_archived?: boolean
 }
 
 export default function AdminAssignmentsPage() {
@@ -60,8 +70,12 @@ export default function AdminAssignmentsPage() {
   const [coordinators, setCoordinators] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(true)
   const [editingAssignment, setEditingAssignment] = useState<Partial<Assignment> | null>(null)
+  const [viewingAssignment, setViewingAssignment] = useState<Assignment | null>(null)
+  const [deletingAssignment, setDeletingAssignment] = useState<Assignment | null>(null)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'archived'>('all')
 
   useEffect(() => {
     loadAllData()
@@ -71,10 +85,10 @@ export default function AdminAssignmentsPage() {
     setLoading(true)
     try {
       const [aRes, cRes, pRes, tRes] = await Promise.all([
-        fetch('/api/assignments'),
-        fetch('/api/customers'),
-        fetch('/api/professionals/slots'),
-        fetch('/api/team'),
+        fetch('/api/assignments?include_archived=true', { cache: 'no-store' }),
+        fetch('/api/customers', { cache: 'no-store' }),
+        fetch('/api/professionals/slots', { cache: 'no-store' }),
+        fetch('/api/team', { cache: 'no-store' }),
       ])
       const aData = await aRes.json()
       const cData = await cRes.json()
@@ -82,9 +96,9 @@ export default function AdminAssignmentsPage() {
       const tData = await tRes.json()
 
       setAssignments(aData.assignments || [])
-      setCustomers(cData.customers || [])
+      setCustomers((cData.customers || []).filter((c: Customer) => !c.is_archived && c.is_active !== false))
       setProfessionals(pData.professionals || [])
-      setCoordinators(tData.team_members || [])
+      setCoordinators((tData.team_members || []).filter((t: TeamMember) => !t.is_archived && t.is_active !== false))
     } catch {
       showToast('Failed to load assignments and capacity data')
     }
@@ -123,7 +137,6 @@ export default function AdminAssignmentsPage() {
       const url = isNew ? '/api/assignments' : `/api/assignments/${editingAssignment.id}`
       const method = isNew ? 'POST' : 'PUT'
 
-      // Match selected coordinator name
       const matchedCoordinator = coordinators.find(c => c.id === editingAssignment.assigned_by_coordinator_id)
 
       const payload = {
@@ -158,14 +171,59 @@ export default function AdminAssignmentsPage() {
         body: JSON.stringify({ is_active: !assignment.is_active }),
       })
       if (res.ok) {
-        setAssignments(prev => prev.map(a => a.id === assignment.id ? { ...a, is_active: !a.is_active } : a))
         showToast(assignment.is_active ? 'Assignment deactivated' : 'Assignment activated')
         await loadAllData()
       }
     } catch {
-      showToast('Status updated locally')
+      showToast('Failed to update assignment status')
     }
   }
+
+  async function restoreAssignment(assignment: Assignment) {
+    try {
+      const res = await fetch(`/api/assignments/${assignment.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restore: true, is_active: true }),
+      })
+      if (res.ok) {
+        showToast(`Assignment for "${assignment.customer_name}" restored!`)
+        await loadAllData()
+      }
+    } catch {
+      showToast('Failed to restore assignment')
+    }
+  }
+
+  async function confirmDeleteAssignment() {
+    if (!deletingAssignment) return
+    const res = await fetch(`/api/assignments/${deletingAssignment.id}`, {
+      method: 'DELETE',
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to delete assignment')
+    }
+    showToast(data.message || (data.archived ? 'Assignment archived safely' : 'Assignment permanently deleted'))
+    setDeletingAssignment(null)
+    await loadAllData()
+  }
+
+  const filteredAssignments = useMemo(() => {
+    return assignments.filter(a => {
+      if (statusFilter === 'active' && (!a.is_active || a.is_archived)) return false
+      if (statusFilter === 'inactive' && (a.is_active || a.is_archived)) return false
+      if (statusFilter === 'archived' && !a.is_archived) return false
+      if (statusFilter === 'all' && a.is_archived) return false
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase()
+        const hay = `${a.customer_name} ${a.professional_name} ${a.role} ${a.assigned_slot || ''} ${a.assigned_by_name || ''}`.toLowerCase()
+        if (!hay.includes(q)) return false
+      }
+      return true
+    })
+  }, [assignments, statusFilter, searchQuery])
 
   const selectedProfessional = professionals.find(p => p.id === editingAssignment?.professional_id)
 
@@ -176,6 +234,11 @@ export default function AdminAssignmentsPage() {
     nutritionist: '🥗',
     yoga_doctor: '🧘',
   }
+
+  const nonArchivedCount = assignments.filter(a => !a.is_archived).length
+  const activeCount = assignments.filter(a => a.is_active && !a.is_archived).length
+  const inactiveCount = assignments.filter(a => !a.is_active && !a.is_archived).length
+  const archivedCount = assignments.filter(a => a.is_archived).length
 
   return (
     <div className="app-layout">
@@ -198,7 +261,7 @@ export default function AdminAssignmentsPage() {
         <div className="grid-3" style={{ marginBottom: 'var(--space-md)' }}>
           <div className="stat-card">
             <div className="stat-label">Active Customer Assignments</div>
-            <div className="stat-value">{assignments.filter(a => a.is_active).length}</div>
+            <div className="stat-value">{activeCount}</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">Doctors &amp; Trainers on Duty</div>
@@ -211,6 +274,47 @@ export default function AdminAssignmentsPage() {
             <div className="stat-value" style={{ color: '#059669' }}>
               {coordinators.filter(c => c.role.includes('coordinator') || c.role.includes('manager') || c.role.includes('staff')).length} Dispatchers
             </div>
+          </div>
+        </div>
+
+        {/* Search & Status Filter Bar */}
+        <div
+          className="card"
+          style={{
+            padding: '12px 16px',
+            marginBottom: 'var(--space-md)',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 10,
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <input
+            className="form-input"
+            style={{ flex: '1 1 260px', maxWidth: 420 }}
+            placeholder="🔍 Search by customer, doctor/trainer, role, or slot..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {(
+              [
+                { key: 'all', label: `All (${nonArchivedCount})` },
+                { key: 'active', label: `Active (${activeCount})` },
+                { key: 'inactive', label: `Inactive (${inactiveCount})` },
+                { key: 'archived', label: `Archived (${archivedCount})` },
+              ] as const
+            ).map(tab => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setStatusFilter(tab.key)}
+                className={`btn btn-sm ${statusFilter === tab.key ? 'btn-primary' : 'btn-ghost'}`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -228,12 +332,12 @@ export default function AdminAssignmentsPage() {
                     <th>Dedicated Time Slot</th>
                     <th>Dispatched By Staff</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {assignments.length ? assignments.map(a => (
-                    <tr key={a.id}>
+                  {filteredAssignments.length ? filteredAssignments.map(a => (
+                    <tr key={a.id} style={{ opacity: a.is_active && !a.is_archived ? 1 : 0.7 }}>
                       <td>
                         <div style={{ fontWeight: 700, fontSize: 14 }}>{a.customer_name}</div>
                         {a.customer_phone && <div className="text-caption text-muted">{a.customer_phone}</div>}
@@ -260,23 +364,54 @@ export default function AdminAssignmentsPage() {
                         </span>
                       </td>
                       <td>
-                        <span className={`badge badge-${a.is_active ? 'success' : 'neutral'}`}>
-                          {a.is_active ? 'Active' : 'Inactive'}
-                        </span>
+                        {a.is_archived ? (
+                          <span className="badge badge-neutral">Archived</span>
+                        ) : (
+                          <span className={`badge badge-${a.is_active ? 'success' : 'warning'}`}>
+                            {a.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        )}
                       </td>
                       <td>
-                        <div style={{ display: 'flex', gap: 6 }}>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                           <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => setViewingAssignment(a)}
+                          >
+                            View
+                          </button>
+                          <button
+                            type="button"
                             className="btn btn-primary btn-sm"
                             onClick={() => setEditingAssignment({ ...a })}
                           >
-                            Reassign Slot
+                            Edit / Reassign
                           </button>
+                          {a.is_archived ? (
+                            <button
+                              type="button"
+                              className="btn btn-outline btn-sm"
+                              onClick={() => restoreAssignment(a)}
+                            >
+                              Restore
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className={`btn btn-sm ${a.is_active ? 'btn-outline' : 'btn-ghost'}`}
+                              onClick={() => toggleActive(a)}
+                            >
+                              {a.is_active ? 'Deactivate' : 'Activate'}
+                            </button>
+                          )}
                           <button
-                            className={`btn btn-sm ${a.is_active ? 'btn-outline' : 'btn-ghost'}`}
-                            onClick={() => toggleActive(a)}
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            style={{ color: '#dc2626' }}
+                            onClick={() => setDeletingAssignment(a)}
                           >
-                            {a.is_active ? 'Deactivate' : 'Activate'}
+                            Delete
                           </button>
                         </div>
                       </td>
@@ -285,7 +420,7 @@ export default function AdminAssignmentsPage() {
                     <tr>
                       <td colSpan={7}>
                         <div className="empty-state" style={{ padding: 'var(--space-md)' }}>
-                          No assignments found. Click &quot;+ Smart Assign &amp; Match Slot&quot; above to assign a doctor or trainer.
+                          No assignments match the current filter.
                         </div>
                       </td>
                     </tr>
@@ -369,6 +504,90 @@ export default function AdminAssignmentsPage() {
             ))}
           </div>
         </div>
+
+        {/* View Assignment Modal */}
+        {viewingAssignment && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.55)',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16,
+            }}
+            onClick={() => setViewingAssignment(null)}
+          >
+            <div
+              className="card"
+              style={{ width: '100%', maxWidth: 520, padding: 'var(--space-lg)' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center" style={{ marginBottom: 14 }}>
+                <div>
+                  <h2 className="text-headline-sm">Care Assignment Details</h2>
+                  <p className="text-caption text-muted">ID: {viewingAssignment.id}</p>
+                </div>
+                <button className="btn btn-icon btn-ghost" onClick={() => setViewingAssignment(null)}>✕</button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                <div style={{ padding: 12, background: 'var(--color-neutral)', borderRadius: 8 }}>
+                  <div className="text-caption text-muted">Customer</div>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>{viewingAssignment.customer_name}</div>
+                  {viewingAssignment.customer_phone && (
+                    <div className="text-caption text-muted">{viewingAssignment.customer_phone}</div>
+                  )}
+                </div>
+                <div style={{ padding: 12, background: 'var(--color-neutral)', borderRadius: 8 }}>
+                  <div className="text-caption text-muted">Assigned Professional</div>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>{viewingAssignment.professional_name}</div>
+                  <div className="text-caption text-muted" style={{ textTransform: 'capitalize' }}>
+                    {viewingAssignment.role?.replace(/_/g, ' ')}
+                  </div>
+                </div>
+                <div style={{ padding: 12, background: 'var(--color-neutral)', borderRadius: 8 }}>
+                  <div className="text-caption text-muted">Dedicated Time Slot</div>
+                  <div style={{ fontWeight: 700, color: '#0d9488' }}>
+                    ⏰ {viewingAssignment.assigned_slot || '07:00 AM - 08:00 AM'}
+                  </div>
+                </div>
+                <div style={{ padding: 12, background: 'var(--color-neutral)', borderRadius: 8 }}>
+                  <div className="text-caption text-muted">Dispatched By</div>
+                  <div style={{ fontWeight: 600 }}>
+                    👔 {viewingAssignment.assigned_by_name || 'Operations Team'}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ padding: 12, background: 'var(--color-neutral)', borderRadius: 8, marginBottom: 16 }}>
+                <div className="text-caption text-muted">Coordinator Notes</div>
+                <div className="text-body-sm" style={{ marginTop: 4 }}>
+                  {viewingAssignment.notes || 'No additional notes recorded.'}
+                </div>
+              </div>
+
+              <div className="flex justify-end" style={{ gap: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() => {
+                    const a = viewingAssignment
+                    setViewingAssignment(null)
+                    setEditingAssignment({ ...a })
+                  }}
+                >
+                  Edit / Reassign Slot
+                </button>
+                <button type="button" className="btn btn-primary btn-sm" onClick={() => setViewingAssignment(null)}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal: Smart Assign & Dispatch */}
         {editingAssignment && (
@@ -457,7 +676,6 @@ export default function AdminAssignmentsPage() {
                   </select>
                 </label>
 
-                {/* Free Slots Grid Selector */}
                 {selectedProfessional && (
                   <div style={{ background: '#f1f5f9', padding: 12, borderRadius: 6 }}>
                     <span className="text-body-sm" style={{ fontWeight: 700, display: 'block', marginBottom: 6, color: '#0f172a' }}>
@@ -541,6 +759,21 @@ export default function AdminAssignmentsPage() {
             </div>
           </div>
         )}
+
+        {/* Delete / Archive Safety Modal */}
+        <AdminRecordDeleteModal
+          isOpen={!!deletingAssignment}
+          moduleKey="assignments"
+          moduleLabel="Smart Slot Assignments & Care Dispatch"
+          recordId={deletingAssignment?.id || ''}
+          recordName={
+            deletingAssignment
+              ? `${deletingAssignment.customer_name} → ${deletingAssignment.professional_name}`
+              : ''
+          }
+          onClose={() => setDeletingAssignment(null)}
+          onConfirm={confirmDeleteAssignment}
+        />
 
         {/* Toast */}
         {toast && (

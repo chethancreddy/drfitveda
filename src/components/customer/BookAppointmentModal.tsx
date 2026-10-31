@@ -16,13 +16,21 @@ interface ProfessionalOption {
 interface BookAppointmentModalProps {
   professionals: ProfessionalOption[]
   customerId: string
+  consultationServiceId?: string
   consultationType?: string
+  durationMin?: number
+  servicePrice?: number
+  serviceCurrency?: string
 }
 
 export default function BookAppointmentModal({
   professionals,
   customerId,
+  consultationServiceId,
   consultationType,
+  durationMin,
+  servicePrice,
+  serviceCurrency,
 }: BookAppointmentModalProps) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
@@ -61,8 +69,10 @@ export default function BookAppointmentModal({
         body: JSON.stringify({
           customer_id: customerId,
           professional_id: professionalId,
+          consultation_service_id: consultationServiceId,
+          consultation_type: consultationType,
           scheduled_at: scheduledAt,
-          duration_min: 30,
+          duration_min: durationMin || 30,
           notes: notes.trim(),
         })
       })
@@ -104,7 +114,14 @@ export default function BookAppointmentModal({
     }}>
       <div className="card" style={{maxWidth:500,width:'100%',padding:'var(--space-md)'}}>
         <div className="flex justify-between items-center" style={{marginBottom:'var(--space-sm)'}}>
-          <h3 className="text-headline-sm">Book Consultation</h3>
+          <div>
+            <h3 className="text-headline-sm">{consultationType ? `Book ${consultationType}` : 'Book Consultation'}</h3>
+            {typeof servicePrice === 'number' && (
+              <div className="text-caption text-muted">
+                Fee: ₹{servicePrice.toLocaleString('en-IN')} ({serviceCurrency || 'INR'}) • {durationMin || 30} mins
+              </div>
+            )}
+          </div>
           <button onClick={() => setIsOpen(false)} className="btn btn-ghost btn-sm">✕</button>
         </div>
 

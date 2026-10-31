@@ -25,10 +25,22 @@ const BADGE_LABEL: Record<string, string> = {
   'mbr-003': '12 Months',
   'mbr-004': '🌟 Super Plan — 12 Months',
 }
-const CONSULT_ICON: Record<string, string> = { yoga: '🧘', pcod: '🩺', wellness: '💚' }
+const CONSULT_ICON: Record<string, string> = {
+  doctor_consultation: '👨‍⚕️',
+  nutrition_consultation: '🥗',
+  yoga: '🧘',
+  womens_health: '🌸',
+  pcod: '🩺',
+  lifestyle_consultation: '🌿',
+  wellness: '💚',
+  other_services: '🏥',
+}
 
-function fmt(n: number) {
-  return '₹' + n.toLocaleString('en-IN')
+function fmt(n: number, currency = 'INR') {
+  const val = Number(n || 0)
+  if (currency === 'USD') return '$' + val.toLocaleString('en-US')
+  if (currency === 'AED') return 'AED ' + val.toLocaleString('en-AE')
+  return '₹' + val.toLocaleString('en-IN')
 }
 
 export default async function MembershipsPage() {
@@ -38,8 +50,8 @@ export default async function MembershipsPage() {
     .sort((a: any, b: any) => a.display_order - b.display_order)
 
   const consultations = [...(mockDb.state.consultation_services ?? [])]
-    .filter((s: any) => s.is_active)
-    .sort((a: any, b: any) => a.display_order - b.display_order)
+    .filter((s: any) => s.is_active !== false && !s.is_archived)
+    .sort((a: any, b: any) => (a.display_order ?? 99) - (b.display_order ?? 99))
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -251,14 +263,30 @@ export default async function MembershipsPage() {
             }}>
               {consultations.map((c: any) => (
                 <div key={c.id} className="card" style={{ padding: 'var(--space-lg)', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ fontSize: 36 }}>{CONSULT_ICON[c.category] ?? '🏥'}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: 36 }}>{c.icon || CONSULT_ICON[c.category] || '🩺'}</div>
+                    {c.consultation_type && (
+                      <span className="badge badge-neutral" style={{ fontSize: 10.5 }}>
+                        📹 {c.consultation_type}
+                      </span>
+                    )}
+                  </div>
                   <div>
                     <h3 className="text-headline-sm" style={{ marginBottom: 4 }}>{c.name}</h3>
-                    <p className="text-body-sm text-muted" style={{ lineHeight: 1.55 }}>{c.description}</p>
+                    {c.specialist_designation && (
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#0d9488', marginBottom: 6 }}>
+                        👨‍⚕️ {c.specialist_designation}
+                      </div>
+                    )}
+                    <p className="text-body-sm text-muted" style={{ lineHeight: 1.55 }}>
+                      {c.short_description || c.description}
+                    </p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 12, borderTop: '1px dashed var(--color-border)' }}>
                     <div>
-                      <span style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-primary)' }}>{fmt(c.price)}</span>
+                      <span style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-primary)' }}>
+                        {fmt(c.price, c.currency)}
+                      </span>
                       <span className="text-body-sm text-muted"> / {c.duration_min} min session</span>
                     </div>
                     <Link href="/login" className="btn btn-primary btn-sm">Book Now</Link>

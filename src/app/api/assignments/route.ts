@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
 import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
+import { triggerCustomerAssignmentNotifications } from '@/lib/services/whatsapp-notification.service'
 
 function getRole(req: NextRequest, user: any) {
   let role = (user as any)?.user_metadata?.role || (user as any)?.role
@@ -90,10 +91,43 @@ export async function POST(req: NextRequest) {
     }
 
     if (!mockDb.state.professional_assignments) mockDb.state.professional_assignments = []
+
+    // Check if there is an existing active assignment for this customer & role category to handle reassignment cleanly
+    const targetRole = proRole || 'doctor'
+    let previousProfessionalId: string | null = null
+    for (const existing of mockDb.state.professional_assignments) {
+      if (
+        existing.customer_id === customer_id &&
+        existing.role === targetRole &&
+        existing.is_active !== false &&
+        existing.professional_id !== professional_id
+      ) {
+        previousProfessionalId = existing.professional_id
+        existing.is_active = false
+        existing.updated_at = new Date().toISOString()
+      }
+    }
+
     mockDb.state.professional_assignments.push(newAssignment)
     await savePersistedState('professional_assignments')
 
-    return NextResponse.json({ assignment: newAssignment, success: true }, { status: 201 })
+    let whatsappNotification = null
+    if (newAssignment.is_active !== false) {
+      const notifRes = await triggerCustomerAssignmentNotifications({
+        customerId: customer_id,
+        professionalId: professional_id,
+        role: newAssignment.role,
+        assignmentId: newAssignment.id,
+        assignedSlot: newAssignment.assigned_slot,
+        previousProfessionalId,
+      })
+      whatsappNotification = notifRes.created
+    }
+
+    return NextResponse.json(
+      { assignment: newAssignment, whatsappNotification, success: true },
+      { status: 201 }
+    )
   } catch {
     return NextResponse.json({ error: 'Failed to create assignment' }, { status: 400 })
   }

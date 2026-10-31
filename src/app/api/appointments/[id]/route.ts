@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { syncSessionRemindersForAppointment } from '@/lib/services/whatsapp-notification.service'
 
 // ============================================================
 // GET /api/appointments/[id] — Get appointment details
@@ -77,16 +78,28 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { status, notes, recommendations, follow_up_date } = body
+    const { status, scheduled_at, professional_id, meeting_url, notes, recommendations, follow_up_date } = body
 
-    // 1. Update appointment status if provided
-    if (status) {
-      const { error: apptErr } = await (supabase as any)
+    // 1. Update appointment status / schedule / professional if provided
+    if (status || scheduled_at || professional_id || meeting_url) {
+      const updatePatch: Record<string, any> = { updated_at: new Date().toISOString() }
+      if (status) updatePatch.status = status
+      if (scheduled_at) updatePatch.scheduled_at = scheduled_at
+      if (professional_id) updatePatch.professional_id = professional_id
+      if (meeting_url) updatePatch.meeting_url = meeting_url
+
+      const { data: updatedAppt, error: apptErr } = await (supabase as any)
         .from('appointments')
-        .update({ status, updated_at: new Date().toISOString() })
+        .update(updatePatch)
         .eq('id', id)
+        .select()
+        .single()
 
       if (apptErr) return NextResponse.json({ error: apptErr.message }, { status: 500 })
+
+      if (updatedAppt) {
+        await syncSessionRemindersForAppointment(updatedAppt)
+      }
     }
 
     // 2. Upsert consultation notes if provided

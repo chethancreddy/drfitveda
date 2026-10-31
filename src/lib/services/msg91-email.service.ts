@@ -36,7 +36,7 @@ class Msg91EmailService {
           return val
         }
       }
-    } catch {}
+    } catch { }
     return null
   }
 

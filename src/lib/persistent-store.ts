@@ -80,7 +80,8 @@ export function syncRuntimeReferences() {
           full_name: pro.full_name || userProfiles[uIdx].full_name,
           email: pro.email || userProfiles[uIdx].email || '',
           phone: pro.phone || userProfiles[uIdx].phone || '',
-          is_active: pro.is_active !== undefined ? pro.is_active : true,
+          is_active: pro.is_active !== false && !pro.is_archived,
+          is_archived: Boolean(pro.is_archived),
         }
       } else {
         userProfiles.push({
@@ -89,7 +90,8 @@ export function syncRuntimeReferences() {
           full_name: pro.full_name || 'Specialist',
           email: pro.email || '',
           phone: pro.phone || '',
-          is_active: pro.is_active !== undefined ? pro.is_active : true,
+          is_active: pro.is_active !== false && !pro.is_archived,
+          is_archived: Boolean(pro.is_archived),
           created_at: pro.created_at || new Date().toISOString(),
         })
       }
@@ -110,7 +112,8 @@ export function syncRuntimeReferences() {
           full_name: tm.full_name || userProfiles[uIdx].full_name,
           email: tm.email || userProfiles[uIdx].email || '',
           phone: tm.phone || userProfiles[uIdx].phone || '',
-          is_active: tm.is_active !== undefined ? tm.is_active : true,
+          is_active: tm.is_active !== false && !tm.is_archived,
+          is_archived: Boolean(tm.is_archived),
         }
       } else {
         userProfiles.push({
@@ -119,7 +122,8 @@ export function syncRuntimeReferences() {
           full_name: tm.full_name || 'Team Member',
           email: tm.email || '',
           phone: tm.phone || '',
-          is_active: tm.is_active !== undefined ? tm.is_active : true,
+          is_active: tm.is_active !== false && !tm.is_archived,
+          is_archived: Boolean(tm.is_archived),
           created_at: tm.created_at || new Date().toISOString(),
         })
       }
@@ -176,7 +180,7 @@ export function syncRuntimeReferences() {
   // 5. Ensure every user_profile with a professional role has a corresponding record in `professionals`
   if (Array.isArray(mockDb.state.professionals)) {
     for (const up of mockDb.state.user_profiles) {
-      if (up && isProfessionalRole(up.role) && up.is_active !== false) {
+      if (up && isProfessionalRole(up.role) && up.is_active !== false && !up.is_archived) {
         const hasPro = mockDb.state.professionals.some((p: any) => p.user_id === up.id)
         if (!hasPro) {
           mockDb.state.professionals.push({
@@ -194,6 +198,49 @@ export function syncRuntimeReferences() {
         }
       }
     }
+  }
+
+  // 6. Ensure consultation_categories and consultation_services have backward-compatible defaults
+  const defaultCategories = [
+    { id: 'cc-001', key: 'doctor_consultation', name: 'Doctor Consultation', icon: '🩺', is_active: true, display_order: 1 },
+    { id: 'cc-002', key: 'nutrition_consultation', name: 'Nutrition Consultation', icon: '🥗', is_active: true, display_order: 2 },
+    { id: 'cc-003', key: 'yoga', name: 'Yoga Consultation', icon: '🧘', is_active: true, display_order: 3 },
+    { id: 'cc-004', key: 'womens_health', name: "Women's Health Consultation", icon: '🌸', is_active: true, display_order: 4 },
+    { id: 'cc-005', key: 'pcod', name: 'PCOD / PCOS Consultation', icon: '🩺', is_active: true, display_order: 5 },
+    { id: 'cc-006', key: 'lifestyle_consultation', name: 'Lifestyle Consultation', icon: '🌿', is_active: true, display_order: 6 },
+    { id: 'cc-007', key: 'wellness', name: 'General Wellness Consultation', icon: '💚', is_active: true, display_order: 7 },
+    { id: 'cc-008', key: 'other', name: 'Other Services', icon: '🏥', is_active: true, display_order: 8 },
+  ]
+  if (!Array.isArray(mockDb.state.consultation_categories) || mockDb.state.consultation_categories.length === 0) {
+    mockDb.state.consultation_categories = defaultCategories
+  }
+
+  const categoryIconMap: Record<string, string> = {
+    doctor_consultation: '🩺',
+    nutrition_consultation: '🥗',
+    yoga: '🧘',
+    womens_health: '🌸',
+    pcod: '🩺',
+    lifestyle_consultation: '🌿',
+    wellness: '💚',
+    other: '🏥',
+  }
+
+  if (Array.isArray(mockDb.state.consultation_services)) {
+    mockDb.state.consultation_services = mockDb.state.consultation_services.map((s: any, idx: number) => ({
+      ...s,
+      short_description: s.short_description || s.description || '',
+      full_description: s.full_description || s.description || s.short_description || '',
+      description: s.description || s.full_description || s.short_description || '',
+      specialist_designation: s.specialist_designation || 'Certified Specialist Doctor',
+      icon: s.icon || categoryIconMap[s.category] || '🩺',
+      image_url: s.image_url || '',
+      consultation_type: s.consultation_type || 'Online Video (Zoho Meeting)',
+      currency: s.currency || 'INR',
+      is_active: s.is_active !== undefined ? Boolean(s.is_active) : true,
+      is_archived: Boolean(s.is_archived),
+      display_order: s.display_order !== undefined ? Number(s.display_order) : idx + 1,
+    }))
   }
 }
 

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import AdminRecordDeleteModal from '@/components/admin/AdminRecordDeleteModal'
 
 export interface Biomarker {
   id: string
@@ -13,6 +14,8 @@ export interface Biomarker {
   max?: number
   description?: string
   is_active: boolean
+  is_archived?: boolean
+  archived_at?: string | null
   is_custom?: boolean
 }
 
@@ -33,11 +36,13 @@ export default function AdminBiomarkersManager() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [viewingBm, setViewingBm] = useState<Biomarker | null>(null)
+  const [deletingBm, setDeletingBm] = useState<Biomarker | null>(null)
   const [successMsg, setSuccessMsg] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
 
-  // New Biomarker Form State
   const [form, setForm] = useState({
+    id: '',
     name: '',
     code: '',
     category: 'Metabolic & Renal',
@@ -49,13 +54,13 @@ export default function AdminBiomarkersManager() {
     is_active: true,
   })
 
-  // Selected Category Filter
   const [filterCat, setFilterCat] = useState('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'archived'>('all')
 
   const fetchBiomarkers = async () => {
     try {
       setLoading(true)
-      const res = await fetch('/api/cms/biomarkers')
+      const res = await fetch('/api/cms/biomarkers?include_archived=true', { cache: 'no-store' })
       const data = await res.json()
       if (data.biomarkers) {
         setBiomarkers(data.biomarkers)
@@ -71,6 +76,38 @@ export default function AdminBiomarkersManager() {
     fetchBiomarkers()
   }, [])
 
+  const openAddNew = () => {
+    setForm({
+      id: '',
+      name: '',
+      code: '',
+      category: 'Metabolic & Renal',
+      unit: 'mg/dL',
+      normal_range: '',
+      min: '',
+      max: '',
+      description: '',
+      is_active: true,
+    })
+    setShowAddModal(true)
+  }
+
+  const openEdit = (bm: Biomarker) => {
+    setForm({
+      id: bm.id,
+      name: bm.name,
+      code: bm.code,
+      category: bm.category,
+      unit: bm.unit,
+      normal_range: bm.normal_range,
+      min: bm.min !== undefined ? String(bm.min) : '',
+      max: bm.max !== undefined ? String(bm.max) : '',
+      description: bm.description || '',
+      is_active: bm.is_active,
+    })
+    setShowAddModal(true)
+  }
+
   const handleSaveBiomarker = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
@@ -83,6 +120,7 @@ export default function AdminBiomarkersManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
+          id: form.id || undefined,
           min: form.min ? Number(form.min) : 0,
           max: form.max ? Number(form.max) : 100,
         }),
@@ -91,22 +129,11 @@ export default function AdminBiomarkersManager() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to save biomarker')
 
-      setSuccessMsg(`✓ Successfully added "${form.name}" to Doctor Clinical Intake & Biomarkers Suite!`)
+      setSuccessMsg(`✓ Saved "${form.name}" in Clinical Biomarkers CMS!`)
       setShowAddModal(false)
-      setForm({
-        name: '',
-        code: '',
-        category: 'Metabolic & Renal',
-        unit: 'mg/dL',
-        normal_range: '',
-        min: '',
-        max: '',
-        description: '',
-        is_active: true,
-      })
-      fetchBiomarkers()
+      await fetchBiomarkers()
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error creating biomarker')
+      setErrorMsg(err.message || 'Error saving biomarker')
     } finally {
       setSaving(false)
     }
@@ -123,14 +150,60 @@ export default function AdminBiomarkersManager() {
         }),
       })
       if (res.ok) {
-        setBiomarkers(biomarkers.map(b => b.id === bm.id ? { ...b, is_active: !b.is_active } : b))
+        setSuccessMsg(`✓ "${bm.name}" ${bm.is_active ? 'deactivated' : 'activated'}`)
+        await fetchBiomarkers()
       }
     } catch {}
   }
 
-  const filtered = filterCat === 'all'
-    ? biomarkers
-    : biomarkers.filter(b => b.category === filterCat)
+  const restoreBiomarker = async (bm: Biomarker) => {
+    try {
+      const res = await fetch('/api/cms/biomarkers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...bm,
+          restore: true,
+          is_active: true,
+          is_archived: false,
+        }),
+      })
+      if (res.ok) {
+        setSuccessMsg(`✓ "${bm.name}" restored!`)
+        await fetchBiomarkers()
+      }
+    } catch {}
+  }
+
+  const confirmDeleteBiomarker = async () => {
+    if (!deletingBm) return
+    const res = await fetch(`/api/cms/biomarkers?id=${encodeURIComponent(deletingBm.id)}`, {
+      method: 'DELETE',
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to delete biomarker')
+    }
+    setSuccessMsg(data.message || `✓ Removed "${deletingBm.name}"`)
+    setDeletingBm(null)
+    await fetchBiomarkers()
+  }
+
+  const filtered = useMemo(() => {
+    return biomarkers.filter(b => {
+      if (statusFilter === 'active' && (!b.is_active || b.is_archived)) return false
+      if (statusFilter === 'inactive' && (b.is_active || b.is_archived)) return false
+      if (statusFilter === 'archived' && !b.is_archived) return false
+      if (statusFilter === 'all' && b.is_archived) return false
+      if (filterCat !== 'all' && b.category !== filterCat) return false
+      return true
+    })
+  }, [biomarkers, statusFilter, filterCat])
+
+  const nonArchivedCount = biomarkers.filter(b => !b.is_archived).length
+  const activeCount = biomarkers.filter(b => b.is_active && !b.is_archived).length
+  const inactiveCount = biomarkers.filter(b => !b.is_active && !b.is_archived).length
+  const archivedCount = biomarkers.filter(b => b.is_archived).length
 
   return (
     <div className="card" style={{ padding: 'var(--space-lg)', marginTop: 'var(--space-lg)', background: 'white', borderRadius: 12 }}>
@@ -142,13 +215,13 @@ export default function AdminBiomarkersManager() {
             <h2 className="text-headline-sm" style={{ margin: 0 }}>Clinical Biomarkers &amp; Lab Parameters CMS</h2>
           </div>
           <p className="text-body-sm text-muted" style={{ margin: '4px 0 0 0' }}>
-            Configure and add clinical lab tests (Uric Acid, CRP/ESR, Thyroid, Vitamins, Lipids, etc.) available in the Doctor Intake &amp; Naturopathy Suite.
+            Configure and manage clinical lab tests (Uric Acid, CRP/ESR, Thyroid, Vitamins, Lipids, etc.) available in the Doctor Intake &amp; Naturopathy Suite.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={() => setShowAddModal(true)}
+          onClick={openAddNew}
           className="btn btn-primary btn-sm"
           style={{ padding: '8px 16px', fontWeight: 600 }}
         >
@@ -168,49 +241,71 @@ export default function AdminBiomarkersManager() {
         </div>
       )}
 
-      {/* Category Filter Pills */}
-      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8, marginBottom: 16 }}>
-        <button
-          type="button"
-          onClick={() => setFilterCat('all')}
-          style={{
-            padding: '4px 12px',
-            borderRadius: 20,
-            fontSize: 12,
-            fontWeight: filterCat === 'all' ? 700 : 500,
-            background: filterCat === 'all' ? '#0d9488' : '#f1f5f9',
-            color: filterCat === 'all' ? 'white' : '#475569',
-            border: 'none',
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          All ({biomarkers.length})
-        </button>
-        {CATEGORIES.map(cat => {
-          const count = biomarkers.filter(b => b.category === cat).length
-          if (count === 0 && cat !== 'Metabolic & Renal') return null
-          return (
+      {/* Status Filter Tabs */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
+          <button
+            type="button"
+            onClick={() => setFilterCat('all')}
+            style={{
+              padding: '4px 12px',
+              borderRadius: 20,
+              fontSize: 12,
+              fontWeight: filterCat === 'all' ? 700 : 500,
+              background: filterCat === 'all' ? '#0d9488' : '#f1f5f9',
+              color: filterCat === 'all' ? 'white' : '#475569',
+              border: 'none',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            All Categories ({nonArchivedCount})
+          </button>
+          {CATEGORIES.map(cat => {
+            const count = biomarkers.filter(b => !b.is_archived && b.category === cat).length
+            if (count === 0 && cat !== 'Metabolic & Renal') return null
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setFilterCat(cat)}
+                style={{
+                  padding: '4px 12px',
+                  borderRadius: 20,
+                  fontSize: 12,
+                  fontWeight: filterCat === cat ? 700 : 500,
+                  background: filterCat === cat ? '#0d9488' : '#f1f5f9',
+                  color: filterCat === cat ? 'white' : '#475569',
+                  border: 'none',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {cat} ({count})
+              </button>
+            )
+          })}
+        </div>
+
+        <div style={{ display: 'flex', gap: 6 }}>
+          {(
+            [
+              { key: 'all', label: `All (${nonArchivedCount})` },
+              { key: 'active', label: `Active (${activeCount})` },
+              { key: 'inactive', label: `Inactive (${inactiveCount})` },
+              { key: 'archived', label: `Archived (${archivedCount})` },
+            ] as const
+          ).map(tab => (
             <button
-              key={cat}
+              key={tab.key}
               type="button"
-              onClick={() => setFilterCat(cat)}
-              style={{
-                padding: '4px 12px',
-                borderRadius: 20,
-                fontSize: 12,
-                fontWeight: filterCat === cat ? 700 : 500,
-                background: filterCat === cat ? '#0d9488' : '#f1f5f9',
-                color: filterCat === cat ? 'white' : '#475569',
-                border: 'none',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
+              onClick={() => setStatusFilter(tab.key)}
+              className={`btn btn-sm ${statusFilter === tab.key ? 'btn-primary' : 'btn-ghost'}`}
             >
-              {cat} ({count})
+              {tab.label}
             </button>
-          )
-        })}
+          ))}
+        </div>
       </div>
 
       {/* Biomarkers Table */}
@@ -225,14 +320,13 @@ export default function AdminBiomarkersManager() {
                 <th style={{ padding: '10px 12px' }}>Category</th>
                 <th style={{ padding: '10px 12px' }}>Unit</th>
                 <th style={{ padding: '10px 12px' }}>Normal Reference Range</th>
-                <th style={{ padding: '10px 12px' }}>Description / Clinical Purpose</th>
                 <th style={{ padding: '10px 12px' }}>Status</th>
                 <th style={{ padding: '10px 12px', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map(bm => (
-                <tr key={bm.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                <tr key={bm.id} style={{ borderBottom: '1px solid #f1f5f9', opacity: bm.is_active && !bm.is_archived ? 1 : 0.7 }}>
                   <td style={{ padding: '10px 12px', fontWeight: 600, color: '#0f172a' }}>
                     {bm.name}{' '}
                     {bm.is_custom && <span className="badge badge-neutral" style={{ fontSize: 10 }}>Custom</span>}
@@ -244,21 +338,61 @@ export default function AdminBiomarkersManager() {
                   </td>
                   <td style={{ padding: '10px 12px', color: '#0d9488', fontWeight: 600 }}>{bm.unit}</td>
                   <td style={{ padding: '10px 12px', color: '#334155' }}><code>{bm.normal_range}</code></td>
-                  <td style={{ padding: '10px 12px', color: '#64748b', maxWidth: 220 }}>{bm.description || '—'}</td>
                   <td style={{ padding: '10px 12px' }}>
-                    <span className={`badge badge-${bm.is_active ? 'success' : 'neutral'}`} style={{ fontSize: 10 }}>
-                      {bm.is_active ? 'Active' : 'Disabled'}
-                    </span>
+                    {bm.is_archived ? (
+                      <span className="badge badge-neutral" style={{ fontSize: 10 }}>Archived</span>
+                    ) : (
+                      <span className={`badge badge-${bm.is_active ? 'success' : 'warning'}`} style={{ fontSize: 10 }}>
+                        {bm.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    )}
                   </td>
                   <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                    <button
-                      type="button"
-                      onClick={() => toggleStatus(bm)}
-                      className="btn btn-ghost btn-sm"
-                      style={{ fontSize: 11, padding: '4px 8px' }}
-                    >
-                      {bm.is_active ? 'Disable' : 'Enable'}
-                    </button>
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        onClick={() => setViewingBm(bm)}
+                        className="btn btn-ghost btn-sm"
+                        style={{ fontSize: 11, padding: '4px 8px' }}
+                      >
+                        View
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openEdit(bm)}
+                        className="btn btn-ghost btn-sm"
+                        style={{ fontSize: 11, padding: '4px 8px' }}
+                      >
+                        Edit
+                      </button>
+                      {bm.is_archived ? (
+                        <button
+                          type="button"
+                          onClick={() => restoreBiomarker(bm)}
+                          className="btn btn-outline btn-sm"
+                          style={{ fontSize: 11, padding: '4px 8px' }}
+                        >
+                          Restore
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => toggleStatus(bm)}
+                          className="btn btn-ghost btn-sm"
+                          style={{ fontSize: 11, padding: '4px 8px' }}
+                        >
+                          {bm.is_active ? 'Deactivate' : 'Activate'}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setDeletingBm(bm)}
+                        className="btn btn-ghost btn-sm"
+                        style={{ fontSize: 11, padding: '4px 8px', color: '#dc2626' }}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -267,7 +401,64 @@ export default function AdminBiomarkersManager() {
         </div>
       )}
 
-      {/* Add Parameter Modal */}
+      {/* View Biomarker Modal */}
+      {viewingBm && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+          onClick={() => setViewingBm(null)}
+        >
+          <div className="card" style={{ width: '100%', maxWidth: 460, padding: 'var(--space-lg)' }} onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center" style={{ marginBottom: 12 }}>
+              <div>
+                <h3 className="text-headline-sm" style={{ margin: 0 }}>{viewingBm.name}</h3>
+                <p className="text-caption text-muted">{viewingBm.category} • Code: {viewingBm.code}</p>
+              </div>
+              <button className="btn btn-icon btn-ghost" onClick={() => setViewingBm(null)}>✕</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+              <div style={{ padding: 10, background: '#f8fafc', borderRadius: 8 }}>
+                <div className="text-caption text-muted">Measurement Unit</div>
+                <div style={{ fontWeight: 700, color: '#0d9488' }}>{viewingBm.unit}</div>
+              </div>
+              <div style={{ padding: 10, background: '#f8fafc', borderRadius: 8 }}>
+                <div className="text-caption text-muted">Normal Range</div>
+                <div style={{ fontWeight: 700 }}>{viewingBm.normal_range}</div>
+              </div>
+            </div>
+            <div style={{ padding: 10, background: '#f8fafc', borderRadius: 8, marginBottom: 14 }}>
+              <div className="text-caption text-muted">Clinical Purpose</div>
+              <div className="text-body-sm">{viewingBm.description || 'Standard clinical diagnostic biomarker.'}</div>
+            </div>
+            <div className="flex justify-end" style={{ gap: 8 }}>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => {
+                  const b = viewingBm
+                  setViewingBm(null)
+                  openEdit(b)
+                }}
+              >
+                Edit
+              </button>
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => setViewingBm(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add / Edit Parameter Modal */}
       {showAddModal && (
         <div
           style={{
@@ -284,8 +475,10 @@ export default function AdminBiomarkersManager() {
           <div className="card" style={{ width: '100%', maxWidth: 500, padding: 'var(--space-lg)', borderRadius: 12 }}>
             <div className="flex justify-between items-center" style={{ marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 20 }}>➕</span>
-                <h3 className="text-headline-sm" style={{ margin: 0 }}>Add New Clinical Biomarker</h3>
+                <span style={{ fontSize: 20 }}>🧪</span>
+                <h3 className="text-headline-sm" style={{ margin: 0 }}>
+                  {form.id ? 'Edit Clinical Biomarker' : 'Add New Clinical Biomarker'}
+                </h3>
               </div>
               <button className="btn btn-icon btn-ghost" onClick={() => setShowAddModal(false)}>✕</button>
             </div>
@@ -394,13 +587,24 @@ export default function AdminBiomarkersManager() {
               <div className="flex justify-end gap-sm" style={{ marginTop: 8 }}>
                 <button type="button" className="btn btn-ghost" onClick={() => setShowAddModal(false)}>Cancel</button>
                 <button type="submit" disabled={saving} className="btn btn-primary">
-                  {saving ? 'Adding…' : 'Save Parameter to CMS'}
+                  {saving ? 'Saving…' : 'Save Parameter to CMS'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Delete / Archive Safety Modal */}
+      <AdminRecordDeleteModal
+        isOpen={!!deletingBm}
+        moduleKey="cms_biomarkers"
+        moduleLabel="Clinical Biomarkers CMS"
+        recordId={deletingBm?.id || ''}
+        recordName={deletingBm?.name || ''}
+        onClose={() => setDeletingBm(null)}
+        onConfirm={confirmDeleteBiomarker}
+      />
     </div>
   )
 }

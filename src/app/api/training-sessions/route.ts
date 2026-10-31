@@ -5,6 +5,7 @@
 // ============================================================
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { syncSessionRemindersForTrainingSession } from '@/lib/services/whatsapp-notification.service'
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,6 +41,31 @@ export async function POST(req: NextRequest) {
     if (!assignment) return NextResponse.json({ error: 'Not assigned to this customer' }, { status: 403 })
 
     const now = new Date().toISOString()
+    const { data: custRecord } = await (svc as any)
+      .from('customers')
+      .select('is_active, is_archived, membership_status, zoho_meeting_url, google_meet_url, meeting_url')
+      .eq('id', customer_id)
+      .single()
+
+    if (custRecord && (custRecord.is_active === false || custRecord.is_archived === true)) {
+      return NextResponse.json(
+        { error: 'Customer is inactive and cannot receive new membership training sessions.' },
+        { status: 403 }
+      )
+    }
+    if (custRecord && custRecord.membership_status !== 'active') {
+      return NextResponse.json(
+        { error: 'Customer membership is inactive. Cannot schedule membership training session.' },
+        { status: 403 }
+      )
+    }
+
+    const meetingUrl =
+      custRecord?.zoho_meeting_url ||
+      custRecord?.google_meet_url ||
+      custRecord?.meeting_url ||
+      'https://meet.zoho.com/drfitveda-live'
+
     const { data: session, error } = await (svc as any)
       .from('training_sessions')
       .insert({
@@ -47,6 +73,7 @@ export async function POST(req: NextRequest) {
         trainer_id: prof.id,
         scheduled_at: scheduled_at ?? null,
         notes: notes ?? null,
+        meeting_url: meetingUrl,
         status: 'scheduled',
         created_at: now,
         updated_at: now,
@@ -64,7 +91,10 @@ export async function POST(req: NextRequest) {
       new_data: { customer_id, trainer_id: prof.id, scheduled_at },
     })
 
-    return NextResponse.json({ session }, { status: 201 })
+    // Schedule automated 15-minute WhatsApp reminders for customer & trainer
+    const reminderRes = await syncSessionRemindersForTrainingSession(session)
+
+    return NextResponse.json({ session, scheduledReminders: reminderRes.scheduled }, { status: 201 })
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Internal error'
     return NextResponse.json({ error: msg }, { status: 500 })

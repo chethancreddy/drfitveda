@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
 import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
+import { triggerCustomerAssignmentNotifications } from '@/lib/services/whatsapp-notification.service'
 
 function getRole(req: NextRequest, user: any) {
   let role = (user as any)?.user_metadata?.role || (user as any)?.role
@@ -9,7 +10,7 @@ function getRole(req: NextRequest, user: any) {
     const cookie = req.cookies.get('drf_session')?.value
     if (cookie) {
       try { role = JSON.parse(decodeURIComponent(cookie)).role } catch {
-        try { role = JSON.parse(cookie).role } catch {}
+        try { role = JSON.parse(cookie).role } catch { }
       }
     }
   }
@@ -131,7 +132,7 @@ export async function POST(req: NextRequest) {
       date_of_birth: date_of_birth || '',
       height_cm: height_cm ? Number(height_cm) : null,
       weight_kg: weight_kg ? Number(weight_kg) : null,
-      bmi: height_cm && weight_kg ? Number((weight_kg / ((height_cm/100)*(height_cm/100))).toFixed(1)) : null,
+      bmi: height_cm && weight_kg ? Number((weight_kg / ((height_cm / 100) * (height_cm / 100))).toFixed(1)) : null,
       goals: goals || 'Lifestyle & wellness improvement',
       created_at: new Date().toISOString(),
     }
@@ -141,9 +142,13 @@ export async function POST(req: NextRequest) {
     // 4. Create assignments if specified
     if (!mockDb.state.professional_assignments) mockDb.state.professional_assignments = []
 
+    const docAssignId = `pa-${Date.now()}-doc`
+    const trnAssignId = `pa-${Date.now()}-trn`
+    const yogAssignId = `pa-${Date.now()}-yog`
+
     if (doctor_id) {
       mockDb.state.professional_assignments.push({
-        id: `pa-${Date.now()}-doc`,
+        id: docAssignId,
         customer_id: customerId,
         professional_id: doctor_id,
         role: 'doctor',
@@ -153,7 +158,7 @@ export async function POST(req: NextRequest) {
     }
     if (trainer_id) {
       mockDb.state.professional_assignments.push({
-        id: `pa-${Date.now()}-trn`,
+        id: trnAssignId,
         customer_id: customerId,
         professional_id: trainer_id,
         role: 'trainer',
@@ -163,7 +168,7 @@ export async function POST(req: NextRequest) {
     }
     if (yoga_id) {
       mockDb.state.professional_assignments.push({
-        id: `pa-${Date.now()}-yog`,
+        id: yogAssignId,
         customer_id: customerId,
         professional_id: yoga_id,
         role: 'yoga_doctor',
@@ -179,7 +184,40 @@ export async function POST(req: NextRequest) {
       'professional_assignments',
     ])
 
-    return NextResponse.json({ customer: newCustomer, success: true }, { status: 201 })
+    // 5. Trigger immediate WhatsApp notifications AFTER database persistence succeeds
+    const whatsappNotifications: any[] = []
+    if (doctor_id) {
+      const docNotif = await triggerCustomerAssignmentNotifications({
+        customerId,
+        professionalId: doctor_id,
+        role: 'doctor',
+        assignmentId: docAssignId,
+      })
+      if (docNotif.created) whatsappNotifications.push(docNotif.created)
+    }
+    if (trainer_id) {
+      const trnNotif = await triggerCustomerAssignmentNotifications({
+        customerId,
+        professionalId: trainer_id,
+        role: 'trainer',
+        assignmentId: trnAssignId,
+      })
+      if (trnNotif.created) whatsappNotifications.push(trnNotif.created)
+    }
+    if (yoga_id) {
+      const yogNotif = await triggerCustomerAssignmentNotifications({
+        customerId,
+        professionalId: yoga_id,
+        role: 'yoga_doctor',
+        assignmentId: yogAssignId,
+      })
+      if (yogNotif.created) whatsappNotifications.push(yogNotif.created)
+    }
+
+    return NextResponse.json(
+      { customer: newCustomer, whatsappNotifications, success: true },
+      { status: 201 }
+    )
   } catch {
     return NextResponse.json({ error: 'Failed to create customer' }, { status: 400 })
   }

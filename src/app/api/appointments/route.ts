@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
+import { syncSessionRemindersForAppointment } from '@/lib/services/whatsapp-notification.service'
 
 // ============================================================
 // GET /api/appointments — List appointments
 // ============================================================
 export async function GET(request: Request) {
   try {
+    await loadPersistedState()
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -38,6 +42,11 @@ export async function GET(request: Request) {
         status,
         notes,
         meeting_url,
+        consultation_service_id,
+        service_name,
+        service_price,
+        service_currency,
+        consultation_type,
         created_at,
         customers (
           id,
@@ -94,6 +103,7 @@ export async function GET(request: Request) {
 // ============================================================
 export async function POST(request: Request) {
   try {
+    await loadPersistedState()
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -104,6 +114,8 @@ export async function POST(request: Request) {
     let {
       customer_id,
       professional_id,
+      consultation_service_id,
+      consultation_type,
       scheduled_at,
       duration_min = 30,
       notes = '',
@@ -112,6 +124,40 @@ export async function POST(request: Request) {
 
     if (!scheduled_at) {
       return NextResponse.json({ error: 'scheduled_at is required' }, { status: 400 })
+    }
+
+    // Validate & snapshot consultation service if consultation_service_id is provided
+    let serviceSnapshot: Record<string, any> = {}
+    if (consultation_service_id) {
+      const svc = (mockDb.state.consultation_services as any[])?.find(
+        (s: any) => s.id === consultation_service_id || s.key === consultation_service_id
+      )
+      if (!svc) {
+        return NextResponse.json({ error: 'Consultation service not found' }, { status: 404 })
+      }
+      if (svc.is_active === false || svc.is_archived === true) {
+        return NextResponse.json(
+          { error: 'Selected consultation service is currently inactive and cannot be booked' },
+          { status: 400 }
+        )
+      }
+      duration_min = Number(svc.duration_min || duration_min || 30)
+      serviceSnapshot = {
+        consultation_service_id: svc.id,
+        service_key: svc.key,
+        service_name: svc.name,
+        service_category: svc.category,
+        service_price: Number(svc.price),
+        service_currency: svc.currency || 'INR',
+        consultation_type: svc.consultation_type || consultation_type || 'Online Video (Zoho Meeting)',
+      }
+      if (!notes && svc.name) {
+        notes = `Consultation service: ${svc.name}`
+      }
+    } else if (consultation_type) {
+      serviceSnapshot = {
+        consultation_type,
+      }
     }
 
     // Resolve customer_id if not provided
@@ -126,6 +172,24 @@ export async function POST(request: Request) {
 
     if (!customer_id) {
       return NextResponse.json({ error: 'customer_id could not be determined' }, { status: 400 })
+    }
+
+    // Verify customer is active and eligible for booking
+    const customerRecord = (mockDb.state.customers || []).find((c: any) => c.id === customer_id)
+    if (customerRecord) {
+      if (customerRecord.is_active === false || customerRecord.is_archived === true) {
+        return NextResponse.json(
+          { error: 'Customer account is inactive and cannot create new bookings or access membership benefits.' },
+          { status: 403 }
+        )
+      }
+      // If booking a membership-included consultation (no paid standalone consultation_service_id), require active membership
+      if (!consultation_service_id && customerRecord.membership_status !== 'active') {
+        return NextResponse.json(
+          { error: 'Active membership is required to book membership-included consultations.' },
+          { status: 403 }
+        )
+      }
     }
 
     // If professional_id not provided, find active assignment
@@ -166,6 +230,7 @@ export async function POST(request: Request) {
         status: 'scheduled',
         notes,
         meeting_url,
+        ...serviceSnapshot,
       })
       .select()
       .single()
@@ -173,6 +238,8 @@ export async function POST(request: Request) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    await savePersistedState('appointments')
 
     // Create notification for customer
     await (supabase as any).from('notifications').insert({
@@ -183,7 +250,14 @@ export async function POST(request: Request) {
       action_url: '/customer/consult'
     })
 
-    return NextResponse.json({ success: true, appointment: appt })
+    // Schedule automated 15-minute WhatsApp session reminder(s)
+    const reminderRes = await syncSessionRemindersForAppointment(appt)
+
+    return NextResponse.json({
+      success: true,
+      appointment: appt,
+      scheduledReminders: reminderRes.scheduled,
+    })
   } catch (err: any) {
     return NextResponse.json({ error: err.message ?? 'Server error' }, { status: 500 })
   }

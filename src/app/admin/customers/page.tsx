@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import AdminSidebar from '@/components/admin/AdminSidebar'
+import AdminRecordDeleteModal from '@/components/admin/AdminRecordDeleteModal'
 
 interface Customer {
   id: string
@@ -12,8 +13,12 @@ interface Customer {
   phone: string
   membership_status: string
   membership_plan_id: string | null
+  membership_expires_at?: string | null
   google_meet_url: string
+  zoho_meeting_url?: string
   is_active: boolean
+  is_archived?: boolean
+  deleted_at?: string | null
   profile?: {
     gender?: string
     height_cm?: number
@@ -54,10 +59,14 @@ export default function AdminCustomersPage() {
   const [plans, setPlans] = useState<Membership[]>([])
   const [loading, setLoading] = useState(true)
   const [showOnboardModal, setShowOnboardModal] = useState(false)
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
+  const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(null)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'archived'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
-  // Form State
+  // Form State for New Onboarding
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -87,9 +96,9 @@ export default function AdminCustomersPage() {
     setLoading(true)
     try {
       const [cRes, pRes, mRes] = await Promise.all([
-        fetch('/api/customers'),
-        fetch('/api/professionals'),
-        fetch('/api/memberships'),
+        fetch('/api/customers', { cache: 'no-store' }),
+        fetch('/api/professionals', { cache: 'no-store' }),
+        fetch('/api/memberships?include_inactive=true', { cache: 'no-store' }),
       ])
       const cData = await cRes.json()
       const pData = await pRes.json()
@@ -99,7 +108,6 @@ export default function AdminCustomersPage() {
       setProfessionals(pData.professionals || [])
       setPlans(mData.memberships || [])
 
-      // Set default doctor and trainer for onboard modal
       const docs = (pData.professionals || []).filter((p: any) => p.role.includes('doctor') && p.is_active)
       const trns = (pData.professionals || []).filter((p: any) => p.role.includes('trainer') && p.is_active)
       setFormData(prev => ({
@@ -115,17 +123,36 @@ export default function AdminCustomersPage() {
 
   function showToast(msg: string) {
     setToast(msg)
-    setTimeout(() => setToast(''), 3500)
+    setTimeout(() => setToast(''), 3800)
   }
+
+  const filteredCustomers = useMemo(() => {
+    return customers.filter(c => {
+      if (statusFilter === 'active' && (!c.is_active || c.is_archived)) return false
+      if (statusFilter === 'inactive' && (c.is_active || c.is_archived)) return false
+      if (statusFilter === 'archived' && !c.is_archived) return false
+      if (statusFilter === 'all' && c.is_archived) return false
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase()
+        const hay = `${c.full_name} ${c.email || ''} ${c.phone || ''} ${c.plan?.name || ''} ${c.membership_status || ''}`.toLowerCase()
+        if (!hay.includes(q)) return false
+      }
+      return true
+    })
+  }, [customers, statusFilter, searchQuery])
 
   function handleNameChange(name: string) {
     const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '')
     setFormData(prev => ({
       ...prev,
       full_name: name,
-      google_meet_url: prev.google_meet_url && !prev.google_meet_url.includes('fitveda-') && !prev.google_meet_url.includes('meet.zoho.com')
-        ? prev.google_meet_url
-        : `https://meet.zoho.com/fitveda-${slug || 'customer'}-${Math.floor(100 + Math.random() * 900)}`,
+      google_meet_url:
+        prev.google_meet_url &&
+        !prev.google_meet_url.includes('fitveda-') &&
+        !prev.google_meet_url.includes('meet.zoho.com')
+          ? prev.google_meet_url
+          : `https://meet.zoho.com/fitveda-${slug || 'customer'}-${Math.floor(100 + Math.random() * 900)}`,
     }))
   }
 
@@ -182,35 +209,154 @@ export default function AdminCustomersPage() {
     setSaving(false)
   }
 
+  async function handleSaveEditCustomer(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editingCustomer) return
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/customers/${editingCustomer.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: editingCustomer.full_name,
+          email: editingCustomer.email,
+          phone: editingCustomer.phone,
+          membership_plan_id: editingCustomer.membership_plan_id,
+          membership_status: editingCustomer.membership_status,
+          google_meet_url: editingCustomer.google_meet_url,
+          zoho_meeting_url: editingCustomer.google_meet_url,
+          is_active: editingCustomer.is_active,
+          profile: editingCustomer.profile,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to update customer')
+
+      showToast(`✓ Updated "${editingCustomer.full_name}" successfully!`)
+      setEditingCustomer(null)
+      await loadAllData()
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to update customer')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function toggleCustomerActive(customer: Customer) {
     try {
+      const nextActive = !customer.is_active
       const res = await fetch(`/api/customers/${customer.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: !customer.is_active }),
+        body: JSON.stringify({ is_active: nextActive }),
       })
+      const data = await res.json().catch(() => ({}))
       if (res.ok) {
-        setCustomers(prev => prev.map(c => c.id === customer.id ? { ...c, is_active: !c.is_active } : c))
-        showToast(customer.is_active ? 'Customer deactivated' : 'Customer activated')
+        showToast(
+          nextActive
+            ? `✓ Customer "${customer.full_name}" reactivated (eligible membership synced)`
+            : `✓ Customer "${customer.full_name}" deactivated & active membership suspended`
+        )
+        await loadAllData()
+      } else {
+        showToast(data.error || 'Failed to update status')
       }
     } catch {
       showToast('Failed to update status')
     }
   }
 
+  async function restoreCustomer(customer: Customer) {
+    try {
+      const res = await fetch(`/api/customers/${customer.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restore: true }),
+      })
+      if (res.ok) {
+        showToast(`✓ Customer "${customer.full_name}" restored from archive!`)
+        await loadAllData()
+      }
+    } catch {
+      showToast('Failed to restore customer')
+    }
+  }
+
+  async function confirmDeleteCustomer(options?: { forceArchive?: boolean }) {
+    if (!deletingCustomer) return
+    const modeQuery = options?.forceArchive ? '?mode=archive' : ''
+    const res = await fetch(`/api/customers/${deletingCustomer.id}${modeQuery}`, {
+      method: 'DELETE',
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || 'Failed to remove customer')
+
+    showToast(data.message || (data.archived ? 'Customer archived safely' : 'Customer permanently deleted'))
+    setDeletingCustomer(null)
+    await loadAllData()
+  }
+
+  const activeCount = customers.filter(c => c.is_active && !c.is_archived).length
+  const inactiveCount = customers.filter(c => !c.is_active && !c.is_archived).length
+  const archivedCount = customers.filter(c => c.is_archived).length
+
   return (
     <div className="app-layout">
       <AdminSidebar />
 
       <main className="app-main">
-        <div className="page-header flex justify-between items-center">
+        <div className="page-header flex justify-between items-center" style={{ flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h1 className="text-headline-md">Customers</h1>
-            <p className="text-body-md text-muted">Manage patient profiles, memberships, dedicated Zoho Meeting rooms, and care teams</p>
+            <p className="text-body-md text-muted">
+              Manage patient profiles, memberships, dedicated Zoho Meeting rooms, and care teams
+            </p>
           </div>
           <button className="btn btn-primary btn-sm" onClick={() => setShowOnboardModal(true)}>
             + Onboard New Customer
           </button>
+        </div>
+
+        {/* Search & Status Filter Bar */}
+        <div
+          className="card"
+          style={{
+            padding: '12px 16px',
+            marginBottom: 'var(--space-md)',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 10,
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <input
+            className="form-input"
+            style={{ flex: '1 1 260px', maxWidth: 420 }}
+            placeholder="🔍 Search by customer name, email, phone, or plan..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {(
+              [
+                { key: 'all', label: `All (${customers.filter(c => !c.is_archived).length})` },
+                { key: 'active', label: `Active (${activeCount})` },
+                { key: 'inactive', label: `Inactive (${inactiveCount})` },
+                { key: 'archived', label: `Archived (${archivedCount})` },
+              ] as const
+            ).map(tab => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setStatusFilter(tab.key)}
+                className={`btn btn-sm ${statusFilter === tab.key ? 'btn-primary' : 'btn-ghost'}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {loading ? (
@@ -222,81 +368,145 @@ export default function AdminCustomersPage() {
                 <thead>
                   <tr>
                     <th>Customer Name</th>
-                    <th>Membership Plan</th>
+                    <th>Membership Plan &amp; Status</th>
                     <th>Dedicated Zoho Meeting Link</th>
                     <th>Assigned Care Team</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>Account Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {customers.length ? customers.map(c => {
-                    const doc = c.assigned_professionals?.find(p => p.role.includes('doctor'))
-                    const trn = c.assigned_professionals?.find(p => p.role.includes('trainer'))
-                    const meetLink = (c as any).zoho_meeting_url || c.google_meet_url || 'https://meet.zoho.com/fitveda-priya'
+                  {filteredCustomers.length ? (
+                    filteredCustomers.map(c => {
+                      const doc = c.assigned_professionals?.find(p => p.role.includes('doctor'))
+                      const trn = c.assigned_professionals?.find(p => p.role.includes('trainer'))
+                      const meetLink =
+                        c.zoho_meeting_url || c.google_meet_url || 'https://meet.zoho.com/fitveda-priya'
 
-                    return (
-                      <tr key={c.id}>
-                        <td>
-                          <div style={{ fontWeight: 700, fontSize: 14 }}>{c.full_name}</div>
-                          <div className="text-caption text-muted">{c.email || c.phone || 'No contact listed'}</div>
-                        </td>
-                        <td>
-                          <span className={`badge badge-${c.membership_status === 'active' ? 'success' : 'neutral'}`} style={{ textTransform: 'capitalize' }}>
-                            {c.plan?.name || c.membership_status || 'None'}
-                          </span>
-                        </td>
-                        <td>
-                          {meetLink ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontSize: 16 }}>📹</span>
-                              <a
-                                href={meetLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-caption text-primary"
-                                style={{ fontWeight: 600, maxWidth: 190, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}
-                                title={meetLink}
-                              >
-                                {meetLink.replace('https://', '')}
-                              </a>
+                      return (
+                        <tr key={c.id} style={{ opacity: c.is_active && !c.is_archived ? 1 : 0.72 }}>
+                          <td>
+                            <div style={{ fontWeight: 700, fontSize: 14 }}>{c.full_name}</div>
+                            <div className="text-caption text-muted">
+                              {c.email || c.phone || 'No contact listed'}
                             </div>
-                          ) : (
-                            <span className="text-caption text-muted">No link set</span>
-                          )}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            {doc && <div className="text-caption">🩺 {doc.full_name}</div>}
-                            {trn && <div className="text-caption">🏋️ {trn.full_name}</div>}
-                            {!doc && !trn && <span className="text-caption text-muted">Unassigned</span>}
-                          </div>
-                        </td>
-                        <td>
-                          <span className={`badge badge-${c.is_active ? 'success' : 'neutral'}`}>
-                            {c.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <Link href={`/admin/customers/${c.id}`} className="btn btn-ghost btn-sm">
-                              View Profile
-                            </Link>
-                            <button
-                              className={`btn btn-sm ${c.is_active ? 'btn-outline' : 'btn-ghost'}`}
-                              onClick={() => toggleCustomerActive(c)}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+                              <span style={{ fontWeight: 600, fontSize: 13 }}>
+                                {c.plan?.name || 'No Plan Assigned'}
+                              </span>
+                              <span
+                                className={`badge badge-${
+                                  c.membership_status === 'active'
+                                    ? 'success'
+                                    : c.membership_status === 'expired' || c.membership_status === 'cancelled'
+                                      ? 'warning'
+                                      : 'neutral'
+                                }`}
+                                style={{ textTransform: 'capitalize', fontSize: 11 }}
+                              >
+                                Membership: {c.membership_status || 'inactive'}
+                              </span>
+                            </div>
+                          </td>
+                          <td>
+                            {meetLink ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ fontSize: 16 }}>📹</span>
+                                <a
+                                  href={meetLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-caption text-primary"
+                                  style={{
+                                    fontWeight: 600,
+                                    maxWidth: 180,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    display: 'inline-block',
+                                  }}
+                                  title={meetLink}
+                                >
+                                  {meetLink.replace('https://', '')}
+                                </a>
+                              </div>
+                            ) : (
+                              <span className="text-caption text-muted">No link set</span>
+                            )}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                              {doc && <div className="text-caption">🩺 {doc.full_name}</div>}
+                              {trn && <div className="text-caption">🏋️ {trn.full_name}</div>}
+                              {!doc && !trn && <span className="text-caption text-muted">Unassigned</span>}
+                            </div>
+                          </td>
+                          <td>
+                            <span
+                              className={`badge badge-${
+                                c.is_archived ? 'neutral' : c.is_active ? 'success' : 'warning'
+                              }`}
                             >
-                              {c.is_active ? 'Deactivate' : 'Activate'}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  }) : (
+                              {c.is_archived ? 'Archived' : c.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                              <Link href={`/admin/customers/${c.id}`} className="btn btn-ghost btn-sm" title="View full patient profile">
+                                👁️ View
+                              </Link>
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                onClick={() =>
+                                  setEditingCustomer({
+                                    ...c,
+                                    google_meet_url: c.zoho_meeting_url || c.google_meet_url || '',
+                                    profile: { ...(c.profile || {}) },
+                                  })
+                                }
+                                title="Edit customer & membership"
+                              >
+                                ✏️ Edit
+                              </button>
+                              {c.is_archived ? (
+                                <button
+                                  type="button"
+                                  className="btn btn-primary btn-sm"
+                                  onClick={() => restoreCustomer(c)}
+                                >
+                                  ♻️ Restore
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className={`btn btn-sm ${c.is_active ? 'btn-outline' : 'btn-primary'}`}
+                                  onClick={() => toggleCustomerActive(c)}
+                                >
+                                  {c.is_active ? 'Deactivate' : 'Activate'}
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                style={{ color: '#dc2626' }}
+                                onClick={() => setDeletingCustomer(c)}
+                                title="Delete or Archive Customer"
+                              >
+                                🗑️ Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })
+                  ) : (
                     <tr>
                       <td colSpan={6}>
                         <div className="empty-state" style={{ padding: 'var(--space-md)' }}>
-                          No customers found. Click &quot;+ Onboard New Customer&quot; above to register your first patient.
+                          No customers found matching the current filter.
                         </div>
                       </td>
                     </tr>
@@ -307,25 +517,247 @@ export default function AdminCustomersPage() {
           </div>
         )}
 
+        {/* Edit Customer & Membership Modal */}
+        {editingCustomer && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.55)',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16,
+            }}
+          >
+            <div
+              className="card"
+              style={{ width: '100%', maxWidth: 620, maxHeight: '90vh', overflowY: 'auto', padding: 'var(--space-lg)' }}
+            >
+              <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-md)' }}>
+                <div>
+                  <h2 className="text-headline-sm">Edit Customer &amp; Membership</h2>
+                  <p className="text-caption text-muted">
+                    Update profile details, Zoho Meeting link, account status, or manually adjust membership status
+                  </p>
+                </div>
+                <button className="btn btn-icon btn-ghost" onClick={() => setEditingCustomer(null)}>
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEditCustomer} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 1fr', gap: 10 }}>
+                  <label className="form-field">
+                    <span className="form-label">Full Name *</span>
+                    <input
+                      className="form-input"
+                      required
+                      value={editingCustomer.full_name}
+                      onChange={e => setEditingCustomer(p => (p ? { ...p, full_name: e.target.value } : p))}
+                    />
+                  </label>
+                  <label className="form-field">
+                    <span className="form-label">Email</span>
+                    <input
+                      className="form-input"
+                      type="email"
+                      value={editingCustomer.email || ''}
+                      onChange={e => setEditingCustomer(p => (p ? { ...p, email: e.target.value } : p))}
+                    />
+                  </label>
+                  <label className="form-field">
+                    <span className="form-label">Phone</span>
+                    <input
+                      className="form-input"
+                      value={editingCustomer.phone || ''}
+                      onChange={e => setEditingCustomer(p => (p ? { ...p, phone: e.target.value } : p))}
+                    />
+                  </label>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <label className="form-field">
+                    <span className="form-label">Membership Plan</span>
+                    <select
+                      className="form-input"
+                      value={editingCustomer.membership_plan_id || ''}
+                      onChange={e =>
+                        setEditingCustomer(p => (p ? { ...p, membership_plan_id: e.target.value || null } : p))
+                      }
+                    >
+                      <option value="">No Active Plan</option>
+                      {plans.map(pl => (
+                        <option key={pl.id} value={pl.id}>
+                          {pl.name} (₹{Number(pl.price || 0).toLocaleString('en-IN')})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="form-field">
+                    <span className="form-label">Membership Status (Manual Override)</span>
+                    <select
+                      className="form-input"
+                      value={editingCustomer.membership_status || 'inactive'}
+                      onChange={e =>
+                        setEditingCustomer(p => (p ? { ...p, membership_status: e.target.value } : p))
+                      }
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="expired">Expired</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </label>
+                </div>
+
+                <label className="form-field">
+                  <span className="form-label">Dedicated Zoho Meeting URL</span>
+                  <input
+                    className="form-input"
+                    value={editingCustomer.google_meet_url || ''}
+                    onChange={e => setEditingCustomer(p => (p ? { ...p, google_meet_url: e.target.value } : p))}
+                  />
+                </label>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: 10 }}>
+                  <label className="form-field">
+                    <span className="form-label">Height (cm)</span>
+                    <input
+                      className="form-input"
+                      type="number"
+                      value={editingCustomer.profile?.height_cm ?? ''}
+                      onChange={e =>
+                        setEditingCustomer(p =>
+                          p
+                            ? {
+                                ...p,
+                                profile: { ...(p.profile || {}), height_cm: Number(e.target.value) || undefined },
+                              }
+                            : p
+                        )
+                      }
+                    />
+                  </label>
+                  <label className="form-field">
+                    <span className="form-label">Weight (kg)</span>
+                    <input
+                      className="form-input"
+                      type="number"
+                      step="0.1"
+                      value={editingCustomer.profile?.weight_kg ?? ''}
+                      onChange={e =>
+                        setEditingCustomer(p =>
+                          p
+                            ? {
+                                ...p,
+                                profile: { ...(p.profile || {}), weight_kg: Number(e.target.value) || undefined },
+                              }
+                            : p
+                        )
+                      }
+                    />
+                  </label>
+                  <label className="form-field">
+                    <span className="form-label">Health Goals</span>
+                    <input
+                      className="form-input"
+                      value={editingCustomer.profile?.goals ?? ''}
+                      onChange={e =>
+                        setEditingCustomer(p =>
+                          p ? { ...p, profile: { ...(p.profile || {}), goals: e.target.value } } : p
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+                  <input
+                    type="checkbox"
+                    checked={!!editingCustomer.is_active}
+                    onChange={e => setEditingCustomer(p => (p ? { ...p, is_active: e.target.checked } : p))}
+                  />
+                  <strong>Customer Account Active</strong> (Deactivating automatically suspends active membership)
+                </label>
+
+                <div className="flex justify-end" style={{ gap: 10, marginTop: 6 }}>
+                  <button type="button" className="btn btn-ghost" onClick={() => setEditingCustomer(null)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                    {saving ? 'Saving…' : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete / Archive Safety Confirmation Modal */}
+        {deletingCustomer && (
+          <AdminRecordDeleteModal
+            isOpen={!!deletingCustomer}
+            module="customers"
+            moduleLabel="Customers & Patient Profiles"
+            recordId={deletingCustomer.id}
+            recordName={deletingCustomer.full_name}
+            onClose={() => setDeletingCustomer(null)}
+            onConfirm={confirmDeleteCustomer}
+          />
+        )}
+
         {/* Onboarding Modal */}
         {showOnboardModal && (
-          <div style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-          }}>
-            <div className="card" style={{ width: '100%', maxWidth: 680, maxHeight: '90vh', overflowY: 'auto', padding: 'var(--space-lg)' }}>
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.5)',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16,
+            }}
+          >
+            <div
+              className="card"
+              style={{ width: '100%', maxWidth: 680, maxHeight: '90vh', overflowY: 'auto', padding: 'var(--space-lg)' }}
+            >
               <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-md)' }}>
                 <div>
                   <h2 className="text-headline-sm">Onboard New Customer</h2>
-                  <p className="text-caption text-muted">Setup patient profile, dedicated Zoho Meeting room, care team, and plan</p>
+                  <p className="text-caption text-muted">
+                    Setup patient profile, dedicated Zoho Meeting room, care team, and plan
+                  </p>
                 </div>
-                <button className="btn btn-icon btn-ghost" onClick={() => setShowOnboardModal(false)}>✕</button>
+                <button className="btn btn-icon btn-ghost" onClick={() => setShowOnboardModal(false)}>
+                  ✕
+                </button>
               </div>
 
               <form onSubmit={handleOnboardSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {/* 1. Identity & Contact */}
-                <div style={{ background: 'var(--color-neutral)', padding: 14, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-primary)', marginBottom: 10, letterSpacing: '0.5px' }}>
+                <div
+                  style={{
+                    background: 'var(--color-neutral)',
+                    padding: 14,
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--color-border)',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      color: 'var(--color-primary)',
+                      marginBottom: 10,
+                      letterSpacing: '0.5px',
+                    }}
+                  >
                     1. Patient Identity &amp; Contact
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr', gap: 10 }}>
@@ -361,18 +793,45 @@ export default function AdminCustomersPage() {
                   </div>
                 </div>
 
-                {/* 2. Dedicated Zoho Meeting Link */}
-                <div style={{ background: '#f0fdf4', padding: 14, borderRadius: 'var(--radius-md)', border: '1px solid #bbf7d0' }}>
+                <div
+                  style={{
+                    background: '#f0fdf4',
+                    padding: 14,
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid #bbf7d0',
+                  }}
+                >
                   <div className="flex justify-between items-center" style={{ marginBottom: 6 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#166534', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        color: '#166534',
+                        letterSpacing: '0.5px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
                       <span>🟢 2. Dedicated Zoho Meeting Room Link</span>
-                      <span className="badge badge-success" style={{ fontSize: 10, padding: '2px 6px' }}>Zoho Active</span>
+                      <span className="badge badge-success" style={{ fontSize: 10, padding: '2px 6px' }}>
+                        Zoho Active
+                      </span>
                     </div>
                     <button
                       type="button"
                       onClick={autoGenerateZohoLink}
                       className="btn btn-secondary btn-sm"
-                      style={{ fontSize: 12, padding: '4px 10px', height: 'auto', background: '#ffffff', borderColor: '#86efac', color: '#166534', fontWeight: 600 }}
+                      style={{
+                        fontSize: 12,
+                        padding: '4px 10px',
+                        height: 'auto',
+                        background: '#ffffff',
+                        borderColor: '#86efac',
+                        color: '#166534',
+                        fontWeight: 600,
+                      }}
                     >
                       ⚡ Auto-Generate Link
                     </button>
@@ -386,15 +845,27 @@ export default function AdminCustomersPage() {
                       onChange={e => setFormData(p => ({ ...p, google_meet_url: e.target.value }))}
                       style={{ fontFamily: 'monospace', fontSize: 13, background: '#ffffff' }}
                     />
-                    <span className="text-caption" style={{ marginTop: 4, display: 'block', color: '#166534' }}>
-                      ⚡ <strong>Auto-generated Zoho Meeting:</strong> Automatically generated from customer name upon typing, or click &ldquo;Auto-Generate Link&rdquo;. Used by assigned doctor and trainer for all live sessions.
-                    </span>
                   </label>
                 </div>
 
-                {/* 3. Membership & Care Team Assignment */}
-                <div style={{ background: 'var(--color-neutral)', padding: 14, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-primary)', marginBottom: 10, letterSpacing: '0.5px' }}>
+                <div
+                  style={{
+                    background: 'var(--color-neutral)',
+                    padding: 14,
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--color-border)',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      color: 'var(--color-primary)',
+                      marginBottom: 10,
+                      letterSpacing: '0.5px',
+                    }}
+                  >
                     3. Membership Plan &amp; Assigned Professionals
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
@@ -408,7 +879,7 @@ export default function AdminCustomersPage() {
                         <option value="">No Active Plan</option>
                         {plans.map(pl => (
                           <option key={pl.id} value={pl.id}>
-                            {pl.name} (₹{pl.price.toLocaleString('en-IN')})
+                            {pl.name} (₹{Number(pl.price || 0).toLocaleString('en-IN')})
                           </option>
                         ))}
                       </select>
@@ -422,9 +893,13 @@ export default function AdminCustomersPage() {
                         onChange={e => setFormData(p => ({ ...p, doctor_id: e.target.value }))}
                       >
                         <option value="">None / Unassigned</option>
-                        {professionals.filter(p => p.role.includes('doctor')).map(d => (
-                          <option key={d.id} value={d.id}>🩺 {d.full_name}</option>
-                        ))}
+                        {professionals
+                          .filter(p => p.role.includes('doctor') && p.is_active)
+                          .map(d => (
+                            <option key={d.id} value={d.id}>
+                              🩺 {d.full_name}
+                            </option>
+                          ))}
                       </select>
                     </label>
 
@@ -436,63 +911,16 @@ export default function AdminCustomersPage() {
                         onChange={e => setFormData(p => ({ ...p, trainer_id: e.target.value }))}
                       >
                         <option value="">None / Unassigned</option>
-                        {professionals.filter(p => p.role.includes('trainer')).map(t => (
-                          <option key={t.id} value={t.id}>🏋️ {t.full_name}</option>
-                        ))}
+                        {professionals
+                          .filter(p => p.role.includes('trainer') && p.is_active)
+                          .map(t => (
+                            <option key={t.id} value={t.id}>
+                              🏋️ {t.full_name}
+                            </option>
+                          ))}
                       </select>
                     </label>
                   </div>
-                </div>
-
-                {/* 4. Basic Biometrics & Goals */}
-                <div style={{ background: 'var(--color-neutral)', padding: 14, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-primary)', marginBottom: 10, letterSpacing: '0.5px' }}>
-                    4. Biometrics &amp; Health Goals
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
-                    <label className="form-field">
-                      <span className="form-label">Gender</span>
-                      <select
-                        className="form-input"
-                        value={formData.gender}
-                        onChange={e => setFormData(p => ({ ...p, gender: e.target.value }))}
-                      >
-                        <option value="female">Female</option>
-                        <option value="male">Male</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </label>
-                    <label className="form-field">
-                      <span className="form-label">Height (cm)</span>
-                      <input
-                        className="form-input"
-                        type="number"
-                        placeholder="e.g. 165"
-                        value={formData.height_cm}
-                        onChange={e => setFormData(p => ({ ...p, height_cm: e.target.value }))}
-                      />
-                    </label>
-                    <label className="form-field">
-                      <span className="form-label">Weight (kg)</span>
-                      <input
-                        className="form-input"
-                        type="number"
-                        placeholder="e.g. 62.5"
-                        value={formData.weight_kg}
-                        onChange={e => setFormData(p => ({ ...p, weight_kg: e.target.value }))}
-                      />
-                    </label>
-                  </div>
-
-                  <label className="form-field">
-                    <span className="form-label">Primary Health Goals</span>
-                    <input
-                      className="form-input"
-                      placeholder="e.g. Weight loss, PCOS management, posture improvement"
-                      value={formData.goals}
-                      onChange={e => setFormData(p => ({ ...p, goals: e.target.value }))}
-                    />
-                  </label>
                 </div>
 
                 <div className="flex justify-end" style={{ gap: 10, marginTop: 4 }}>
@@ -510,13 +938,22 @@ export default function AdminCustomersPage() {
 
         {/* Toast */}
         {toast && (
-          <div style={{
-            position: 'fixed', bottom: 24, right: 24, zIndex: 2000,
-            background: 'var(--color-success)', color: 'white',
-            padding: '12px 20px', borderRadius: 'var(--radius-md)',
-            fontWeight: 600, fontSize: 14, boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
-          }}>
-            ✓ {toast}
+          <div
+            style={{
+              position: 'fixed',
+              bottom: 24,
+              right: 24,
+              zIndex: 2000,
+              background: 'var(--color-success)',
+              color: 'white',
+              padding: '12px 20px',
+              borderRadius: 'var(--radius-md)',
+              fontWeight: 600,
+              fontSize: 14,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+            }}
+          >
+            {toast}
           </div>
         )}
       </main>
