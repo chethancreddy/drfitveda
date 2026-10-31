@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { syncSessionRemindersForAppointment } from '@/lib/services/whatsapp-notification.service'
+import {
+  syncSessionRemindersForAppointment,
+  syncCustomerAppointmentStatusNotification,
+} from '@/lib/services/whatsapp-notification.service'
 
 // ============================================================
 // GET /api/appointments/[id] — Get appointment details
@@ -99,6 +102,12 @@ export async function PATCH(
 
       if (updatedAppt) {
         await syncSessionRemindersForAppointment(updatedAppt)
+
+        if (status === 'cancelled') {
+          await syncCustomerAppointmentStatusNotification(updatedAppt, 'cancelled')
+        } else if (scheduled_at || professional_id) {
+          await syncCustomerAppointmentStatusNotification(updatedAppt, 'updated')
+        }
       }
     }
 

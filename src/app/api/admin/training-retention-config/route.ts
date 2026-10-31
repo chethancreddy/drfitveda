@@ -50,7 +50,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString(), updated_by: auth.user.id }
-    if (body.retention_mode   !== undefined) patch.retention_mode    = body.retention_mode
+    if (body.retention_mode !== undefined) patch.retention_mode = body.retention_mode
     if (body.grace_period_hours !== undefined) patch.grace_period_hours = body.grace_period_hours
 
     const { data, error } = await (auth.svc as any)

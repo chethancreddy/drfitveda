@@ -17,7 +17,7 @@ function getRole(req: NextRequest, user: any) {
   return role
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await loadPersistedState()
     const assignments = mockDb.state.professional_assignments || []
@@ -42,10 +42,67 @@ export async function GET() {
         professional_slots: pro?.working_slots || [],
         assigned_by_name: coordinator?.full_name || a.assigned_by_name || 'Operations Dispatch',
         assigned_slot: a.assigned_slot || 'Flexible',
+        is_unassigned: false,
       }
     })
 
-    return NextResponse.json({ assignments: enriched })
+    // Active assigned customer IDs
+    const assignedCustomerIds = new Set(
+      assignments
+        .filter((a: any) => a.is_active !== false && !a.is_archived && a.professional_id)
+        .map((a: any) => a.customer_id)
+    )
+
+    // Unassigned active customers genuinely awaiting care dispatch
+    const unassigned = customers
+      .filter((c: any) => !c.is_archived && c.is_active !== false && !assignedCustomerIds.has(c.id))
+      .map((c: any) => {
+        const userProfile = userProfiles.find((u: any) => u.id === c.user_id)
+        return {
+          id: `unassigned-${c.id}`,
+          customer_id: c.id,
+          customer_name: userProfile?.full_name || c.full_name || 'Customer',
+          customer_phone: userProfile?.phone || c.phone || '',
+          customer_email: userProfile?.email || c.email || '',
+          customer_meet_url: c.google_meet_url || (c as any)?.zoho_meeting_url || '',
+          membership_status: c.membership_status || 'active',
+          professional_id: '',
+          professional_name: 'Unassigned (Awaiting Care Match)',
+          professional_role: 'Pending Assignment',
+          role: 'doctor',
+          assigned_slot: 'Awaiting Slot Dispatch',
+          assigned_by_name: 'Care Coordinator Needed',
+          is_active: false,
+          is_archived: false,
+          is_unassigned: true,
+          status: 'unassigned',
+          created_at: c.created_at || new Date().toISOString(),
+        }
+      })
+
+    const { searchParams } = new URL(req.url)
+    const filter = searchParams.get('filter') // 'all' | 'assigned' | 'unassigned'
+
+    let result = enriched
+    if (filter === 'unassigned') {
+      result = unassigned
+    } else if (filter === 'assigned') {
+      result = enriched
+    }
+
+    return NextResponse.json({
+      assignments: enriched,
+      unassigned,
+      all: [...enriched, ...unassigned],
+      stats: {
+        total: enriched.length + unassigned.length,
+        assigned: enriched.filter((a: any) => !a.is_archived && a.is_active).length,
+        unassigned: unassigned.length,
+        active: enriched.filter((a: any) => !a.is_archived && a.is_active).length,
+        inactive: enriched.filter((a: any) => !a.is_archived && !a.is_active).length,
+        archived: enriched.filter((a: any) => a.is_archived).length,
+      },
+    })
   } catch {
     return NextResponse.json({ error: 'Failed to fetch assignments' }, { status: 500 })
   }
@@ -71,6 +128,8 @@ export async function POST(req: NextRequest) {
       assigned_by_name,
       notes,
       is_active,
+      appointment_date,
+      consultation_type,
     } = body
 
     if (!customer_id || !professional_id) {
@@ -92,6 +151,26 @@ export async function POST(req: NextRequest) {
 
     if (!mockDb.state.professional_assignments) mockDb.state.professional_assignments = []
 
+    // If appointment_date is specified, create or link confirmed appointment
+    let confirmedAppt = null
+    if (appointment_date) {
+      if (!mockDb.state.appointments) mockDb.state.appointments = []
+      const scheduledIso = new Date(`${appointment_date}T09:00:00Z`).toISOString()
+      confirmedAppt = {
+        id: `appt-${Date.now()}`,
+        customer_id,
+        professional_id,
+        scheduled_at: scheduledIso,
+        duration_min: 45,
+        status: 'scheduled',
+        notes: notes || 'Assigned via Care Dispatch',
+        consultation_type: consultation_type || 'Doctor Video Consultation (Zoho Meeting)',
+        created_at: new Date().toISOString(),
+      }
+      mockDb.state.appointments.push(confirmedAppt)
+      await savePersistedState('appointments')
+    }
+
     // Check if there is an existing active assignment for this customer & role category to handle reassignment cleanly
     const targetRole = proRole || 'doctor'
     let previousProfessionalId: string | null = null
@@ -112,6 +191,7 @@ export async function POST(req: NextRequest) {
     await savePersistedState('professional_assignments')
 
     let whatsappNotification = null
+    let customerNotification = null
     if (newAssignment.is_active !== false) {
       const notifRes = await triggerCustomerAssignmentNotifications({
         customerId: customer_id,
@@ -122,10 +202,17 @@ export async function POST(req: NextRequest) {
         previousProfessionalId,
       })
       whatsappNotification = notifRes.created
+      customerNotification = notifRes.customerNotification
     }
 
     return NextResponse.json(
-      { assignment: newAssignment, whatsappNotification, success: true },
+      {
+        assignment: newAssignment,
+        appointment: confirmedAppt,
+        whatsappNotification,
+        customerNotification,
+        success: true,
+      },
       { status: 201 }
     )
   } catch {

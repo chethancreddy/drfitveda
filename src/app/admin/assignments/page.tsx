@@ -9,7 +9,9 @@ interface Assignment {
   customer_id: string
   customer_name: string
   customer_phone?: string
+  customer_email?: string
   customer_meet_url?: string
+  membership_status?: string
   professional_id: string
   professional_name: string
   professional_role?: string
@@ -20,6 +22,9 @@ interface Assignment {
   notes?: string
   is_active: boolean
   is_archived?: boolean
+  is_unassigned?: boolean
+  status?: string
+  appointment_date?: string
   archived_at?: string | null
   created_at?: string
 }
@@ -76,6 +81,8 @@ export default function AdminAssignmentsPage() {
   const [toast, setToast] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'archived'>('all')
+  const [dispatchFilter, setDispatchFilter] = useState<'all' | 'assigned' | 'unassigned'>('all')
+  const [unassignedList, setUnassignedList] = useState<Assignment[]>([])
 
   useEffect(() => {
     loadAllData()
@@ -96,6 +103,7 @@ export default function AdminAssignmentsPage() {
       const tData = await tRes.json()
 
       setAssignments(aData.assignments || [])
+      setUnassignedList(aData.unassigned || [])
       setCustomers((cData.customers || []).filter((c: Customer) => !c.is_archived && c.is_active !== false))
       setProfessionals(pData.professionals || [])
       setCoordinators((tData.team_members || []).filter((t: TeamMember) => !t.is_archived && t.is_active !== false))
@@ -120,6 +128,20 @@ export default function AdminAssignmentsPage() {
       assigned_by_coordinator_id: coordinators[0]?.id || 'tm-001',
       assigned_by_name: coordinators[0]?.full_name || 'Care Operations Manager',
       notes: 'Initial slot dispatch by Care Team',
+      is_active: true,
+    })
+  }
+
+  function openAssignmentForCustomer(customerId: string) {
+    const defaultDoctor = professionals.find(p => p.role.includes('doctor') && p.remaining_capacity > 0) || professionals[0]
+    setEditingAssignment({
+      customer_id: customerId,
+      role: defaultDoctor?.role || 'doctor',
+      professional_id: defaultDoctor?.id || '',
+      assigned_slot: defaultDoctor?.free_slots?.[0] || '07:00 AM - 08:00 AM',
+      assigned_by_coordinator_id: coordinators[0]?.id || 'tm-001',
+      assigned_by_name: coordinators[0]?.full_name || 'Care Operations Manager',
+      notes: 'Smart slot dispatch for unassigned patient',
       is_active: true,
     })
   }
@@ -210,20 +232,29 @@ export default function AdminAssignmentsPage() {
   }
 
   const filteredAssignments = useMemo(() => {
-    return assignments.filter(a => {
-      if (statusFilter === 'active' && (!a.is_active || a.is_archived)) return false
-      if (statusFilter === 'inactive' && (a.is_active || a.is_archived)) return false
+    let pool: Assignment[] = []
+    if (dispatchFilter === 'assigned') {
+      pool = assignments
+    } else if (dispatchFilter === 'unassigned') {
+      pool = unassignedList
+    } else {
+      pool = [...assignments, ...unassignedList]
+    }
+
+    return pool.filter(a => {
+      if (statusFilter === 'active' && (!a.is_active || a.is_archived || a.is_unassigned)) return false
+      if (statusFilter === 'inactive' && (a.is_active || a.is_archived || a.is_unassigned)) return false
       if (statusFilter === 'archived' && !a.is_archived) return false
       if (statusFilter === 'all' && a.is_archived) return false
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase()
-        const hay = `${a.customer_name} ${a.professional_name} ${a.role} ${a.assigned_slot || ''} ${a.assigned_by_name || ''}`.toLowerCase()
+        const hay = `${a.customer_name} ${a.customer_phone || ''} ${a.customer_email || ''} ${a.professional_name} ${a.role} ${a.assigned_slot || ''} ${a.assigned_by_name || ''}`.toLowerCase()
         if (!hay.includes(q)) return false
       }
       return true
     })
-  }, [assignments, statusFilter, searchQuery])
+  }, [assignments, unassignedList, dispatchFilter, statusFilter, searchQuery])
 
   const selectedProfessional = professionals.find(p => p.id === editingAssignment?.professional_id)
 
@@ -235,7 +266,9 @@ export default function AdminAssignmentsPage() {
     yoga_doctor: '🧘',
   }
 
-  const nonArchivedCount = assignments.filter(a => !a.is_archived).length
+  const assignedNonArchivedCount = assignments.filter(a => !a.is_archived).length
+  const unassignedCount = unassignedList.length
+  const totalAllCount = assignedNonArchivedCount + unassignedCount
   const activeCount = assignments.filter(a => a.is_active && !a.is_archived).length
   const inactiveCount = assignments.filter(a => !a.is_active && !a.is_archived).length
   const archivedCount = assignments.filter(a => a.is_archived).length
@@ -258,10 +291,15 @@ export default function AdminAssignmentsPage() {
         </div>
 
         {/* Capacity Overview Cards */}
-        <div className="grid-3" style={{ marginBottom: 'var(--space-md)' }}>
+        <div className="grid-4" style={{ marginBottom: 'var(--space-md)' }}>
           <div className="stat-card">
             <div className="stat-label">Active Customer Assignments</div>
             <div className="stat-value">{activeCount}</div>
+          </div>
+          <div className="stat-card" style={{ borderColor: '#fcd34d', background: '#fffbeb' }}>
+            <div className="stat-label" style={{ color: '#b45309' }}>⚠️ Unassigned Customers</div>
+            <div className="stat-value" style={{ color: '#d97706' }}>{unassignedCount}</div>
+            <div className="text-caption text-muted">Awaiting Doctor / Trainer Match</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">Doctors &amp; Trainers on Duty</div>
@@ -281,41 +319,78 @@ export default function AdminAssignmentsPage() {
         <div
           className="card"
           style={{
-            padding: '12px 16px',
+            padding: '14px 16px',
             marginBottom: 'var(--space-md)',
             display: 'flex',
-            flexWrap: 'wrap',
-            gap: 10,
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            flexDirection: 'column',
+            gap: 12,
           }}
         >
-          <input
-            className="form-input"
-            style={{ flex: '1 1 260px', maxWidth: 420 }}
-            placeholder="🔍 Search by customer, doctor/trainer, role, or slot..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {(
-              [
-                { key: 'all', label: `All (${nonArchivedCount})` },
-                { key: 'active', label: `Active (${activeCount})` },
-                { key: 'inactive', label: `Inactive (${inactiveCount})` },
-                { key: 'archived', label: `Archived (${archivedCount})` },
-              ] as const
-            ).map(tab => (
+          {/* Top row: Search input + Primary Dispatch Filter Tabs */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', justifyContent: 'space-between' }}>
+            <input
+              className="form-input"
+              style={{ flex: '1 1 260px', maxWidth: 420 }}
+              placeholder="🔍 Search by customer, phone, doctor/trainer, role, or slot..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+
+            {/* Primary Dispatch Filter (All / Assigned / Unassigned) */}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               <button
-                key={tab.key}
                 type="button"
-                onClick={() => setStatusFilter(tab.key)}
-                className={`btn btn-sm ${statusFilter === tab.key ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setDispatchFilter('all')}
+                className={`btn btn-sm ${dispatchFilter === 'all' ? 'btn-primary' : 'btn-ghost'}`}
               >
-                {tab.label}
+                All ({totalAllCount})
               </button>
-            ))}
+              <button
+                type="button"
+                onClick={() => setDispatchFilter('assigned')}
+                className={`btn btn-sm ${dispatchFilter === 'assigned' ? 'btn-primary' : 'btn-ghost'}`}
+              >
+                Assigned ({assignedNonArchivedCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setDispatchFilter('unassigned')}
+                className={`btn btn-sm ${dispatchFilter === 'unassigned' ? 'btn-primary' : 'btn-ghost'}`}
+                style={
+                  dispatchFilter === 'unassigned'
+                    ? { background: '#d97706', borderColor: '#b45309', color: '#fff' }
+                    : { color: '#d97706', borderColor: '#fde68a', background: '#fffbeb' }
+                }
+              >
+                ⚠️ Unassigned ({unassignedCount})
+              </button>
+            </div>
           </div>
+
+          {/* Sub-row: Status filters (All / Active / Inactive / Archived) */}
+          {dispatchFilter !== 'unassigned' && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', paddingTop: 6, borderTop: '1px solid var(--color-border)' }}>
+              <span className="text-caption text-muted" style={{ marginRight: 6 }}>Status:</span>
+              {(
+                [
+                  { key: 'all', label: `All Statuses` },
+                  { key: 'active', label: `Active (${activeCount})` },
+                  { key: 'inactive', label: `Inactive (${inactiveCount})` },
+                  { key: 'archived', label: `Archived (${archivedCount})` },
+                ] as const
+              ).map(tab => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setStatusFilter(tab.key)}
+                  className={`btn btn-xs ${statusFilter === tab.key ? 'btn-secondary' : 'btn-ghost'}`}
+                  style={{ fontSize: 11, padding: '4px 8px' }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -337,10 +412,27 @@ export default function AdminAssignmentsPage() {
                 </thead>
                 <tbody>
                   {filteredAssignments.length ? filteredAssignments.map(a => (
-                    <tr key={a.id} style={{ opacity: a.is_active && !a.is_archived ? 1 : 0.7 }}>
+                    <tr
+                      key={a.id}
+                      style={{
+                        opacity: a.is_active && !a.is_archived ? 1 : 0.8,
+                        background: a.is_unassigned ? '#fffdf7' : undefined,
+                      }}
+                    >
                       <td>
                         <div style={{ fontWeight: 700, fontSize: 14 }}>{a.customer_name}</div>
-                        {a.customer_phone && <div className="text-caption text-muted">{a.customer_phone}</div>}
+                        {a.customer_phone ? (
+                          <div className="text-caption text-muted">{a.customer_phone}</div>
+                        ) : a.customer_email ? (
+                          <div className="text-caption text-muted">{a.customer_email}</div>
+                        ) : (
+                          <div className="text-caption text-muted">No phone provided</div>
+                        )}
+                        {a.is_unassigned && (
+                          <span className="badge badge-neutral" style={{ fontSize: 10, marginTop: 2 }}>
+                            {a.membership_status || 'Active Member'}
+                          </span>
+                        )}
                       </td>
                       <td>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -351,12 +443,22 @@ export default function AdminAssignmentsPage() {
                         </span>
                       </td>
                       <td>
-                        <div style={{ fontWeight: 600, color: '#0f172a' }}>{a.professional_name}</div>
+                        {a.is_unassigned ? (
+                          <span style={{ color: '#d97706', fontWeight: 600, fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <span>⚠️</span> Awaiting Doctor Match
+                          </span>
+                        ) : (
+                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{a.professional_name}</div>
+                        )}
                       </td>
                       <td>
-                        <div style={{ fontWeight: 600, color: '#0d9488', fontSize: 13 }}>
-                          ⏰ {a.assigned_slot || '07:00 AM - 08:00 AM'}
-                        </div>
+                        {a.is_unassigned ? (
+                          <span style={{ color: '#94a3b8', fontSize: 12 }}>Awaiting Slot Dispatch</span>
+                        ) : (
+                          <div style={{ fontWeight: 600, color: '#0d9488', fontSize: 13 }}>
+                            ⏰ {a.assigned_slot || '07:00 AM - 08:00 AM'}
+                          </div>
+                        )}
                       </td>
                       <td>
                         <span className="badge badge-neutral" style={{ fontSize: 11 }}>
@@ -364,7 +466,14 @@ export default function AdminAssignmentsPage() {
                         </span>
                       </td>
                       <td>
-                        {a.is_archived ? (
+                        {a.is_unassigned ? (
+                          <span
+                            className="badge"
+                            style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', fontWeight: 700 }}
+                          >
+                            ⚠️ Unassigned
+                          </span>
+                        ) : a.is_archived ? (
                           <span className="badge badge-neutral">Archived</span>
                         ) : (
                           <span className={`badge badge-${a.is_active ? 'success' : 'warning'}`}>
@@ -374,45 +483,58 @@ export default function AdminAssignmentsPage() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-sm"
-                            onClick={() => setViewingAssignment(a)}
-                          >
-                            View
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-primary btn-sm"
-                            onClick={() => setEditingAssignment({ ...a })}
-                          >
-                            Edit / Reassign
-                          </button>
-                          {a.is_archived ? (
+                          {a.is_unassigned ? (
                             <button
                               type="button"
-                              className="btn btn-outline btn-sm"
-                              onClick={() => restoreAssignment(a)}
+                              className="btn btn-primary btn-sm"
+                              style={{ background: '#0d9488', borderColor: '#0f766e', fontWeight: 600 }}
+                              onClick={() => openAssignmentForCustomer(a.customer_id)}
                             >
-                              Restore
+                              + Assign Doctor
                             </button>
                           ) : (
-                            <button
-                              type="button"
-                              className={`btn btn-sm ${a.is_active ? 'btn-outline' : 'btn-ghost'}`}
-                              onClick={() => toggleActive(a)}
-                            >
-                              {a.is_active ? 'Deactivate' : 'Activate'}
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                onClick={() => setViewingAssignment(a)}
+                              >
+                                View
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-primary btn-sm"
+                                onClick={() => setEditingAssignment({ ...a })}
+                              >
+                                Edit / Reassign
+                              </button>
+                              {a.is_archived ? (
+                                <button
+                                  type="button"
+                                  className="btn btn-outline btn-sm"
+                                  onClick={() => restoreAssignment(a)}
+                                >
+                                  Restore
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className={`btn btn-sm ${a.is_active ? 'btn-outline' : 'btn-ghost'}`}
+                                  onClick={() => toggleActive(a)}
+                                >
+                                  {a.is_active ? 'Deactivate' : 'Activate'}
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                style={{ color: '#dc2626' }}
+                                onClick={() => setDeletingAssignment(a)}
+                              >
+                                Delete
+                              </button>
+                            </>
                           )}
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-sm"
-                            style={{ color: '#dc2626' }}
-                            onClick={() => setDeletingAssignment(a)}
-                          >
-                            Delete
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -420,7 +542,9 @@ export default function AdminAssignmentsPage() {
                     <tr>
                       <td colSpan={7}>
                         <div className="empty-state" style={{ padding: 'var(--space-md)' }}>
-                          No assignments match the current filter.
+                          {dispatchFilter === 'unassigned'
+                            ? 'Great job! All active customers are currently assigned to professionals.'
+                            : 'No assignments match the current filter.'}
                         </div>
                       </td>
                     </tr>
@@ -707,7 +831,21 @@ export default function AdminAssignmentsPage() {
                 )}
 
                 <label className="form-field">
-                  <span className="form-label">5. Authorizing Staff / Care Coordinator *</span>
+                  <span className="form-label">5. Confirmed Appointment Date (Optional — Triggers Immediate Customer WhatsApp Confirmation)</span>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={editingAssignment.appointment_date ?? ''}
+                    onChange={e => setEditingAssignment(p => ({ ...p, appointment_date: e.target.value }))}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                  <span className="text-caption text-muted">
+                    Setting an appointment date confirms the consultation session and sends the WhatsApp appointment details to the customer.
+                  </span>
+                </label>
+
+                <label className="form-field">
+                  <span className="form-label">6. Authorizing Staff / Care Coordinator *</span>
                   <select
                     className="form-input"
                     value={editingAssignment.assigned_by_coordinator_id ?? ''}

@@ -1,8 +1,11 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState } from '@/lib/persistent-store'
+import { buildLoginUrl } from '@/lib/app-url'
 import ProfessionalSidebar from '@/components/professional/ProfessionalSidebar'
 import ClinicalIntakeEditor from '@/components/professional/ClinicalIntakeEditor'
 
@@ -15,40 +18,171 @@ export default async function ProfessionalCustomerDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id: customerId } = await params
+  await loadPersistedState()
+
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
 
-  const { data: professional } = await (supabase as any)
-    .from('professionals')
-    .select('id, full_name, role')
-    .eq('user_id', user.id)
-    .single()
+  const cookieStore = await cookies()
+  const drfSessionRaw = cookieStore.get('drf_session')?.value
+  let sessionUser: any = null
+  if (drfSessionRaw) {
+    try {
+      sessionUser = JSON.parse(decodeURIComponent(drfSessionRaw))
+    } catch {
+      try {
+        sessionUser = JSON.parse(drfSessionRaw)
+      } catch {}
+    }
+  }
 
-  // Fetch full customer details
-  const { data: customer } = await (supabase as any)
-    .from('customers')
-    .select(`
-      id,
-      membership_status,
-      created_at,
-      google_meet_url,
-      user_profiles ( full_name, phone ),
-      customer_profiles (
-        date_of_birth, gender, height_cm, weight_kg, bmi,
-        occupation, work_schedule, sleep_hours, activity_level,
-        exercise_history, stress_level, lifestyle_notes, goals
-      ),
-      food_profiles (
-        dietary_preference, meal_timing, typical_meals, snacks,
-        preferences, dislikes, eating_out_freq, water_intake_liters,
-        restrictions, allergies
-      )
-    `)
-    .eq('id', customerId)
-    .single()
+  const currentUser = user || sessionUser
+  if (!currentUser) {
+    // Preserve return target so doctor is returned post-login
+    redirect(buildLoginUrl(`/professional/customers/${customerId}`))
+  }
 
-  if (!customer) redirect('/professional/customers')
+  const currentUserId = currentUser.id || currentUser.user_id
+  const userRole =
+    (currentUser as any)?.role ||
+    (currentUser as any)?.user_metadata?.role ||
+    sessionUser?.role ||
+    'doctor'
+
+  const isAdminOrStaff = [
+    'admin',
+    'super_admin',
+    'operations_manager',
+    'care_coordinator',
+    'staff',
+  ].includes(userRole)
+
+  // Resolve professional record
+  let professional: any = null
+  if (supabase && user) {
+    try {
+      const { data: proData } = await (supabase as any)
+        .from('professionals')
+        .select('id, full_name, role')
+        .eq('user_id', user.id)
+        .single()
+      if (proData) professional = proData
+    } catch {}
+  }
+  if (!professional) {
+    professional =
+      (mockDb.state.professionals || []).find(
+        (p: any) => p.user_id === currentUserId || p.id === currentUserId
+      ) || null
+  }
+
+  // Enforce role-based authorization: Only assigned doctors, assigned trainers, or admins/staff can view profile
+  if (!isAdminOrStaff) {
+    if (!professional) {
+      redirect('/professional/customers?error=unauthorized')
+    }
+
+    const proId = professional.id
+    const assignments: any[] = mockDb.state.professional_assignments || []
+    const isDirectlyAssigned = assignments.some(
+      (a: any) =>
+        a.customer_id === customerId &&
+        (a.professional_id === proId || a.professional_id === currentUserId) &&
+        a.is_active !== false &&
+        !a.is_archived
+    )
+
+    const appointments: any[] = mockDb.state.appointments || []
+    const hasAppointment = appointments.some(
+      (a: any) =>
+        a.customer_id === customerId &&
+        (a.professional_id === proId || a.professional_id === currentUserId)
+    )
+
+    const trainingSessions: any[] = mockDb.state.training_sessions || []
+    const hasTrainingSession = trainingSessions.some(
+      (ts: any) =>
+        ts.customer_id === customerId &&
+        (ts.trainer_id === proId || ts.trainer_id === currentUserId)
+    )
+
+    if (!isDirectlyAssigned && !hasAppointment && !hasTrainingSession) {
+      redirect('/professional/customers?error=unauthorized')
+    }
+  }
+
+  // Fetch full customer details: Supabase primary with fallback to persistent store / mockDb
+  let customer: any = null
+  try {
+    const { data: dbCustomer } = await (supabase as any)
+      .from('customers')
+      .select(`
+        id,
+        membership_status,
+        created_at,
+        google_meet_url,
+        zoho_meeting_url,
+        user_profiles ( full_name, phone ),
+        customer_profiles (
+          date_of_birth, gender, height_cm, weight_kg, bmi,
+          occupation, work_schedule, sleep_hours, activity_level,
+          exercise_history, stress_level, lifestyle_notes, goals
+        ),
+        food_profiles (
+          dietary_preference, meal_timing, typical_meals, snacks,
+          preferences, dislikes, eating_out_freq, water_intake_liters,
+          restrictions, allergies
+        )
+      `)
+      .eq('id', customerId)
+      .single()
+    if (dbCustomer) customer = dbCustomer
+  } catch {}
+
+  if (!customer) {
+    const mockCust = (mockDb.state.customers || []).find((c: any) => c.id === customerId)
+    if (mockCust) {
+      const userProfile = (mockDb.state.user_profiles || []).find(
+        (up: any) => up.id === mockCust.user_id
+      ) || { full_name: mockCust.full_name || 'Customer', phone: mockCust.phone || '' }
+
+      const custProfile = (mockDb.state.customer_profiles || []).find(
+        (cp: any) => cp.customer_id === customerId
+      ) || {
+        date_of_birth: '1992-05-14',
+        gender: 'female',
+        height_cm: 165,
+        weight_kg: 68,
+        bmi: 24.9,
+        stress_level: 6,
+        sleep_hours: 7,
+        goals: 'Overall holistic wellness and weight management',
+      }
+
+      const foodProfile = (mockDb.state.food_profiles || []).find(
+        (fp: any) => fp.customer_id === customerId
+      ) || {
+        dietary_preference: 'vegetarian',
+        water_intake_liters: 2.5,
+      }
+
+      customer = {
+        id: mockCust.id,
+        membership_status: mockCust.membership_status || 'active',
+        created_at: mockCust.created_at || new Date().toISOString(),
+        google_meet_url: mockCust.google_meet_url,
+        zoho_meeting_url:
+          mockCust.zoho_meeting_url ||
+          (mockCust as any)?.meeting_url ||
+          'https://meet.zoho.com/fitveda-priya',
+        user_profiles: userProfile,
+        customer_profiles: custProfile,
+        food_profiles: foodProfile,
+      }
+    }
+  }
+
+  if (!customer) redirect('/professional/customers?error=not_found')
 
   const profile = customer.customer_profiles?.[0] || customer.customer_profiles || {}
   const food = customer.food_profiles?.[0] || customer.food_profiles || {}

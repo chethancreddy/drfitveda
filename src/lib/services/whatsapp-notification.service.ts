@@ -12,12 +12,20 @@ import { mockDb, MOCK_USERS } from '../mock-db'
 import { loadPersistedState, savePersistedState } from '../persistent-store'
 import { msg91WhatsAppService } from './msg91-whatsapp.service'
 import { normalizeIdentifier } from './otp-security'
+import {
+  getAppBaseUrl,
+  buildProfessionalCustomerProfileUrl,
+  buildCustomerAppointmentUrl,
+} from '@/lib/app-url'
 
 export type WhatsAppNotificationType =
   | 'customer_session_reminder'
   | 'trainer_session_reminder'
   | 'doctor_customer_assigned'
   | 'trainer_customer_assigned'
+  | 'customer_doctor_assigned'
+  | 'customer_appointment_updated'
+  | 'customer_appointment_cancelled'
 
 export type WhatsAppDeliveryStatus =
   | 'Pending'
@@ -96,10 +104,30 @@ export const WHATSAPP_TEMPLATES: Record<
     category: 'UTILITY',
     variableCount: 7,
   },
+  customer_doctor_assigned: {
+    name: 'drfitveda_customer_doctor_assigned',
+    templateId: '1641564591042581',
+    msg91TemplateId: 591413,
+    category: 'UTILITY',
+    variableCount: 5,
+  },
+  customer_appointment_updated: {
+    name: 'drfitveda_customer_appointment_updated',
+    templateId: '1855077042334467',
+    msg91TemplateId: 591025,
+    category: 'UTILITY',
+    variableCount: 5,
+  },
+  customer_appointment_cancelled: {
+    name: 'drfitveda_customer_appointment_cancelled',
+    templateId: '1855077042334468',
+    msg91TemplateId: 591026,
+    category: 'UTILITY',
+    variableCount: 4,
+  },
 }
 
 const DEFAULT_TIMEZONE = 'Asia/Kolkata'
-const BASE_APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://drfitveda.com'
 
 /**
  * Formats an ISO timestamp into readable Date and Time strings in the target IANA timezone.
@@ -161,6 +189,18 @@ export function cleanDoctorDisplayName(fullName: string): string {
     .trim()
     .replace(/^dr\.?\s+/i, '')
     .trim() || 'Doctor'
+}
+
+/**
+ * Ensures the doctor's name is prefixed with "Dr." exactly once.
+ * E.g., "Priya Sharma" -> "Dr. Priya Sharma", "Dr. Priya Sharma" -> "Dr. Priya Sharma"
+ */
+export function formatDoctorDisplayNameWithTitle(fullName: string): string {
+  const trimmed = String(fullName || 'Doctor').trim()
+  if (/^dr\.?\s+/i.test(trimmed)) {
+    return trimmed.replace(/^dr\.?\s+/i, 'Dr. ')
+  }
+  return `Dr. ${trimmed}`
 }
 
 /**
@@ -258,6 +298,67 @@ export function renderWhatsAppMessagePreview(
         `Team DrFitVeda`,
       ].join('\n')
     }
+
+    case 'customer_doctor_assigned': {
+      const [customerName, doctorName, appointmentDate, appointmentTime, consultationType] = vars
+      return [
+        `Hello ${customerName},`,
+        ``,
+        `Good news! Your doctor has been successfully assigned on DrFitVeda.`,
+        ``,
+        `**Your Appointment Details:**`,
+        ``,
+        `Doctor Name: ${doctorName}`,
+        ``,
+        `Appointment Date: ${appointmentDate}`,
+        ``,
+        `Appointment Time: ${appointmentTime}`,
+        ``,
+        `Consultation Type: ${consultationType}`,
+        ``,
+        `Your appointment is confirmed.`,
+        ``,
+        `Please log in to your DrFitVeda account to view your appointment details and access further instructions.`,
+        ``,
+        `Thank you,`,
+        `Team DrFitVeda`,
+      ].join('\n')
+    }
+
+    case 'customer_appointment_updated': {
+      const [customerName, doctorName, appointmentDate, appointmentTime, consultationType] = vars
+      return [
+        `Hello ${customerName},`,
+        ``,
+        `Your DrFitVeda appointment has been rescheduled/updated.`,
+        ``,
+        `**Updated Appointment Details:**`,
+        ``,
+        `- Doctor Name: Dr. ${doctorName}`,
+        `- Appointment Date: ${appointmentDate}`,
+        `- Appointment Time: ${appointmentTime}`,
+        `- Consultation Type: ${consultationType}`,
+        ``,
+        `Please log in to your DrFitVeda account to review your appointment details.`,
+        ``,
+        `Thank you,`,
+        `Team DrFitVeda`,
+      ].join('\n')
+    }
+
+    case 'customer_appointment_cancelled': {
+      const [customerName, doctorName, appointmentDate, appointmentTime] = vars
+      return [
+        `Hello ${customerName},`,
+        ``,
+        `Your DrFitVeda appointment with Dr. ${doctorName} scheduled for ${appointmentDate} at ${appointmentTime} has been cancelled.`,
+        ``,
+        `If you have any questions or would like to reschedule, please contact support or log in to your DrFitVeda dashboard.`,
+        ``,
+        `Thank you,`,
+        `Team DrFitVeda`,
+      ].join('\n')
+    }
   }
 }
 
@@ -277,20 +378,75 @@ function getNotificationsArray(): WhatsAppNotificationRecord[] {
   return mockDb.state.whatsapp_notifications
 }
 
-function resolveCustomerDetails(customerId: string): {
+async function resolveCustomerDetails(customerId: string): Promise<{
   customer: any | null
   userProfile: any | null
   fullName: string
   phone: string
   meetingLink: string
   timezone: string
-} {
+}> {
   const customers: any[] = mockDb.state.customers || []
   const userProfiles: any[] = mockDb.state.user_profiles || []
-  const customer = customers.find((c: any) => c.id === customerId) || null
-  const userProfile = customer
+  let customer = customers.find((c: any) => c.id === customerId) || null
+  let userProfile = customer
     ? userProfiles.find((u: any) => u.id === customer.user_id) || null
     : null
+
+  // If customer or userProfile or phone is missing, query Supabase for production records
+  if (!customer || !userProfile || !userProfile.phone) {
+    try {
+      const { createServerSupabaseClient } = await import('@/lib/supabase/server')
+      const supabase = await createServerSupabaseClient()
+      const { data: dbCust } = await (supabase as any)
+        .from('customers')
+        .select(`
+          id,
+          user_id,
+          membership_status,
+          is_active,
+          google_meet_url,
+          zoho_meeting_url,
+          user_profiles ( id, full_name, phone, timezone )
+        `)
+        .eq('id', customerId)
+        .single()
+
+      if (dbCust) {
+        const up = dbCust.user_profiles || {}
+        customer = {
+          id: dbCust.id,
+          user_id: dbCust.user_id,
+          full_name: up.full_name || 'Customer',
+          phone: up.phone || '',
+          membership_status: dbCust.membership_status || 'active',
+          is_active: dbCust.is_active !== false,
+          timezone: up.timezone || DEFAULT_TIMEZONE,
+          google_meet_url: dbCust.google_meet_url,
+          zoho_meeting_url: dbCust.zoho_meeting_url,
+        }
+        userProfile = {
+          id: dbCust.user_id,
+          full_name: up.full_name || 'Customer',
+          phone: up.phone || '',
+          timezone: up.timezone || DEFAULT_TIMEZONE,
+        }
+
+        const cIdx = customers.findIndex((c: any) => c.id === customerId)
+        if (cIdx >= 0) {
+          customers[cIdx] = { ...customers[cIdx], ...customer }
+        } else {
+          customers.push(customer)
+        }
+        const uIdx = userProfiles.findIndex((u: any) => u.id === customer.user_id)
+        if (uIdx >= 0) {
+          userProfiles[uIdx] = { ...userProfiles[uIdx], ...userProfile }
+        } else {
+          userProfiles.push(userProfile)
+        }
+      }
+    } catch {}
+  }
 
   const fullName = userProfile?.full_name || customer?.full_name || 'Customer'
   const phone = userProfile?.phone || customer?.phone || ''
@@ -304,7 +460,7 @@ function resolveCustomerDetails(customerId: string): {
   return { customer, userProfile, fullName, phone, meetingLink, timezone }
 }
 
-function resolveProfessionalDetails(professionalId: string): {
+async function resolveProfessionalDetails(professionalId: string): Promise<{
   professional: any | null
   userProfile: any | null
   userId: string
@@ -312,14 +468,61 @@ function resolveProfessionalDetails(professionalId: string): {
   role: string
   phone: string
   timezone: string
-} {
+}> {
   const professionals: any[] = mockDb.state.professionals || []
   const userProfiles: any[] = mockDb.state.user_profiles || []
-  const professional =
+  let professional =
     professionals.find((p: any) => p.id === professionalId || p.user_id === professionalId) || null
-  const userProfile = professional
+  let userProfile = professional
     ? userProfiles.find((u: any) => u.id === professional.user_id) || null
     : null
+
+  if (!professional || !professional.phone) {
+    try {
+      const { createServerSupabaseClient } = await import('@/lib/supabase/server')
+      const supabase = await createServerSupabaseClient()
+      const { data: dbPro } = await (supabase as any)
+        .from('professionals')
+        .select(`
+          id,
+          user_id,
+          full_name,
+          role,
+          phone,
+          is_active,
+          timezone,
+          user_profiles ( id, full_name, phone, timezone )
+        `)
+        .eq('id', professionalId)
+        .single()
+
+      if (dbPro) {
+        const up = dbPro.user_profiles || {}
+        professional = {
+          id: dbPro.id,
+          user_id: dbPro.user_id,
+          full_name: dbPro.full_name || up.full_name || 'Specialist',
+          role: dbPro.role || 'doctor',
+          phone: dbPro.phone || up.phone || '',
+          is_active: dbPro.is_active !== false,
+          timezone: dbPro.timezone || up.timezone || DEFAULT_TIMEZONE,
+        }
+        userProfile = {
+          id: dbPro.user_id,
+          full_name: professional.full_name,
+          phone: professional.phone,
+          role: professional.role,
+          timezone: professional.timezone,
+        }
+        const pIdx = professionals.findIndex((p: any) => p.id === professionalId)
+        if (pIdx >= 0) {
+          professionals[pIdx] = { ...professionals[pIdx], ...professional }
+        } else {
+          professionals.push(professional)
+        }
+      }
+    } catch {}
+  }
 
   const userId = professional?.user_id || userProfile?.id || professionalId
   const fullName = professional?.full_name || userProfile?.full_name || 'Specialist'
@@ -461,19 +664,21 @@ export async function dispatchWhatsAppNotificationRecord(
 
 /**
  * Triggers immediate Doctor or Trainer WhatsApp notifications when a customer is onboarded or assigned/reassigned.
+ * In addition, whenever a Doctor is assigned, ALSO dispatches the Customer WhatsApp confirmation notification.
  * Must be called AFTER the database assignment save succeeds.
  */
 export async function triggerCustomerAssignmentNotifications(params: {
   customerId: string
   professionalId: string
-  role: string
-  assignmentId: string
+  role?: string
+  assignmentId?: string
   assignedSlot?: string
   previousProfessionalId?: string | null
   timezone?: string
   dispatchImmediately?: boolean
 }): Promise<{
   created: WhatsAppNotificationRecord | null
+  customerNotification?: WhatsAppNotificationRecord | null
   cancelledCount: number
   skippedDuplicate: boolean
 }> {
@@ -481,14 +686,14 @@ export async function triggerCustomerAssignmentNotifications(params: {
   const notifications = getNotificationsArray()
 
   const { customer, fullName: customerName, phone: customerPhone, timezone: custTz } =
-    resolveCustomerDetails(params.customerId)
+    await resolveCustomerDetails(params.customerId)
 
   // Requirement: Do not send notification if onboarding is incomplete or customer is missing/inactive
   if (!customer || customer.is_active === false || !customerName || customerName === 'Customer') {
     return { created: null, cancelledCount: 0, skippedDuplicate: false }
   }
 
-  const proInfo = resolveProfessionalDetails(params.professionalId)
+  const proInfo = await resolveProfessionalDetails(params.professionalId)
   if (!proInfo.professional || proInfo.professional.is_active === false) {
     return { created: null, cancelledCount: 0, skippedDuplicate: false }
   }
@@ -510,7 +715,7 @@ export async function triggerCustomerAssignmentNotifications(params: {
   // If reassigned from a previous doctor/trainer, cancel any unsent Pending notifications for the old professional
   // and update/cancel any Pending session reminders for the old trainer on this customer's upcoming sessions.
   if (params.previousProfessionalId && params.previousProfessionalId !== params.professionalId) {
-    const oldProInfo = resolveProfessionalDetails(params.previousProfessionalId)
+    const oldProInfo = await resolveProfessionalDetails(params.previousProfessionalId)
     for (const n of notifications) {
       if (
         n.customer_id === params.customerId &&
@@ -519,6 +724,19 @@ export async function triggerCustomerAssignmentNotifications(params: {
       ) {
         n.delivery_status = 'Cancelled'
         n.error_details = `Cancelled due to customer reassignment to ${proInfo.fullName}.`
+        n.updated_at = new Date().toISOString()
+        cancelledCount++
+      }
+
+      // Also cancel any unsent customer confirmation for the old doctor
+      if (
+        isDoc &&
+        n.customer_id === params.customerId &&
+        n.notification_type === 'customer_doctor_assigned' &&
+        n.delivery_status === 'Pending'
+      ) {
+        n.delivery_status = 'Cancelled'
+        n.error_details = `Superseded by doctor reassignment to Dr. ${cleanDoctorDisplayName(proInfo.fullName)}.`
         n.updated_at = new Date().toISOString()
         cancelledCount++
       }
@@ -558,7 +776,7 @@ export async function triggerCustomerAssignmentNotifications(params: {
 
   // Idempotency key: prevent duplicate assignment notifications for the same (customer_id, professional_user_id, notification_type)
   // unless a reassignment happened after the previous one was superseded.
-  const idempotencyKey = `${notificationType}:${params.customerId}:${proInfo.userId}:${params.assignmentId}`
+  const idempotencyKey = `${notificationType}:${params.customerId}:${proInfo.userId}:${params.assignmentId || 'direct'}`
   const existingSameAssignment = notifications.find(
     n =>
       n.idempotency_key === idempotencyKey ||
@@ -583,6 +801,8 @@ export async function triggerCustomerAssignmentNotifications(params: {
   let sessionDate = assignmentDate
   let sessionTime = params.assignedSlot || '07:00 AM - 08:00 AM IST'
   let sessionScheduledAt: string | null = null
+  let upcomingApptRef: any = null
+  let consultationType = 'Online Video (Zoho Meeting)'
 
   if (isDoc) {
     const appts: any[] = mockDb.state.appointments || []
@@ -591,10 +811,15 @@ export async function triggerCustomerAssignmentNotifications(params: {
         a =>
           a.customer_id === params.customerId &&
           (a.professional_id === params.professionalId || a.professional_id === proInfo.professional?.id) &&
-          a.status === 'scheduled' &&
+          (a.status === 'scheduled' || a.status === 'confirmed') &&
           a.scheduled_at
       )
       .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())[0]
+
+    upcomingApptRef = upcomingAppt
+    if (upcomingAppt?.consultation_type || upcomingAppt?.service_name) {
+      consultationType = upcomingAppt.consultation_type || upcomingAppt.service_name
+    }
 
     if (upcomingAppt?.scheduled_at) {
       sessionScheduledAt = upcomingAppt.scheduled_at
@@ -611,7 +836,7 @@ export async function triggerCustomerAssignmentNotifications(params: {
         s =>
           s.customer_id === params.customerId &&
           (s.trainer_id === params.professionalId || s.trainer_id === proInfo.professional?.id) &&
-          s.status === 'scheduled' &&
+          (s.status === 'scheduled' || s.status === 'confirmed') &&
           s.scheduled_at
       )
       .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())[0]
@@ -626,7 +851,8 @@ export async function triggerCustomerAssignmentNotifications(params: {
     }
   }
 
-  const secureProfileLink = `${BASE_APP_URL}/professional/customers/${params.customerId}`
+  // Authoritative production profile URL (never ephemeral preview hashes)
+  const secureProfileLink = buildProfessionalCustomerProfileUrl(params.customerId)
   const displayCustomerPhone = customerPhone || 'Not Provided'
 
   const templateVars: string[] = isDoc
@@ -661,8 +887,8 @@ export async function triggerCustomerAssignmentNotifications(params: {
     recipient_phone: proInfo.phone || '',
     customer_id: params.customerId,
     customer_name: customerName,
-    session_id: null,
-    assignment_id: params.assignmentId,
+    session_id: upcomingApptRef?.id || null,
+    assignment_id: params.assignmentId || null,
     scheduled_for: nowIso,
     session_scheduled_at: sessionScheduledAt,
     sent_at: null,
@@ -683,12 +909,218 @@ export async function triggerCustomerAssignmentNotifications(params: {
 
   notifications.unshift(record)
 
+  // ------------------------------------------------------------------------
+  // CUSTOMER NOTIFICATION: Dispatched simultaneously when a doctor is assigned!
+  // Uses dedicated template: drfitveda_customer_doctor_assigned
+  // Variables: {{1}} Customer Name, {{2}} Doctor Name, {{3}} Appt Date, {{4}} Appt Time, {{5}} Consult Type
+  // ------------------------------------------------------------------------
+  let customerNotificationRecord: WhatsAppNotificationRecord | null = null
+  if (isDoc) {
+    const custUserId = customer.user_id || customer.id || params.customerId
+    const custIdempotencyKey = `customer_doctor_assigned:${params.customerId}:${proInfo.userId}:${params.assignmentId || 'direct'}`
+
+    const doctorDisplayWithTitle = formatDoctorDisplayNameWithTitle(proInfo.fullName)
+    const custTemplateVars = [
+      customerName,
+      doctorDisplayWithTitle,
+      sessionDate,
+      sessionTime,
+      consultationType,
+    ]
+
+    const cleanDigits = String(customerPhone || '').replace(/\D/g, '')
+    const hasValidPhone = cleanDigits.length >= 10
+
+    customerNotificationRecord = {
+      id: `wn-cust-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      idempotency_key: custIdempotencyKey,
+      notification_type: 'customer_doctor_assigned',
+      template_name: WHATSAPP_TEMPLATES.customer_doctor_assigned.name,
+      recipient_user_id: custUserId,
+      recipient_name: customerName,
+      recipient_role: 'customer',
+      recipient_phone: customerPhone || '',
+      customer_id: params.customerId,
+      customer_name: customerName,
+      session_id: upcomingApptRef?.id || null,
+      assignment_id: params.assignmentId || null,
+      scheduled_for: nowIso,
+      session_scheduled_at: sessionScheduledAt,
+      sent_at: null,
+      delivered_at: null,
+      provider_message_id: null,
+      delivery_status: hasValidPhone ? 'Pending' : 'Failed',
+      retry_count: 0,
+      max_retries: 3,
+      next_retry_at: null,
+      permanent_failure: !hasValidPhone,
+      error_details: hasValidPhone
+        ? null
+        : `Customer registered WhatsApp phone number is missing or invalid in profile (${customerPhone || 'empty'}).`,
+      message_preview: renderWhatsAppMessagePreview('customer_doctor_assigned', custTemplateVars),
+      template_variables: custTemplateVars,
+      timezone: tz,
+      created_at: nowIso,
+      updated_at: nowIso,
+    }
+
+    notifications.unshift(customerNotificationRecord)
+
+    if (params.dispatchImmediately !== false && hasValidPhone) {
+      await dispatchWhatsAppNotificationRecord(customerNotificationRecord, { persistImmediately: false })
+    }
+  }
+
   if (params.dispatchImmediately !== false) {
     await dispatchWhatsAppNotificationRecord(record, { persistImmediately: false })
   }
 
   await savePersistedState(['whatsapp_notifications', 'training_sessions', 'notifications'])
-  return { created: record, cancelledCount, skippedDuplicate: false }
+  return {
+    created: record,
+    customerNotification: customerNotificationRecord,
+    cancelledCount,
+    skippedDuplicate: false,
+  }
+}
+
+/**
+ * Triggers automated WhatsApp notification to customer when their consultation appointment
+ * is rescheduled/updated or cancelled.
+ */
+export async function syncCustomerAppointmentStatusNotification(
+  appointment: any,
+  action: 'updated' | 'cancelled',
+  options?: { persist?: boolean; timezone?: string; dispatchImmediately?: boolean }
+): Promise<WhatsAppNotificationRecord | null> {
+  if (!appointment || !appointment.id) return null
+  if (options?.persist !== false) {
+    await loadPersistedState()
+  }
+
+  const notifications = getNotificationsArray()
+  const customerId = appointment.customer_id
+  const professionalId = appointment.professional_id
+  if (!customerId || !professionalId) return null
+
+  const custInfo = await resolveCustomerDetails(customerId)
+  if (!custInfo.customer || !custInfo.phone) {
+    return null
+  }
+
+  const proInfo = await resolveProfessionalDetails(professionalId)
+  const tz = options?.timezone || custInfo.timezone || DEFAULT_TIMEZONE
+  const nowIso = new Date().toISOString()
+  const formatted = formatDateTimeInTimeZone(appointment.scheduled_at, tz)
+  const doctorName = cleanDoctorDisplayName(proInfo.fullName)
+  const consultationType =
+    appointment.consultation_type ||
+    appointment.service_name ||
+    'Online Video (Zoho Meeting)'
+
+  if (action === 'updated') {
+    const templateVars = [
+      custInfo.fullName,
+      doctorName,
+      formatted.dateStr,
+      formatted.timeStr,
+      consultationType,
+    ]
+    const idempotencyKey = `customer_appointment_updated:${appointment.id}:${appointment.scheduled_at || nowIso}`
+
+    const existing = notifications.find(n => n.idempotency_key === idempotencyKey)
+    if (existing) return existing
+
+    const record: WhatsAppNotificationRecord = {
+      id: `wn-upd-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      idempotency_key: idempotencyKey,
+      notification_type: 'customer_appointment_updated',
+      template_name: WHATSAPP_TEMPLATES.customer_appointment_updated.name,
+      recipient_user_id: custInfo.userProfile?.id || custInfo.customer.user_id || customerId,
+      recipient_name: custInfo.fullName,
+      recipient_role: 'customer',
+      recipient_phone: custInfo.phone,
+      customer_id: customerId,
+      customer_name: custInfo.fullName,
+      session_id: appointment.id,
+      assignment_id: null,
+      scheduled_for: nowIso,
+      session_scheduled_at: appointment.scheduled_at,
+      sent_at: null,
+      delivered_at: null,
+      provider_message_id: null,
+      delivery_status: 'Pending',
+      retry_count: 0,
+      max_retries: 3,
+      next_retry_at: null,
+      permanent_failure: false,
+      error_details: null,
+      message_preview: renderWhatsAppMessagePreview('customer_appointment_updated', templateVars),
+      template_variables: templateVars,
+      timezone: tz,
+      created_at: nowIso,
+      updated_at: nowIso,
+    }
+
+    notifications.unshift(record)
+    if (options?.dispatchImmediately !== false) {
+      await dispatchWhatsAppNotificationRecord(record, { persistImmediately: false })
+    }
+    if (options?.persist !== false) {
+      await savePersistedState(['whatsapp_notifications', 'notifications'])
+    }
+    return record
+  } else if (action === 'cancelled') {
+    const templateVars = [
+      custInfo.fullName,
+      doctorName,
+      formatted.dateStr,
+      formatted.timeStr,
+    ]
+    const idempotencyKey = `customer_appointment_cancelled:${appointment.id}:${Date.now()}`
+
+    const record: WhatsAppNotificationRecord = {
+      id: `wn-can-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      idempotency_key: idempotencyKey,
+      notification_type: 'customer_appointment_cancelled',
+      template_name: WHATSAPP_TEMPLATES.customer_appointment_cancelled.name,
+      recipient_user_id: custInfo.userProfile?.id || custInfo.customer.user_id || customerId,
+      recipient_name: custInfo.fullName,
+      recipient_role: 'customer',
+      recipient_phone: custInfo.phone,
+      customer_id: customerId,
+      customer_name: custInfo.fullName,
+      session_id: appointment.id,
+      assignment_id: null,
+      scheduled_for: nowIso,
+      session_scheduled_at: appointment.scheduled_at,
+      sent_at: null,
+      delivered_at: null,
+      provider_message_id: null,
+      delivery_status: 'Pending',
+      retry_count: 0,
+      max_retries: 3,
+      next_retry_at: null,
+      permanent_failure: false,
+      error_details: null,
+      message_preview: renderWhatsAppMessagePreview('customer_appointment_cancelled', templateVars),
+      template_variables: templateVars,
+      timezone: tz,
+      created_at: nowIso,
+      updated_at: nowIso,
+    }
+
+    notifications.unshift(record)
+    if (options?.dispatchImmediately !== false) {
+      await dispatchWhatsAppNotificationRecord(record, { persistImmediately: false })
+    }
+    if (options?.persist !== false) {
+      await savePersistedState(['whatsapp_notifications', 'notifications'])
+    }
+    return record
+  }
+
+  return null
 }
 
 /**
@@ -738,8 +1170,8 @@ export async function syncSessionRemindersForAppointment(
   const scheduledAtIso = new Date(scheduledAtMs).toISOString()
   const reminderTimeIso = new Date(scheduledAtMs - 15 * 60 * 1000).toISOString()
 
-  const custInfo = resolveCustomerDetails(appointment.customer_id)
-  const proInfo = resolveProfessionalDetails(appointment.professional_id)
+  const custInfo = await resolveCustomerDetails(appointment.customer_id)
+  const proInfo = await resolveProfessionalDetails(appointment.professional_id)
   const tz = options?.timezone || custInfo.timezone || proInfo.timezone || DEFAULT_TIMEZONE
 
   // Cancel any Pending reminders for this session whose scheduled_at or recipient changed (rescheduled or reassigned)
@@ -927,7 +1359,7 @@ export async function syncSessionRemindersForTrainingSession(
   const scheduledAtIso = new Date(scheduledAtMs).toISOString()
   const reminderTimeIso = new Date(scheduledAtMs - 15 * 60 * 1000).toISOString()
 
-  const custInfo = resolveCustomerDetails(session.customer_id)
+  const custInfo = await resolveCustomerDetails(session.customer_id)
 
   // Determine the currently assigned active trainer for this customer (or session.trainer_id)
   const activeTrainerAssignment = (mockDb.state.professional_assignments || []).find(
@@ -937,7 +1369,7 @@ export async function syncSessionRemindersForTrainingSession(
       isTrainerLikeRole(pa.role)
   )
   const effectiveTrainerId = activeTrainerAssignment?.professional_id || session.trainer_id
-  const trnInfo = resolveProfessionalDetails(effectiveTrainerId)
+  const trnInfo = await resolveProfessionalDetails(effectiveTrainerId)
   const tz = options?.timezone || custInfo.timezone || trnInfo.timezone || DEFAULT_TIMEZONE
 
   // Cancel any Pending reminders for this training session whose time or trainer changed
@@ -1317,10 +1749,10 @@ export async function adminRetryFailedNotification(notificationId: string): Prom
 
   // Reset permanent_failure if admin fixed the phone number in profile
   if (record.recipient_role === 'customer') {
-    const custInfo = resolveCustomerDetails(record.customer_id)
+    const custInfo = await resolveCustomerDetails(record.customer_id)
     if (custInfo.phone) record.recipient_phone = custInfo.phone
   } else {
-    const proInfo = resolveProfessionalDetails(record.recipient_user_id)
+    const proInfo = await resolveProfessionalDetails(record.recipient_user_id)
     if (proInfo.phone) record.recipient_phone = proInfo.phone
   }
 

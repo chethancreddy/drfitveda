@@ -37,14 +37,35 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
-  // Detect ?portal=professional or ?role=doctor|trainer from URL
+  // Safe internal redirect resolver respecting post-login return targets
+  const getSafeRedirectUrl = (defaultUrl: string) => {
+    if (typeof window === 'undefined') return defaultUrl
+    const params = new URLSearchParams(window.location.search)
+    const redirectParam = params.get('redirect')
+    if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
+      return redirectParam
+    }
+    return defaultUrl
+  }
+
+  // Detect ?portal=professional or ?role=doctor|trainer or ?redirect=/professional/... from URL
   useEffect(() => {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
     const portal = (params.get('portal') || params.get('role') || '').toLowerCase()
-    if (portal === 'professional' || portal === 'doctor' || portal === 'trainer') {
+    const redirectTarget = params.get('redirect') || ''
+    if (
+      portal === 'professional' ||
+      portal === 'doctor' ||
+      portal === 'trainer' ||
+      redirectTarget.startsWith('/professional')
+    ) {
       setPortalMode('professional')
-    } else if (portal === 'admin' || portal === 'staff') {
+    } else if (
+      portal === 'admin' ||
+      portal === 'staff' ||
+      redirectTarget.startsWith('/admin')
+    ) {
       setPortalMode('admin')
     }
   }, [])
@@ -189,7 +210,7 @@ export default function LoginPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Invalid User ID or Password')
 
-      window.location.href = data.redirectTo || '/customer'
+      window.location.href = getSafeRedirectUrl(data.redirectTo || '/customer')
     } catch (err: any) {
       setError(err.message || 'Login failed')
       setLoading(false)
@@ -307,7 +328,7 @@ export default function LoginPage() {
       if (!res.ok) throw new Error(data.error || 'Invalid verification code.')
 
       setSuccessMsg('WhatsApp verification successful! Accessing your portal…')
-      window.location.href = data.redirectTo || '/customer'
+      window.location.href = getSafeRedirectUrl(data.redirectTo || '/customer')
     } catch (err: any) {
       setError(err.message || 'WhatsApp OTP verification failed')
       setLoading(false)
@@ -414,7 +435,7 @@ export default function LoginPage() {
       if (!res.ok) throw new Error(data.error || 'Invalid verification code.')
 
       setSuccessMsg('Email verification successful! Accessing your portal…')
-      window.location.href = data.redirectTo || '/customer'
+      window.location.href = getSafeRedirectUrl(data.redirectTo || '/customer')
     } catch (err: any) {
       setError(err.message || 'Email OTP verification failed')
       setLoading(false)

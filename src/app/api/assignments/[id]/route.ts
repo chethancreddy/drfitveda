@@ -74,6 +74,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     await savePersistedState('professional_assignments')
 
     let whatsappNotification = null
+    let customerNotification = null
     if (
       assignments[idx].is_active !== false &&
       !assignments[idx].is_archived &&
@@ -89,6 +90,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
           previousProfessionalId !== assignments[idx].professional_id ? previousProfessionalId : null,
       })
       whatsappNotification = notifRes.created
+      customerNotification = notifRes.customerNotification
     } else if (assignments[idx].is_active === false && Array.isArray(mockDb.state.whatsapp_notifications)) {
       for (const n of mockDb.state.whatsapp_notifications) {
         if (n.assignment_id === id && n.delivery_status === 'Pending') {
@@ -128,7 +130,12 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
       actionType,
     })
 
-    return NextResponse.json({ assignment: assignments[idx], whatsappNotification, success: true })
+    return NextResponse.json({
+      assignment: assignments[idx],
+      whatsappNotification,
+      customerNotification,
+      success: true,
+    })
   } catch {
     return NextResponse.json({ error: 'Failed to update assignment' }, { status: 400 })
   }
