@@ -62,6 +62,11 @@ export default function HomePage() {
                   border:'1px solid rgba(255,255,255,0.16)',
                   borderRadius:12,
                 }}>
+                  <span style={{fontSize:12.5,color:'rgba(255,255,255,0.75)'}}>New here?</span>
+                  <Link href="/register" style={{fontSize:13,fontWeight:700,color:'#34d399',textDecoration:'underline'}}>
+                    Sign Up →
+                  </Link>
+                  <span style={{color:'rgba(255,255,255,0.3)'}}>•</span>
                   <span style={{fontSize:12.5,color:'rgba(255,255,255,0.75)'}}>Already registered?</span>
                   <Link href="/login" style={{fontSize:13,fontWeight:700,color:'var(--color-tertiary)',textDecoration:'underline'}}>
                     Patient Sign In →

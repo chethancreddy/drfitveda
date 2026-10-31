@@ -215,6 +215,28 @@ export default function PublicHeader({ active }: { active?: string }) {
                   </span>
                 </Link>
               </div>
+
+              <Link
+                href="/register"
+                onClick={() => setMenuOpen(false)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  padding: '9px 12px',
+                  borderRadius: 10,
+                  background: '#ecfdf5',
+                  border: '1px solid #a7f3d0',
+                  color: '#047857',
+                  fontWeight: 700,
+                  fontSize: 13,
+                  textDecoration: 'none',
+                  marginTop: 10,
+                }}
+              >
+                <span>✨</span> New Patient? Create Account / Sign Up →
+              </Link>
             </div>
 
             <div className="divider" style={{ margin: '12px 0' }} />

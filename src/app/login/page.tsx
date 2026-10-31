@@ -54,6 +54,10 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search)
     const portal = (params.get('portal') || params.get('role') || '').toLowerCase()
     const redirectTarget = params.get('redirect') || ''
+    const registered = params.get('registered')
+    if (registered === 'true') {
+      setSuccessMsg('Account registered successfully! Please sign in using your WhatsApp number or Email.')
+    }
     if (
       portal === 'professional' ||
       portal === 'doctor' ||
@@ -1457,6 +1461,32 @@ export default function LoginPage() {
                 {loading ? 'Signing In…' : 'Sign In with Password'}
               </button>
             </form>
+          )}
+
+          {/* New Patient Registration Link */}
+          {portalMode === 'customer' && (
+            <div
+              style={{
+                marginTop: 18,
+                paddingTop: 14,
+                borderTop: '1px solid #f1f5f9',
+                textAlign: 'center',
+                fontSize: 13,
+                color: '#64748b',
+              }}
+            >
+              Don&apos;t have an account yet?{' '}
+              <Link
+                href="/register"
+                style={{
+                  color: '#059669',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                }}
+              >
+                Sign Up / Register here →
+              </Link>
+            </div>
           )}
         </div>
 
