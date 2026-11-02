@@ -161,7 +161,7 @@ export async function PUT(
       consultation_type:
         body.consultation_type !== undefined
           ? String(body.consultation_type).trim()
-          : existing.consultation_type || 'Online Video (Zoho Meeting)',
+          : existing.consultation_type || 'Online Video (Google Meet)',
       price: body.price !== undefined ? Number(body.price) : existing.price,
       currency:
         body.currency !== undefined

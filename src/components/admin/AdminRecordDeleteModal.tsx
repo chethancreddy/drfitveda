@@ -25,6 +25,15 @@ interface DependencyInfo {
   linkedRecords: Array<{ label: string; count: number; blocking?: boolean }>
   recommendedAction: 'permanent_delete' | 'soft_delete' | 'blocked_requires_reassignment'
   consequenceWarning: string
+  customerSummary?: {
+    customerName: string
+    customerId: string
+    phone: string
+    membershipsCount: number
+    appointmentsCount: number
+    upcomingAppointmentsCount: number
+    assignmentsCount: number
+  }
 }
 
 export default function AdminRecordDeleteModal({
@@ -203,6 +212,87 @@ export default function AdminRecordDeleteModal({
                 {isPermanent ? 'PERMANENT DELETE' : 'SOFT DELETE / ARCHIVE'}
               </span>
             </div>
+
+            {/* Customer Summary & Impact Card */}
+            {depInfo?.customerSummary && (
+              <div
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: 'var(--radius-md)',
+                  padding: 14,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    color: '#475569',
+                    marginBottom: 10,
+                    letterSpacing: '0.5px',
+                  }}
+                >
+                  Customer Record Summary Before Deletion
+                </div>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                    gap: 10,
+                    fontSize: 13,
+                  }}
+                >
+                  <div>
+                    <div className="text-caption text-muted">Customer Name</div>
+                    <strong style={{ color: '#0f172a' }}>{depInfo.customerSummary.customerName}</strong>
+                  </div>
+                  <div>
+                    <div className="text-caption text-muted">Customer ID</div>
+                    <code style={{ fontSize: 12 }}>{depInfo.customerSummary.customerId}</code>
+                  </div>
+                  <div>
+                    <div className="text-caption text-muted">Phone Number</div>
+                    <strong>{depInfo.customerSummary.phone}</strong>
+                  </div>
+                  <div>
+                    <div className="text-caption text-muted">Memberships</div>
+                    <strong>{depInfo.customerSummary.membershipsCount} record</strong>
+                  </div>
+                  <div>
+                    <div className="text-caption text-muted">Appointments &amp; Sessions</div>
+                    <strong>
+                      {depInfo.customerSummary.appointmentsCount} total
+                      {depInfo.customerSummary.upcomingAppointmentsCount > 0 && (
+                        <span style={{ color: '#dc2626', fontWeight: 600, fontSize: 11 }}>
+                          {' '}
+                          ({depInfo.customerSummary.upcomingAppointmentsCount} will be cancelled)
+                        </span>
+                      )}
+                    </strong>
+                  </div>
+                  <div>
+                    <div className="text-caption text-muted">Active Assignments</div>
+                    <strong>{depInfo.customerSummary.assignmentsCount} active</strong>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    marginTop: 12,
+                    padding: '10px 12px',
+                    borderRadius: 6,
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    fontSize: 12,
+                    color: '#991b1b',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  <strong>⚠️ Warning:</strong> Deleting this customer will automatically cancel upcoming appointments, deactivate care team assignments, suspend active memberships, and revoke customer portal access immediately. Financial and billing records will remain safely preserved.
+                </div>
+              </div>
+            )}
 
             {/* Linked Dependencies Breakdown */}
             <div>

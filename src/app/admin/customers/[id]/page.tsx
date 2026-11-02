@@ -37,10 +37,10 @@ export default function AdminCustomerDetailPage({ params }: { params: Promise<{ 
     setTimeout(() => setToast(''), 3500)
   }
 
-  async function generateZohoMeeting() {
+  async function generateGoogleMeet() {
     setSavingMeet(true)
     try {
-      const res = await fetch('/api/zoho/create-meeting', {
+      const res = await fetch('/api/google-meet/create-meeting', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -51,17 +51,17 @@ export default function AdminCustomerDetailPage({ params }: { params: Promise<{ 
         }),
       })
       const data = await res.json()
-      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to generate Zoho Meeting')
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to generate Google Meet')
       setCustomer((prev: any) => ({
         ...prev,
         google_meet_url: data.meeting.meeting_url,
         zoho_meeting_url: data.meeting.meeting_url,
-        meeting_provider: 'zoho_meeting',
+        meeting_provider: 'google_meet',
       }))
       setMeetUrlInput(data.meeting.meeting_url)
-      showToast('✓ New Zoho Meeting link created and assigned!')
+      showToast('✓ New Google Meet link created and assigned!')
     } catch (err: any) {
-      showToast(`Failed: ${err.message || 'Error generating Zoho Meeting'}`)
+      showToast(`Failed: ${err.message || 'Error generating Google Meet'}`)
     }
     setSavingMeet(false)
   }
@@ -131,7 +131,7 @@ export default function AdminCustomerDetailPage({ params }: { params: Promise<{ 
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-            {/* 🎥 Dedicated Zoho Meeting Link Hero Card */}
+            {/* 🎥 Dedicated Google Meet Link Hero Card */}
             <div className="card" style={{
               padding: 'var(--space-lg)',
               background: 'linear-gradient(135deg, rgba(13, 148, 136, 0.08) 0%, rgba(99, 102, 241, 0.08) 100%)',
@@ -143,14 +143,14 @@ export default function AdminCustomerDetailPage({ params }: { params: Promise<{ 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                     <span style={{ fontSize: 24 }}>📹</span>
                     <h2 className="text-headline-sm" style={{ margin: 0, color: '#0f172a' }}>
-                      Dedicated Zoho Meeting Live Room
+                      Dedicated Google Meet Live Room
                     </h2>
                     <span className="badge badge-success" style={{ fontSize: 11 }}>
-                      🟢 Zoho Meeting Active
+                      🟢 Google Meet Active
                     </span>
                   </div>
                   <p className="text-body-sm text-muted" style={{ margin: '4px 0 12px', lineHeight: 1.5 }}>
-                    This unique Zoho Meeting room is assigned exclusively to <strong>{customer.full_name}</strong>. Their assigned doctor and personal trainer connect here for all live 1-on-1 consultations and workout sessions.
+                    This unique Google Meet room is assigned exclusively to <strong>{customer.full_name}</strong>. Their assigned doctor and personal trainer connect here for all live 1-on-1 consultations and workout sessions (accessible via any browser without app download).
                   </p>
 
                   {!editingMeetUrl ? (
@@ -165,24 +165,24 @@ export default function AdminCustomerDetailPage({ params }: { params: Promise<{ 
                         fontSize: 14,
                         color: '#0d9488',
                       }}>
-                        {customer.zoho_meeting_url || customer.google_meet_url || 'No Zoho Meeting URL set'}
+                        {customer.google_meet_url || customer.zoho_meeting_url || 'No Google Meet URL set'}
                       </div>
 
-                      {(customer.zoho_meeting_url || customer.google_meet_url) && (
+                      {(customer.google_meet_url || customer.zoho_meeting_url) && (
                         <>
                           <a
-                            href={customer.zoho_meeting_url || customer.google_meet_url}
+                            href={customer.google_meet_url || customer.zoho_meeting_url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="btn btn-primary btn-sm"
                             style={{ fontWeight: 600 }}
                           >
-                            🎥 Join Zoho Room
+                            🎥 Join Google Meet
                           </a>
                           <button
                             type="button"
                             className="btn btn-outline btn-sm"
-                            onClick={() => copyToClipboard(customer.zoho_meeting_url || customer.google_meet_url)}
+                            onClick={() => copyToClipboard(customer.google_meet_url || customer.zoho_meeting_url)}
                           >
                             📋 Copy Link
                           </button>
@@ -193,17 +193,17 @@ export default function AdminCustomerDetailPage({ params }: { params: Promise<{ 
                         type="button"
                         className="btn btn-ghost btn-sm"
                         disabled={savingMeet}
-                        onClick={generateZohoMeeting}
+                        onClick={generateGoogleMeet}
                         style={{ border: '1px solid #0d9488', color: '#0d9488', fontWeight: 600 }}
                       >
-                        {savingMeet ? 'Generating…' : '🔄 Generate New Zoho Meeting'}
+                        {savingMeet ? 'Generating…' : '🔄 Generate New Google Meet'}
                       </button>
 
                       <button
                         type="button"
                         className="btn btn-ghost btn-sm"
                         onClick={() => {
-                          setMeetUrlInput(customer.zoho_meeting_url || customer.google_meet_url || '')
+                          setMeetUrlInput(customer.google_meet_url || customer.zoho_meeting_url || '')
                           setEditingMeetUrl(true)
                         }}
                       >
@@ -214,7 +214,7 @@ export default function AdminCustomerDetailPage({ params }: { params: Promise<{ 
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center', maxWidth: 640, flexWrap: 'wrap' }}>
                       <input
                         className="form-input"
-                        placeholder="https://meet.zoho.com/fitveda-xxx-yyy"
+                        placeholder="https://meet.google.com/xxx-yyyy-zzz"
                         value={meetUrlInput}
                         onChange={e => setMeetUrlInput(e.target.value)}
                         style={{ flex: 1, minWidth: 260 }}

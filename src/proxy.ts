@@ -63,6 +63,15 @@ export async function proxy(request: NextRequest) {
   if (demoCookie) {
     try {
       const session = JSON.parse(decodeURIComponent(demoCookie))
+      if (session.is_active === false || session.is_archived === true) {
+        const loginUrl = request.nextUrl.clone()
+        loginUrl.pathname = '/login'
+        loginUrl.searchParams.set('error', 'account_deactivated')
+        const response = NextResponse.redirect(loginUrl)
+        response.cookies.delete('drf_session')
+        return response
+      }
+
       const userRole = String(session.role || '')
       const requiredRoles = matchRoute(pathname)
 

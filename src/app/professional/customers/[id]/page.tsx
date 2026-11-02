@@ -170,11 +170,14 @@ export default async function ProfessionalCustomerDetailPage({
         id: mockCust.id,
         membership_status: mockCust.membership_status || 'active',
         created_at: mockCust.created_at || new Date().toISOString(),
-        google_meet_url: mockCust.google_meet_url,
+        google_meet_url:
+          mockCust.google_meet_url ||
+          (mockCust as any)?.meeting_url ||
+          'https://meet.google.com/dfv-priya',
         zoho_meeting_url:
           mockCust.zoho_meeting_url ||
-          (mockCust as any)?.meeting_url ||
-          'https://meet.zoho.com/fitveda-priya',
+          mockCust.google_meet_url ||
+          'https://meet.google.com/dfv-priya',
         user_profiles: userProfile,
         customer_profiles: custProfile,
         food_profiles: foodProfile,
@@ -258,15 +261,15 @@ export default async function ProfessionalCustomerDetailPage({
           </div>
 
           <div className="flex gap-xs" style={{ alignItems: 'center' }}>
-            {(customer.zoho_meeting_url || customer.google_meet_url) && (
+            {(customer.google_meet_url || customer.zoho_meeting_url) && (
               <a
-                href={customer.zoho_meeting_url || customer.google_meet_url}
+                href={customer.google_meet_url || customer.zoho_meeting_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-secondary btn-sm"
                 style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #6ee7b7', fontWeight: 600 }}
               >
-                📹 Join Zoho Meeting Room
+                📹 Join Google Meet Room
               </a>
             )}
             <Link href={`/professional/plans/${customerId}`} className="btn btn-primary btn-sm">
@@ -275,7 +278,7 @@ export default async function ProfessionalCustomerDetailPage({
           </div>
         </div>
 
-        {/* Dedicated Zoho Meeting Banner */}
+        {/* Dedicated Google Meet Banner */}
         <div
           style={{
             padding: '12px 16px',
@@ -294,21 +297,21 @@ export default async function ProfessionalCustomerDetailPage({
             <span style={{ fontSize: 22 }}>📹</span>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#065f46' }}>
-                Dedicated Patient Video Consultation &amp; Live Training Room (Zoho Meeting)
+                Dedicated Patient Video Consultation &amp; Live Training Room (Google Meet)
               </div>
               <div style={{ fontSize: 12, color: '#047857', wordBreak: 'break-all' }}>
-                {customer.zoho_meeting_url || customer.google_meet_url || 'https://meet.zoho.com/fitveda-priya'}
+                {customer.google_meet_url || customer.zoho_meeting_url || 'https://meet.google.com/fit-veda-live'}
               </div>
             </div>
           </div>
           <a
-            href={customer.zoho_meeting_url || customer.google_meet_url || 'https://meet.zoho.com/fitveda-priya'}
+            href={customer.google_meet_url || customer.zoho_meeting_url || 'https://meet.google.com/fit-veda-live'}
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-primary btn-sm"
             style={{ fontWeight: 600 }}
           >
-            Launch Zoho Meeting →
+            Launch Google Meet →
           </a>
         </div>
 

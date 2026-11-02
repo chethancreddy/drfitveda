@@ -61,6 +61,76 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
         ? 'active'
         : 'inactive'
 
+    // Check for availability conflicts with existing scheduled appointments
+    if (
+      (body.day_wise_slots || body.working_slots || body.blocked_dates) &&
+      !body.confirm_conflicts &&
+      !body.restore
+    ) {
+      const appointments = mockDb.state.appointments || []
+      const proAppointments = appointments.filter(
+        (a: any) =>
+          a.professional_id === pros[idx].id &&
+          a.status === 'scheduled' &&
+          !a.is_archived
+      )
+
+      const blockedDates: string[] = Array.isArray(body.blocked_dates)
+        ? body.blocked_dates
+        : pros[idx].blocked_dates || []
+
+      const conflicts: any[] = []
+
+      for (const apt of proAppointments) {
+        const aptDate = (apt.appointment_date || apt.scheduled_at || '').split('T')[0]
+        const aptTime = apt.appointment_time || apt.time || ''
+
+        // Check if date is now blocked
+        if (aptDate && blockedDates.includes(aptDate)) {
+          conflicts.push({
+            appointment_id: apt.id,
+            customer_id: apt.customer_id,
+            customer_name: apt.customer_name || 'Patient',
+            date: aptDate,
+            time: aptTime,
+            reason: `Date ${aptDate} is marked as a blocked holiday/unavailable date.`,
+          })
+          continue
+        }
+
+        // Check if day of week slot was removed
+        if (aptDate && body.day_wise_slots) {
+          const parsed = new Date(`${aptDate}T12:00:00Z`)
+          if (!isNaN(parsed.getTime())) {
+            const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][parsed.getUTCDay()]
+            const daySlots = body.day_wise_slots[dayName]
+            if (Array.isArray(daySlots) && daySlots.length > 0 && aptTime && !daySlots.includes(aptTime)) {
+              conflicts.push({
+                appointment_id: apt.id,
+                customer_id: apt.customer_id,
+                customer_name: apt.customer_name || 'Patient',
+                date: aptDate,
+                time: aptTime,
+                reason: `Slot "${aptTime}" is no longer in the ${dayName} schedule.`,
+              })
+            }
+          }
+        }
+      }
+
+      if (conflicts.length > 0) {
+        return NextResponse.json(
+          {
+            warning: true,
+            has_conflicts: true,
+            error: `Notice: This professional has ${conflicts.length} scheduled appointment(s) that conflict with the new availability. Confirm to proceed while preserving existing appointments.`,
+            conflicts,
+          },
+          { status: 409 }
+        )
+      }
+    }
+
     const updatedEmail =
       body.email !== undefined ? String(body.email).trim().toLowerCase() : pros[idx].email
     const updatedPhone =

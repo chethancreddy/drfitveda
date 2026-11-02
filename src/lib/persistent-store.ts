@@ -235,7 +235,7 @@ export function syncRuntimeReferences() {
       specialist_designation: s.specialist_designation || 'Certified Specialist Doctor',
       icon: s.icon || categoryIconMap[s.category] || '🩺',
       image_url: s.image_url || '',
-      consultation_type: s.consultation_type || 'Online Video (Zoho Meeting)',
+      consultation_type: s.consultation_type || 'Online Video (Google Meet)',
       currency: s.currency || 'INR',
       is_active: s.is_active !== undefined ? Boolean(s.is_active) : true,
       is_archived: Boolean(s.is_archived),

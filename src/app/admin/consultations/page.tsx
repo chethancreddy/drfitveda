@@ -47,7 +47,7 @@ const DEFAULT_CATEGORIES: ConsultationCategory[] = [
 ]
 
 const CONSULTATION_MODES = [
-  'Online Video (Zoho Meeting)',
+  'Online Video (Google Meet)',
   'Video / Audio Teleconsultation',
   'Follow-Up Clinical Review',
   'In-Depth Diagnostic Consultation',
@@ -65,7 +65,7 @@ const EMPTY_SERVICE: Partial<ConsultationService> = {
   icon: '🩺',
   image_url: '',
   duration_min: 30,
-  consultation_type: 'Online Video (Zoho Meeting)',
+  consultation_type: 'Online Video (Google Meet)',
   price: 499,
   currency: 'INR',
   is_active: true,
@@ -172,7 +172,7 @@ export default function AdminConsultationServicesPage() {
       short_description: svc.short_description || svc.description || '',
       full_description: svc.full_description || svc.description || '',
       specialist_designation: svc.specialist_designation || 'Preventive Medicine & Lifestyle Physician',
-      consultation_type: svc.consultation_type || 'Online Video (Zoho Meeting)',
+      consultation_type: svc.consultation_type || 'Online Video (Google Meet)',
       currency: svc.currency || 'INR',
       icon: svc.icon || categoryMap[svc.category]?.icon || '🩺',
     })
@@ -422,7 +422,7 @@ export default function AdminConsultationServicesPage() {
             <div style={{ fontSize: 24, fontWeight: 800, color: '#0d9488', marginTop: 2 }}>
               {formatPrice(minPrice)}
             </div>
-            <div className="text-caption text-muted" style={{ marginTop: 2 }}>1-on-1 Zoho Meeting session</div>
+            <div className="text-caption text-muted" style={{ marginTop: 2 }}>1-on-1 Google Meet session</div>
           </div>
         </div>
 
@@ -564,7 +564,7 @@ export default function AdminConsultationServicesPage() {
 
                         {svc.specialist_designation && (
                           <div style={{ fontSize: 12.5, fontWeight: 600, color: '#0d9488', marginBottom: 6 }}>
-                            👨‍⚕️ {svc.specialist_designation} • 📹 {svc.consultation_type || 'Online Video (Zoho Meeting)'}
+                            👨‍⚕️ {svc.specialist_designation} • 📹 {svc.consultation_type || 'Online Video (Google Meet)'}
                           </div>
                         )}
 
@@ -955,7 +955,7 @@ export default function AdminConsultationServicesPage() {
                       <span className="form-label">Consultation Mode / Type</span>
                       <select
                         className="form-input"
-                        value={editingService.consultation_type ?? 'Online Video (Zoho Meeting)'}
+                        value={editingService.consultation_type ?? 'Online Video (Google Meet)'}
                         onChange={e => setEditingService(s => ({ ...s, consultation_type: e.target.value }))}
                       >
                         {CONSULTATION_MODES.map(mode => (
@@ -1074,7 +1074,7 @@ export default function AdminConsultationServicesPage() {
                   </p>
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--color-muted)' }}>
-                  📹 {previewService.consultation_type || 'Online Video (Zoho Meeting)'}
+                  📹 {previewService.consultation_type || 'Online Video (Google Meet)'}
                 </div>
                 <div
                   style={{

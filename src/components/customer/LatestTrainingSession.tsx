@@ -66,7 +66,7 @@ export default function LatestTrainingSession({ session, customerId }: Props) {
           style={{ background: '#dc2626', borderColor: '#dc2626' }}
           id="btn-join-live-session"
         >
-          <span>🔴</span> {session.meeting_url.includes('zoho.com') ? 'Join Live on Zoho Meeting' : 'Join Live Session'}
+          <span>🔴</span> {session.meeting_url.includes('meet.google.com') ? 'Join Live on Google Meet' : (session.meeting_url.includes('zoho.com') ? 'Join Live on Zoho Meeting' : 'Join Live Session')}
         </a>
       )}
 
@@ -79,7 +79,7 @@ export default function LatestTrainingSession({ session, customerId }: Props) {
           className="btn-watch"
           id="btn-join-upcoming-session"
         >
-          <span>📹</span> {session.meeting_url.includes('zoho.com') ? 'Open Zoho Meeting Room' : 'Open Meeting Link'}
+          <span>📹</span> {session.meeting_url.includes('meet.google.com') ? 'Open Google Meet Room' : (session.meeting_url.includes('zoho.com') ? 'Open Zoho Meeting Room' : 'Open Meeting Link')}
         </a>
       )}
 
@@ -92,14 +92,14 @@ export default function LatestTrainingSession({ session, customerId }: Props) {
           className="btn-watch"
           id="btn-watch-meet-recording"
         >
-          <span>▶</span> Watch Session Recording (Zoho Meeting)
+          <span>▶</span> Watch Session Recording
         </a>
       )}
 
       {/* Completed — no recording yet */}
       {isCompleted && !session.recording_url && (
         <div className="recording-empty" style={{ marginTop: 8 }}>
-          Session completed. Recording link will appear here once available from Zoho Meeting.
+          Session completed. Recording link will appear here once available.
         </div>
       )}
 
@@ -111,7 +111,7 @@ export default function LatestTrainingSession({ session, customerId }: Props) {
         borderTop: '1px dashed var(--color-border)',
         paddingTop: 8,
       }}>
-        📹 All sessions are conducted via <strong>Zoho Meeting</strong>.
+        📹 All sessions are conducted via <strong>Google Meet</strong> (join directly in any browser without app download).
         Recording links are provided by the care team after the session ends.
       </div>
     </div>

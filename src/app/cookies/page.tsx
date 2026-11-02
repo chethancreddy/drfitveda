@@ -39,7 +39,7 @@ export default function CookiePolicyPage() {
         <p>
           Our fonts and demonstration media (including sample video and vector thumbnails) are served directly from
           our own origin, so browsing public pages and customer galleries does not transmit your IP address to third-party
-          media networks. When you join a live session, you connect to our meeting provider (Zoho Meeting), where the
+          media networks. When you join a live session, you connect to our meeting provider (Google Meet), where the
           meeting provider&apos;s own privacy and cookie policies govern the video room connection.
         </p>
       </Section>

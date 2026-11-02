@@ -1,4 +1,9 @@
 import crypto from 'crypto'
+import {
+  ALL_COUNTRY_CODES,
+  validateInternationalPhone,
+  findCountry,
+} from '../country-codes'
 
 
 export interface NormalizedPhone {
@@ -31,7 +36,11 @@ export interface NormalizedIdentifier {
  * Supports explicit channel targeting ('email' | 'whatsapp').
  * When channel is omitted, defaults to 'email' preserving DLT notice for SMS attempts.
  */
-export function normalizeIdentifier(input: string, channel: 'email' | 'whatsapp' = 'email'): NormalizedIdentifier {
+export function normalizeIdentifier(
+  input: string,
+  channel: 'email' | 'whatsapp' = 'email',
+  countryCodeHint?: string
+): NormalizedIdentifier {
   if (!input || typeof input !== 'string') {
     return {
       isValid: false,
@@ -59,7 +68,7 @@ export function normalizeIdentifier(input: string, channel: 'email' | 'whatsapp'
         error: 'Please enter your mobile number with country code for WhatsApp OTP login.',
       }
     }
-    const phoneNorm = normalizeMobile(trimmed)
+    const phoneNorm = normalizeMobile(trimmed, countryCodeHint)
     if (!phoneNorm.isValid) {
       return {
         isValid: false,
@@ -116,9 +125,9 @@ export function normalizeIdentifier(input: string, channel: 'email' | 'whatsapp'
 
 /**
  * Normalizes and validates Indian or international mobile numbers with country code.
- * Accepts: 9876543210, +919876543210, +91 98765 43210, 09876543210, +1 415 555 2671, etc.
+ * Accepts: 9876543210, +919876543210, +91 98765 43210, +1 415 555 2671, +44 7123 456789, +971 50 123 4567, etc.
  */
-export function normalizeMobile(input: string): NormalizedPhone {
+export function normalizeMobile(input: string, countryCodeHint?: string): NormalizedPhone {
   if (!input || typeof input !== 'string') {
     return {
       isValid: false,
@@ -130,39 +139,74 @@ export function normalizeMobile(input: string): NormalizedPhone {
     }
   }
 
-  // Clean all spaces, dashes, parentheses
-  const cleaned = input.trim().replace(/[\s\-\(\)]/g, '')
+  const trimmed = input.trim()
+  let dialCode = countryCodeHint || ''
+  let nationalNumber = trimmed
 
-  // First, check Indian number formats
-  const indianCheck = normalizeIndianMobile(input)
-  if (indianCheck.isValid) {
-    return indianCheck
+  // 1. Explicit leading + format (e.g. +447123456789, +14155552671, +971501234567, +919876543210)
+  if (trimmed.startsWith('+')) {
+    const sorted = [...ALL_COUNTRY_CODES].sort((a, b) => b.dialCode.length - a.dialCode.length)
+    const matched = sorted.find(c => trimmed.startsWith(c.dialCode))
+    if (matched) {
+      dialCode = matched.dialCode
+      nationalNumber = trimmed.slice(matched.dialCode.length)
+    } else {
+      const digits = trimmed.slice(1).replace(/\D/g, '')
+      if (digits.length >= 8 && digits.length <= 15) {
+        return {
+          isValid: true,
+          raw: input,
+          msg91Mobile: digits,
+          e164Phone: `+${digits}`,
+          displayPhone: `+${digits}`,
+        }
+      }
+    }
+  } else if (!dialCode) {
+    // 2. International number entered without '+' prefix (e.g. 971501234567, 447123456789, 14155552671)
+    const digitsOnly = trimmed.replace(/\D/g, '')
+    const sorted = [...ALL_COUNTRY_CODES].sort(
+      (a, b) => b.dialCode.replace(/\D/g, '').length - a.dialCode.replace(/\D/g, '').length
+    )
+    const matched = sorted.find(c => {
+      const codeDigits = c.dialCode.replace(/\D/g, '')
+      return digitsOnly.startsWith(codeDigits) && digitsOnly.length >= codeDigits.length + c.minLen
+    })
+    if (matched) {
+      dialCode = matched.dialCode
+      nationalNumber = digitsOnly.slice(matched.dialCode.replace(/\D/g, '').length)
+    } else if (digitsOnly.length === 10 && /^[6-9]/.test(digitsOnly)) {
+      // 10 digits starting with 6-9 without country code defaults to India
+      dialCode = '+91'
+      nationalNumber = digitsOnly
+    }
   }
 
-  // International number with leading + (10 to 15 digits as per E.164)
-  if (cleaned.startsWith('+')) {
-    const digitsOnly = cleaned.slice(1).replace(/\D/g, '')
-    if (digitsOnly.length >= 10 && digitsOnly.length <= 15) {
+  if (dialCode) {
+    const validated = validateInternationalPhone(dialCode, nationalNumber)
+    if (validated.isValid) {
       return {
         isValid: true,
         raw: input,
-        msg91Mobile: digitsOnly,
-        e164Phone: `+${digitsOnly}`,
-        displayPhone: `+${digitsOnly}`,
+        msg91Mobile: validated.msg91Mobile,
+        e164Phone: validated.e164Phone,
+        displayPhone: `${validated.cleanDialCode} ${validated.nationalNumber}`,
       }
+    }
+    return {
+      isValid: false,
+      raw: input,
+      msg91Mobile: '',
+      e164Phone: '',
+      displayPhone: '',
+      error: validated.error || 'Please enter a valid mobile number with country code.',
     }
   }
 
-  // International number without +, but 11-15 digits
-  const rawDigits = cleaned.replace(/\D/g, '')
-  if (rawDigits.length >= 11 && rawDigits.length <= 15) {
-    return {
-      isValid: true,
-      raw: input,
-      msg91Mobile: rawDigits,
-      e164Phone: `+${rawDigits}`,
-      displayPhone: `+${rawDigits}`,
-    }
+  // 3. Fallback to standard Indian format check
+  const indianCheck = normalizeIndianMobile(input)
+  if (indianCheck.isValid) {
+    return indianCheck
   }
 
   return {
@@ -171,7 +215,7 @@ export function normalizeMobile(input: string): NormalizedPhone {
     msg91Mobile: '',
     e164Phone: '',
     displayPhone: '',
-    error: 'Please enter a valid mobile number with country code (e.g. +91 98765 43210).',
+    error: 'Please enter a valid mobile number with country code (e.g. +91 98765 43210 or +1 415 555 2671).',
   }
 }
 

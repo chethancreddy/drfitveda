@@ -1,16 +1,16 @@
 // ============================================================
-// Dr Fit Veda — Zoho Meeting API Integration Service
-// Secure backend service for automated & on-demand Zoho Meeting creation
+// Dr Fit Veda — Meeting Service (Zoho to Google Meet Bridge)
+// Delegates all meeting creation and management to GoogleMeetService.
+// Fully backwards-compatible drop-in replacement.
 // ============================================================
 
-import { mockDb } from '@/lib/mock-db'
-import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
+import { GoogleMeetService, GoogleMeetResult } from './google-meet.service'
 
 export interface ZohoMeetingResult {
   success: boolean
   meeting_url: string
   meeting_key: string
-  provider: 'zoho_meeting'
+  provider: 'zoho_meeting' | 'google_meet'
   customer_id: string
   customer_name: string
   created_at: string
@@ -19,59 +19,15 @@ export interface ZohoMeetingResult {
 }
 
 export class ZohoMeetingService {
-  private static clientId = process.env.ZOHO_CLIENT_ID || ''
-  private static clientSecret = process.env.ZOHO_CLIENT_SECRET || ''
-  private static accountsUrl = process.env.ZOHO_ACCOUNTS_URL || 'https://accounts.zoho.com'
-  private static meetingApiUrl = process.env.ZOHO_MEETING_API_URL || 'https://meeting.zoho.com/api/v2'
-
-  // Cached OAuth token
-  private static cachedToken: { accessToken: string; expiresAt: number } | null = null
-
   /**
-   * Authenticate / Fetch Zoho OAuth Access Token with automatic refresh
+   * Delegates token check to GoogleMeetService
    */
   public static async getAccessToken(): Promise<string | null> {
-    try {
-      const now = Date.now()
-      if (this.cachedToken && this.cachedToken.expiresAt > now + 60000) {
-        return this.cachedToken.accessToken
-      }
-
-      // If refresh token is available in environment
-      const refreshToken = process.env.ZOHO_REFRESH_TOKEN
-      if (refreshToken && this.clientId && this.clientSecret) {
-        const params = new URLSearchParams({
-          refresh_token: refreshToken,
-          client_id: this.clientId,
-          client_secret: this.clientSecret,
-          grant_type: 'refresh_token',
-        })
-
-        const res = await fetch(`${this.accountsUrl}/oauth/v2/token?${params.toString()}`, {
-          method: 'POST',
-        })
-
-        if (res.ok) {
-          const data = await res.json()
-          if (data.access_token) {
-            this.cachedToken = {
-              accessToken: data.access_token,
-              expiresAt: now + (data.expires_in || 3600) * 1000,
-            }
-            return data.access_token
-          }
-        }
-      }
-
-      return null
-    } catch {
-      return null
-    }
+    return GoogleMeetService.getAccessToken()
   }
 
   /**
-   * Create or Retrieve dedicated Zoho Meeting Room for a Customer
-   * Idempotent: Does not create duplicate links during webhook/payment retries unless forceNew=true.
+   * Create or Retrieve meeting room for a customer (Delegates to Google Meet)
    */
   public static async getOrCreateCustomerMeeting(params: {
     customerId: string
@@ -79,116 +35,17 @@ export class ZohoMeetingService {
     customerEmail?: string
     forceNew?: boolean
   }): Promise<ZohoMeetingResult> {
-    const { customerId, customerName, customerEmail, forceNew = false } = params
-    await loadPersistedState()
-
-    // 1. Check existing customer record for idempotency
-    const customers = mockDb.state.customers || []
-    const customer = customers.find((c: any) => c.id === customerId || c.user_id === customerId)
-
-    if (customer && !forceNew) {
-      // If customer already has a valid Zoho or active meeting URL, reuse it
-      const existingUrl = customer.zoho_meeting_url || customer.google_meet_url || customer.meeting_url
-      if (existingUrl && existingUrl.includes('zoho.com')) {
-        return {
-          success: true,
-          meeting_url: existingUrl,
-          meeting_key: customer.zoho_meeting_key || `zm-${customerId.slice(0, 8)}`,
-          provider: 'zoho_meeting',
-          customer_id: customer.id,
-          customer_name: customerName,
-          created_at: customer.zoho_meeting_created_at || new Date().toISOString(),
-          is_active: true,
-        }
-      }
-    }
-
-    // 2. Generate unique Zoho Meeting Key & URL
-    // Clean identifier for room naming
-    const cleanId = customerId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10).toLowerCase()
-    const nameSlug = customerName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12).toLowerCase()
-    const randomSuffix = Math.random().toString(36).substring(2, 6)
-    const meetingKey = `fitveda-${nameSlug || 'care'}-${cleanId || randomSuffix}`
-
-    let generatedMeetingUrl = `https://meet.zoho.com/${meetingKey}`
-
-    // 3. Attempt API creation via Zoho Meeting API if OAuth Access Token is present
-    try {
-      const token = await this.getAccessToken()
-      if (token) {
-        const response = await fetch(`${this.meetingApiUrl}/sessions`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Zoho-oauthtoken ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            session: {
-              topic: `Dr Fit Veda 1-on-1 Care: ${customerName}`,
-              agenda: 'Live Personal Training & Clinical Nutrition Consultation Room',
-              type: 1, // Instant / Ongoing room
-              timezone: 'Asia/Kolkata',
-              participants: customerEmail ? [{ email: customerEmail }] : [],
-            },
-          }),
-        })
-
-        if (response.ok) {
-          const apiData = await response.json()
-          if (apiData?.session?.joinLink) {
-            generatedMeetingUrl = apiData.session.joinLink
-          }
-        }
-      }
-    } catch {
-      // Fallback to configured Zoho Meeting room URL
-    }
-
-    const now = new Date().toISOString()
-
-    // 4. Update customer record in mock database and state
-    if (customer) {
-      const idx = customers.findIndex((c: any) => c.id === customer.id)
-      if (idx !== -1) {
-        customers[idx] = {
-          ...customers[idx],
-          zoho_meeting_url: generatedMeetingUrl,
-          zoho_meeting_key: meetingKey,
-          zoho_meeting_created_at: now,
-          // Sync existing meeting fields for full backward compatibility
-          google_meet_url: generatedMeetingUrl,
-          meeting_url: generatedMeetingUrl,
-          meeting_provider: 'zoho_meeting',
-          updated_at: now,
-        }
-      }
-
-      // Sync any scheduled training sessions for this customer
-      if (mockDb.state.training_sessions) {
-        mockDb.state.training_sessions = mockDb.state.training_sessions.map((s: any) => {
-          if (s.customer_id === customer.id && (s.status === 'scheduled' || !s.status)) {
-            return {
-              ...s,
-              google_meet_url: generatedMeetingUrl,
-              zoho_meeting_url: generatedMeetingUrl,
-              meeting_url: generatedMeetingUrl,
-            }
-          }
-          return s
-        })
-      }
-      await savePersistedState(['customers', 'training_sessions'])
-    }
-
+    const meetRes: GoogleMeetResult = await GoogleMeetService.getOrCreateCustomerMeeting(params)
     return {
-      success: true,
-      meeting_url: generatedMeetingUrl,
-      meeting_key: meetingKey,
-      provider: 'zoho_meeting',
-      customer_id: customerId,
-      customer_name: customerName,
-      created_at: now,
-      is_active: true,
+      success: meetRes.success,
+      meeting_url: meetRes.meeting_url,
+      meeting_key: meetRes.meeting_code || meetRes.meeting_id,
+      provider: 'google_meet',
+      customer_id: meetRes.customer_id,
+      customer_name: meetRes.customer_name,
+      created_at: meetRes.created_at,
+      is_active: meetRes.is_active,
+      error: meetRes.error,
     }
   }
 
@@ -196,22 +53,6 @@ export class ZohoMeetingService {
    * Admin: Update or replace meeting link manually
    */
   public static async updateCustomerMeetingUrl(customerId: string, newUrl: string) {
-    await loadPersistedState()
-    const customers = mockDb.state.customers || []
-    const idx = customers.findIndex((c: any) => c.id === customerId || c.user_id === customerId)
-    if (idx === -1) throw new Error('Customer not found')
-
-    const now = new Date().toISOString()
-    customers[idx] = {
-      ...customers[idx],
-      zoho_meeting_url: newUrl,
-      google_meet_url: newUrl,
-      meeting_url: newUrl,
-      meeting_provider: newUrl.includes('zoho.com') ? 'zoho_meeting' : 'custom',
-      updated_at: now,
-    }
-    await savePersistedState('customers')
-
-    return customers[idx]
+    return GoogleMeetService.updateCustomerMeetingUrl(customerId, newUrl)
   }
 }

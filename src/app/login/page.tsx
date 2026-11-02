@@ -2,29 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-
-// Popular country codes supported with flags
-const POPULAR_COUNTRY_CODES = [
-  { code: '+91', flag: '🇮🇳', name: 'India (+91)' },
-  { code: '+971', flag: '🇦🇪', name: 'UAE (+971)' },
-  { code: '+1', flag: '🇺🇸', name: 'USA/CA (+1)' },
-  { code: '+44', flag: '🇬🇧', name: 'UK (+44)' },
-  { code: '+65', flag: '🇸🇬', name: 'Singapore (+65)' },
-  { code: '+61', flag: '🇦🇺', name: 'Australia (+61)' },
-  { code: '+966', flag: '🇸🇦', name: 'Saudi Arabia (+966)' },
-  { code: '+974', flag: '🇶🇦', name: 'Qatar (+974)' },
-  { code: '+965', flag: '🇰🇼', name: 'Kuwait (+965)' },
-  { code: '+968', flag: '🇴🇲', name: 'Oman (+968)' },
-  { code: '+973', flag: '🇧🇭', name: 'Bahrain (+973)' },
-  { code: '+60', flag: '🇲🇾', name: 'Malaysia (+60)' },
-  { code: '+49', flag: '🇩🇪', name: 'Germany (+49)' },
-  { code: '+33', flag: '🇫🇷', name: 'France (+33)' },
-  { code: '+81', flag: '🇯🇵', name: 'Japan (+81)' },
-  { code: '+27', flag: '🇿🇦', name: 'South Africa (+27)' },
-  { code: '+880', flag: '🇧🇩', name: 'Bangladesh (+880)' },
-  { code: '+977', flag: '🇳🇵', name: 'Nepal (+977)' },
-  { code: '+94', flag: '🇱🇰', name: 'Sri Lanka (+94)' },
-]
+import CountryCodeSelector from '@/components/ui/CountryCodeSelector'
+import { validateInternationalPhone, findCountry, ALL_COUNTRY_CODES } from '@/lib/country-codes'
 
 export default function LoginPage() {
   const [portalMode, setPortalMode] = useState<'customer' | 'professional' | 'admin'>('customer')
@@ -113,68 +92,30 @@ export default function LoginPage() {
     return () => clearInterval(timer)
   }, [emailCountdown])
 
-  // Helper: validate phone number using selected country code
+  // Helper: validate phone number using international validation rules
   const validatePhoneNumber = (
     code: string,
     number: string
   ): { isValid: boolean; error?: string; cleanPhone: string; cleanCode: string; fullPhone: string } => {
-    let cleanNumber = number.replace(/\D/g, '')
-    let cleanCode = code.trim().startsWith('+') ? code.trim() : `+${code.trim()}`
-    cleanCode = `+${cleanCode.replace(/\D/g, '')}`
-
-    if (!cleanCode || cleanCode === '+') {
-      return { isValid: false, error: 'Please enter a valid country code (e.g. +91).', cleanPhone: '', cleanCode: '', fullPhone: '' }
+    const res = validateInternationalPhone(code, number)
+    return {
+      isValid: res.isValid,
+      error: res.error,
+      cleanPhone: res.nationalNumber,
+      cleanCode: res.cleanDialCode,
+      fullPhone: res.e164Phone,
     }
-
-    if (!cleanNumber) {
-      return { isValid: false, error: 'Please enter your mobile number.', cleanPhone: '', cleanCode, fullPhone: '' }
-    }
-
-    // Handle duplicate country code if user accidentally pasted it in the mobile field
-    const codeDigits = cleanCode.replace(/\D/g, '')
-    if (cleanNumber.startsWith(codeDigits) && cleanNumber.length > 10) {
-      cleanNumber = cleanNumber.slice(codeDigits.length)
-    }
-
-    // Specific country validations
-    if (cleanCode === '+91') {
-      // Strip leading 0 if entered for India
-      if (cleanNumber.startsWith('0') && cleanNumber.length === 11) {
-        cleanNumber = cleanNumber.slice(1)
-      }
-      if (cleanNumber.length !== 10) {
-        return { isValid: false, error: 'Please enter a valid 10-digit Indian mobile number.', cleanPhone: cleanNumber, cleanCode, fullPhone: '' }
-      }
-      if (!/^[6-9]/.test(cleanNumber)) {
-        return { isValid: false, error: 'Indian mobile numbers must start with 6, 7, 8, or 9.', cleanPhone: cleanNumber, cleanCode, fullPhone: '' }
-      }
-    } else if (cleanCode === '+1') {
-      if (cleanNumber.length !== 10) {
-        return { isValid: false, error: 'Please enter a valid 10-digit US/Canada phone number.', cleanPhone: cleanNumber, cleanCode, fullPhone: '' }
-      }
-    } else if (cleanCode === '+971') {
-      if (cleanNumber.length !== 9) {
-        return { isValid: false, error: 'Please enter a valid 9-digit UAE mobile number (e.g. 50 123 4567).', cleanPhone: cleanNumber, cleanCode, fullPhone: '' }
-      }
-    } else {
-      if (cleanNumber.length < 6 || cleanNumber.length > 14) {
-        return { isValid: false, error: `Please enter a valid mobile number for country code ${cleanCode}.`, cleanPhone: cleanNumber, cleanCode, fullPhone: '' }
-      }
-    }
-
-    const fullPhone = `${cleanCode}${cleanNumber}`
-    return { isValid: true, cleanPhone: cleanNumber, cleanCode, fullPhone }
   }
 
-  // Auto-detect pasted phone number containing a country code
+  // Auto-detect pasted phone number containing an international calling code
   const handleMobileInputChange = (val: string) => {
     const trimmed = val.trim()
     if (trimmed.startsWith('+')) {
-      const matched = POPULAR_COUNTRY_CODES.find(c => trimmed.startsWith(c.code))
+      const sorted = [...ALL_COUNTRY_CODES].sort((a, b) => b.dialCode.length - a.dialCode.length)
+      const matched = sorted.find(c => trimmed.startsWith(c.dialCode))
       if (matched) {
-        setCountryCode(matched.code)
-        setIsCustomCode(false)
-        const remainder = trimmed.slice(matched.code.length).replace(/[\s\-]/g, '')
+        setCountryCode(matched.dialCode)
+        const remainder = trimmed.slice(matched.dialCode.length).replace(/[\s\-]/g, '')
         setWhatsappMobile(remainder)
         return
       }
@@ -242,6 +183,7 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone: validation.fullPhone,
+          country_code: validation.cleanCode,
           channel: 'whatsapp',
           action: 'send_otp',
         }),
@@ -281,6 +223,7 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone: targetPhone,
+          country_code: validation.cleanCode,
           channel: 'whatsapp',
           action: 'resend_otp',
         }),
@@ -585,79 +528,41 @@ export default function LoginPage() {
             overflow: 'hidden',
           }}
         >
-          {/* Role / Portal Quick Switcher */}
-          <div
-            role="tablist"
-            aria-label="Account type"
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1.15fr 0.85fr',
-              gap: 4,
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: 10,
-              padding: 4,
-              marginBottom: 14,
-            }}
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={portalMode === 'customer'}
-              onClick={() => setPortalMode('customer')}
+          {/* Portal Mode Indicator for Staff / Specialists (hidden from regular customers) */}
+          {portalMode !== 'customer' && (
+            <div
               style={{
-                padding: '7px 6px',
-                borderRadius: 7,
-                border: 'none',
-                background: portalMode === 'customer' ? '#0f172a' : 'transparent',
-                color: portalMode === 'customer' ? 'white' : '#475569',
-                fontWeight: portalMode === 'customer' ? 700 : 600,
-                fontSize: 12,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: portalMode === 'professional' ? '#ecfdf5' : '#f0fdfa',
+                border: `1px solid ${portalMode === 'professional' ? '#a7f3d0' : '#99f6e4'}`,
+                borderRadius: 8,
+                padding: '8px 12px',
+                marginBottom: 14,
+                fontSize: 12.5,
               }}
             >
-              👤 Patient
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={portalMode === 'professional'}
-              onClick={() => setPortalMode('professional')}
-              style={{
-                padding: '7px 6px',
-                borderRadius: 7,
-                border: 'none',
-                background: portalMode === 'professional' ? '#059669' : 'transparent',
-                color: portalMode === 'professional' ? 'white' : '#047857',
-                fontWeight: portalMode === 'professional' ? 700 : 600,
-                fontSize: 12,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              🩺 Doctor / Trainer
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={portalMode === 'admin'}
-              onClick={() => setPortalMode('admin')}
-              style={{
-                padding: '7px 6px',
-                borderRadius: 7,
-                border: 'none',
-                background: portalMode === 'admin' ? '#0d9488' : 'transparent',
-                color: portalMode === 'admin' ? 'white' : '#475569',
-                fontWeight: portalMode === 'admin' ? 700 : 600,
-                fontSize: 12,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              🛡️ Admin
-            </button>
-          </div>
+              <span style={{ fontWeight: 700, color: portalMode === 'professional' ? '#047857' : '#0f766e' }}>
+                {portalMode === 'professional' ? '🩺 Specialist Clinical Portal' : '🛡️ Admin Portal'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPortalMode('customer')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#64748b',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                }}
+              >
+                ← Patient Sign In
+              </button>
+            </div>
+          )}
 
           {/* Header */}
           <div style={{ marginBottom: 14 }}>
@@ -830,112 +735,13 @@ export default function LoginPage() {
                         width: '100%',
                       }}
                     >
-                      {/* Country Code: Default +91, compact 100px width, exact 48px height */}
-                      {!isCustomCode ? (
-                        <div style={{ flex: '0 0 100px', width: 100, height: 48, position: 'relative' }}>
-                          <select
-                            value={countryCode}
-                            onChange={e => {
-                              if (e.target.value === 'custom') {
-                                setIsCustomCode(true)
-                                setCustomCountryCode('+')
-                              } else {
-                                setCountryCode(e.target.value)
-                              }
-                            }}
-                            aria-label="Country Code"
-                            className="form-input"
-                            style={{
-                              width: '100%',
-                              height: 48,
-                              minHeight: 48,
-                              padding: '0 22px 0 8px',
-                              border: '1px solid var(--color-border)',
-                              borderRadius: 8,
-                              fontSize: 16,
-                              lineHeight: '22px',
-                              fontWeight: 600,
-                              background: '#f8fafc',
-                              color: '#0f172a',
-                              cursor: 'pointer',
-                              boxSizing: 'border-box',
-                              appearance: 'none',
-                              WebkitAppearance: 'none',
-                              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23475569' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
-                              backgroundRepeat: 'no-repeat',
-                              backgroundPosition: 'right 7px center',
-                            }}
-                            title="Country Code (defaults to +91 India)"
-                          >
-                            {POPULAR_COUNTRY_CODES.map(c => (
-                              <option key={c.code} value={c.code}>
-                                {c.flag} {c.code}
-                              </option>
-                            ))}
-                            <option value="custom">✏️ Other</option>
-                          </select>
-                        </div>
-                      ) : (
-                        <div style={{ flex: '0 0 104px', width: 104, height: 48, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <input
-                            type="tel"
-                            value={customCountryCode}
-                            onChange={e => {
-                              let val = e.target.value.trim()
-                              if (!val.startsWith('+')) val = `+${val.replace(/\+/g, '')}`
-                              setCustomCountryCode(val)
-                            }}
-                            placeholder="+91"
-                            maxLength={5}
-                            aria-label="Custom Country Code"
-                            className="form-input"
-                            style={{
-                              width: 72,
-                              height: 48,
-                              minHeight: 48,
-                              padding: '0 6px',
-                              border: '1px solid #059669',
-                              borderRadius: 8,
-                              fontSize: 16,
-                              lineHeight: '22px',
-                              fontWeight: 700,
-                              textAlign: 'center',
-                              color: '#0f172a',
-                              boxSizing: 'border-box',
-                            }}
-                            title="Enter country code (e.g. +91)"
-                            autoFocus
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsCustomCode(false)
-                              setCountryCode('+91')
-                            }}
-                            style={{
-                              width: 28,
-                              height: 48,
-                              background: '#f1f5f9',
-                              border: '1px solid #cbd5e1',
-                              borderRadius: 8,
-                              padding: 0,
-                              fontSize: 12,
-                              cursor: 'pointer',
-                              color: '#475569',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0,
-                              boxSizing: 'border-box',
-                            }}
-                            title="Reset to default (+91)"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      )}
+                      {/* Searchable International Country Code Selector */}
+                      <CountryCodeSelector
+                        value={countryCode}
+                        onChange={(code) => setCountryCode(code)}
+                      />
 
-                      {/* Mobile Number Input — Full Remaining Width, Identical 48px Height */}
+                      {/* Mobile Number Input — Full Remaining Width, Identical Height */}
                       <div style={{ flex: '1 1 auto', minWidth: 0, height: 48, position: 'relative' }}>
                         <input
                           type="tel"
@@ -944,7 +750,7 @@ export default function LoginPage() {
                           required
                           value={whatsappMobile}
                           onChange={e => handleMobileInputChange(e.target.value)}
-                          placeholder={countryCode === '+91' ? '98765 43210' : 'Mobile number'}
+                          placeholder={findCountry(countryCode)?.format || 'Mobile number'}
                           className="form-input"
                           style={{
                             width: '100%',

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import AdminSidebar from '@/components/admin/AdminSidebar'
 import AdminRecordDeleteModal from '@/components/admin/AdminRecordDeleteModal'
+import AdminProfessionalAvailabilityModal from '@/components/admin/AdminProfessionalAvailabilityModal'
 
 interface Professional {
   id: string
@@ -60,6 +61,7 @@ export default function AdminProfessionalsPage() {
   const [editingPro, setEditingPro] = useState<Partial<Professional> | null>(null)
   const [viewingPro, setViewingPro] = useState<any | null>(null)
   const [deletingPro, setDeletingPro] = useState<Professional | null>(null)
+  const [availabilityPro, setAvailabilityPro] = useState<Professional | null>(null)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'archived'>('all')
@@ -418,6 +420,15 @@ export default function AdminProfessionalsPage() {
                         ✏️ Edit
                       </button>
 
+                      <button
+                        className="btn btn-outline btn-sm"
+                        style={{ borderColor: '#0284c7', color: '#0369a1' }}
+                        onClick={() => setAvailabilityPro(p)}
+                        title="Configure Customizable Working Days & Time Slots"
+                      >
+                        🗓️ Slots
+                      </button>
+
                       {p.is_archived ? (
                         <button className="btn btn-outline btn-sm" onClick={() => restoreProfessional(p)}>
                           ♻️ Restore
@@ -714,6 +725,19 @@ export default function AdminProfessionalsPage() {
               </form>
             </div>
           </div>
+        )}
+
+        {/* Customizable Available Slots Modal */}
+        {availabilityPro && (
+          <AdminProfessionalAvailabilityModal
+            isOpen={!!availabilityPro}
+            professional={availabilityPro}
+            onClose={() => setAvailabilityPro(null)}
+            onSaveSuccess={(updatedPro) => {
+              setProfessionals(prev => prev.map(p => p.id === updatedPro.id ? { ...p, ...updatedPro } : p))
+              showToast(`Available slots for ${updatedPro.full_name} updated successfully!`)
+            }}
+          />
         )}
 
         {/* Toast */}

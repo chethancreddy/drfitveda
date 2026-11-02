@@ -7,7 +7,7 @@ import { loadPersistedState } from '@/lib/persistent-store'
 
 export const metadata: Metadata = {
   title: 'Memberships & Pricing | Dr Fit Veda',
-  description: 'Transparent membership plans: Starter ₹9,999, Growth ₹49,999, Elite ₹89,999, and Super ₹1,99,999. Live 1-on-1 trainer sessions on Zoho Meeting, doctor monitoring, and separate specialist consultations at ₹499.',
+  description: 'Transparent membership plans: Starter ₹9,999, Growth ₹49,999, Elite ₹89,999, and Super ₹1,99,999. Live 1-on-1 trainer sessions on Google Meet, doctor monitoring, and separate specialist consultations at ₹499.',
 }
 
 export const dynamic = 'force-dynamic'
@@ -73,7 +73,7 @@ export default async function MembershipsPage() {
               Choose Your Transformation Journey
             </h1>
             <p className="text-body-lg" style={{ color: 'rgba(255,255,255,0.82)', lineHeight: 1.65 }}>
-              Every plan includes live 1-on-1 Zoho Meeting sessions with certified trainers, a customized health plan, and a dedicated care team. No hidden fees.
+              Every plan includes live 1-on-1 Google Meet sessions with certified trainers, a customized health plan, and a dedicated care team. No hidden fees.
             </p>
           </div>
         </section>
@@ -182,7 +182,7 @@ export default async function MembershipsPage() {
                               {plan.session_frequency}
                             </div>
                             <div style={{ fontSize: 11, color: mutedCol, marginTop: 3 }}>
-                              Live 1-on-1 on Zoho Meeting with recording &amp; review
+                              Live 1-on-1 on Google Meet with recording &amp; review
                             </div>
                           </div>
                         </div>
@@ -228,15 +228,15 @@ export default async function MembershipsPage() {
           </p>
         </section>
 
-        {/* Zoho Meeting note */}
+        {/* Google Meet note */}
         <section style={{ padding: 'var(--space-md) 0', background: 'var(--color-neutral)' }}>
           <div className="container" style={{ maxWidth: 860, textAlign: 'center' }}>
             <div className="alert alert-info" style={{ display: 'inline-flex', gap: 12, textAlign: 'left' }}>
               <span style={{ fontSize: 24 }}>📹</span>
               <div>
-                <strong>All live sessions are conducted on Zoho Meeting.</strong>
+                <strong>All live sessions are conducted on Google Meet.</strong>
                 <p className="text-body-sm" style={{ margin: '4px 0 0', lineHeight: 1.5 }}>
-                  Every session is recorded and stored securely. Super Plan members get full overwrite & override access to their session recordings. Trainer & doctor sessions are clearly labeled and searchable from your dashboard.
+                  Join directly in any browser without app download. Every session can be recorded and stored securely. Super Plan members get full overwrite &amp; override access to their session recordings. Trainer &amp; doctor sessions are clearly labeled and searchable from your dashboard.
                 </p>
               </div>
             </div>
@@ -297,8 +297,8 @@ export default async function MembershipsPage() {
 
             <div style={{ marginTop: 'var(--space-md)', padding: '14px 20px', background: 'var(--color-neutral)', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
               <p className="text-body-sm text-muted">
-                All consultations conducted via <strong>Zoho Meeting</strong>. Sessions are recorded and shared with you post-consultation.
-                <br />Yoga, PCOD/PCOS & Wellness consultations are separate from membership entitlements.
+                All consultations conducted via <strong>Google Meet</strong> (join directly in any browser without app download). Sessions can be recorded and shared with you post-consultation.
+                <br />Yoga, PCOD/PCOS &amp; Wellness consultations are separate from membership entitlements.
               </p>
             </div>
           </div>
@@ -313,7 +313,7 @@ export default async function MembershipsPage() {
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
               {[
-                { label: 'Certified Trainer Sessions', sub: 'Live Zoho Meeting coaching', val: '55%' },
+                { label: 'Certified Trainer Sessions', sub: 'Live Google Meet coaching', val: '55%' },
                 { label: 'Doctor Reviews & Planning', sub: 'Clinical assessments & plan updates', val: '12%' },
                 { label: 'Platform & Secure Storage', sub: 'Video, HIPAA-grade hosting', val: '33%' },
               ].map(r => (

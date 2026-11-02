@@ -47,11 +47,11 @@ const DEFAULT_SETTINGS: PlatformSettings = {
   contact_email: 'support@drfitveda.com',
   support_phone: '+91 98765 00000',
   platform_address: 'Bangalore, Karnataka, India',
-  google_meet_platform: 'Zoho Meeting',
-  google_meet_recording_policy: 'Admin/trainer shares Zoho Meeting recording link after session completion',
+  google_meet_platform: 'Google Meet',
+  google_meet_recording_policy: 'Browser-based 1-on-1 consultations via Google Meet with zero mandatory application download',
   google_meet_super_plan_overwrite: true,
   google_meet_auto_notify: true,
-  google_meet_default_url: 'https://meeting.zoho.com',
+  google_meet_default_url: 'https://meet.google.com',
 }
 
 const DEFAULT_ADMIN_PROFILE: AdminProfile = {
@@ -80,7 +80,25 @@ export default function AdminSettingsPage() {
   const [deletingRole, setDeletingRole] = useState<ProfessionalRole | null>(null)
   const [roleStatusFilter, setRoleStatusFilter] = useState<'all' | 'active' | 'inactive' | 'archived'>('all')
   const [saving, setSaving] = useState(false)
+  const [migratingMeetings, setMigratingMeetings] = useState(false)
   const [toast, setToast] = useState('')
+
+  async function handleMigrateZohoMeetings() {
+    setMigratingMeetings(true)
+    try {
+      const res = await fetch('/api/google-meet/migrate-upcoming', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        showToast(data.message || 'Migrated upcoming appointments to Google Meet!')
+      } else {
+        showToast(data.error || 'Migration failed')
+      }
+    } catch {
+      showToast('Network error migrating meetings')
+    } finally {
+      setMigratingMeetings(false)
+    }
+  }
 
   useEffect(() => {
     loadSettings()
@@ -591,26 +609,48 @@ export default function AdminSettingsPage() {
               </div>
             </div>
 
-            {/* 3. Zoho Meeting Integration */}
+            {/* 3. Google Meet Integration */}
             <div className="card" style={{ padding: 'var(--space-lg)' }}>
-              <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-md)' }}>
+              <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-md)', flexWrap: 'wrap', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 24 }}>📹</span>
                   <div>
-                    <h2 className="text-headline-sm" style={{ margin: 0 }}>Zoho Meeting Integration &amp; Recording</h2>
-                    <p className="text-caption text-muted">Configure live video session hosting and recording policy</p>
+                    <h2 className="text-headline-sm" style={{ margin: 0 }}>Google Meet Integration &amp; Video Platform</h2>
+                    <p className="text-caption text-muted">Official browser-based consultation conferencing replacing Zoho Meeting (Zero app download required)</p>
                   </div>
                 </div>
-                <button className="btn btn-primary btn-sm" onClick={() => openEdit('google_meet')}>
-                  ✏️ Edit Video Policies
-                </button>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    style={{ borderColor: '#0284c7', color: '#0369a1' }}
+                    onClick={handleMigrateZohoMeetings}
+                    disabled={migratingMeetings}
+                  >
+                    {migratingMeetings ? 'Migrating…' : '🔄 Migrate Upcoming Zoho Meetings'}
+                  </button>
+                  <a
+                    href="/api/auth/google/connect"
+                    className="btn btn-outline btn-sm"
+                    style={{ borderColor: '#16a34a', color: '#166534' }}
+                    title="Connect Google Account for Google Calendar API Conferencing"
+                  >
+                    ⚡ Connect Google Calendar
+                  </a>
+                  <button className="btn btn-primary btn-sm" onClick={() => openEdit('google_meet')}>
+                    ✏️ Edit Video Policies
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
                 <div style={{ padding: '12px 14px', background: 'var(--color-neutral)', borderRadius: 'var(--radius-sm)' }}>
-                  <div className="text-label-md text-muted">Video Platform</div>
+                  <div className="text-label-md text-muted">Video Platform Provider</div>
                   <div className="text-body-md" style={{ fontWeight: 700, color: 'var(--color-primary)', marginTop: 2 }}>
-                    📹 {settings.google_meet_platform}
+                    📹 {settings.google_meet_platform || 'Google Meet'}
+                  </div>
+                  <div className="text-caption" style={{ color: '#16a34a', fontWeight: 600, marginTop: 4 }}>
+                    ✓ Browser-optimized (No mandatory app download)
                   </div>
                 </div>
                 <div style={{ padding: '12px 14px', background: 'var(--color-neutral)', borderRadius: 'var(--radius-sm)' }}>
@@ -631,8 +671,8 @@ export default function AdminSettingsPage() {
                 </div>
                 <div style={{ padding: '12px 14px', background: 'var(--color-neutral)', borderRadius: 'var(--radius-sm)' }}>
                   <div className="text-label-md text-muted">Default Meeting Link Provider</div>
-                  <div className="text-body-md text-primary" style={{ marginTop: 2, wordBreak: 'break-all' }}>
-                    {settings.google_meet_default_url}
+                  <div className="text-body-md text-primary" style={{ marginTop: 2, wordBreak: 'break-all', fontWeight: 600 }}>
+                    {settings.google_meet_default_url || 'https://meet.google.com'}
                   </div>
                 </div>
                 <div style={{ padding: '12px 14px', background: 'var(--color-neutral)', borderRadius: 'var(--radius-sm)', gridColumn: '1 / -1' }}>

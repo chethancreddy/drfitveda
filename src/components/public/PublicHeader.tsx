@@ -53,21 +53,6 @@ export default function PublicHeader({ active }: { active?: string }) {
 
         {/* Desktop & Mobile Action Buttons */}
         <div className="flex items-center gap-xs" style={{ flexShrink: 0 }}>
-          {/* Desktop Doctor / Trainer Direct Entry */}
-          <Link
-            href="/login?portal=professional"
-            className="btn btn-ghost btn-sm hide-mobile"
-            style={{
-              color: '#0d9488',
-              fontWeight: 600,
-              fontSize: 13,
-              padding: '0 12px',
-            }}
-            title="Direct Login for Doctors, Trainers & Care Team"
-          >
-            🩺 Doctor / Trainer Login
-          </Link>
-
           {/* Direct Sign In Button — Visible on BOTH Mobile and Desktop */}
           <Link
             href="/login"
@@ -172,9 +157,9 @@ export default function PublicHeader({ active }: { active?: string }) {
                   onClick={() => setMenuOpen(false)}
                   style={{
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: 4,
-                    padding: '12px',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '12px 14px',
                     borderRadius: 12,
                     background: '#f8fafc',
                     border: '1.5px solid var(--color-primary)',
@@ -182,37 +167,15 @@ export default function PublicHeader({ active }: { active?: string }) {
                     color: 'var(--color-on-surface)',
                   }}
                 >
-                  <span style={{ fontSize: 18 }}>👤</span>
-                  <span style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
-                    Customer Login
-                  </span>
-                  <span style={{ fontSize: 11, color: '#64748b', lineHeight: 1.3 }}>
-                    Daily plans, check-ins &amp; video sessions
-                  </span>
-                </Link>
-
-                <Link
-                  href="/login?portal=professional"
-                  onClick={() => setMenuOpen(false)}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 4,
-                    padding: '12px',
-                    borderRadius: 12,
-                    background: '#f0fdf4',
-                    border: '1.5px solid #059669',
-                    textDecoration: 'none',
-                    color: 'var(--color-on-surface)',
-                  }}
-                >
-                  <span style={{ fontSize: 18 }}>🩺</span>
-                  <span style={{ fontSize: 13.5, fontWeight: 700, color: '#065f46' }}>
-                    Doctor / Trainer
-                  </span>
-                  <span style={{ fontSize: 11, color: '#047857', lineHeight: 1.3 }}>
-                    Specialist &amp; trainer clinical portal
-                  </span>
+                  <span style={{ fontSize: 22 }}>👤</span>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
+                      Patient Sign In
+                    </div>
+                    <div style={{ fontSize: 11.5, color: '#64748b', lineHeight: 1.3 }}>
+                      Daily plans, doctor reviews &amp; live training
+                    </div>
+                  </div>
                 </Link>
               </div>
 

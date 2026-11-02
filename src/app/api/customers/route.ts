@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
 import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 import { triggerCustomerAssignmentNotifications } from '@/lib/services/whatsapp-notification.service'
+import { GoogleMeetService } from '@/lib/services/google-meet.service'
 
 function getRole(req: NextRequest, user: any) {
   let role = (user as any)?.user_metadata?.role || (user as any)?.role
@@ -103,21 +104,21 @@ export async function POST(req: NextRequest) {
     if (!mockDb.state.user_profiles) mockDb.state.user_profiles = []
     mockDb.state.user_profiles.push(newUserProfile)
 
-    // 2. Automatically generate unique Zoho Meeting room for the customer
+    // 2. Automatically generate unique Google Meet room for the customer
     const cleanName = (full_name || 'care').toLowerCase().replace(/[^a-z0-9]/g, '')
-    const zohoMeetingKey = `fitveda-${cleanName}-${Math.floor(100 + Math.random() * 900)}`
-    const defaultZohoUrl = google_meet_url || `https://meet.zoho.com/${zohoMeetingKey}`
+    const meetCode = GoogleMeetService.generateStandardMeetCode(`${cleanName}${Date.now()}`)
+    const defaultMeetUrl = google_meet_url || `https://meet.google.com/${meetCode}`
 
     const newCustomer = {
       id: customerId,
       user_id: userId,
       membership_status: membership_plan_id ? 'active' : 'inactive',
       membership_plan_id: membership_plan_id || null,
-      zoho_meeting_url: defaultZohoUrl,
-      zoho_meeting_key: zohoMeetingKey,
-      google_meet_url: defaultZohoUrl,
-      meeting_url: defaultZohoUrl,
-      meeting_provider: 'zoho_meeting',
+      google_meet_url: defaultMeetUrl,
+      meeting_url: defaultMeetUrl,
+      meeting_id: `gm-${meetCode}`,
+      meeting_provider: 'google_meet',
+      google_meet_created_at: new Date().toISOString(),
       is_active: true,
       created_at: new Date().toISOString(),
     }

@@ -6,6 +6,8 @@ import {
   normalizePhoneForMatch,
   getDashboardForRole,
 } from '@/lib/auth-resolver'
+import { validateInternationalPhone } from '@/lib/country-codes'
+import { GoogleMeetService } from '@/lib/services/google-meet.service'
 
 // ============================================================
 // POST /api/auth/register — Patient / Customer Sign Up API
@@ -121,21 +123,12 @@ export async function POST(req: NextRequest) {
     if (!rawPhone) {
       fieldErrors.phone = 'Phone Number is required.'
     } else {
-      if (!fullPhoneWithCode.startsWith('+')) {
-        fullPhoneWithCode = `${rawCode.startsWith('+') ? rawCode : `+${rawCode}`}${rawPhone.replace(/\D/g, '')}`
-      }
-
-      canonicalDigits = normalizePhoneForMatch(fullPhoneWithCode)
-      const numericDigits = fullPhoneWithCode.replace(/\D/g, '')
-
-      if (numericDigits.length < 8 || numericDigits.length > 15) {
-        fieldErrors.phone = 'Please enter a valid phone number (8 to 15 digits).'
-      } else if (fullPhoneWithCode.startsWith('+91') || (numericDigits.length === 12 && numericDigits.startsWith('91'))) {
-        // India specific validation
-        const localTenDigits = numericDigits.slice(-10)
-        if (!/^[6-9]\d{9}$/.test(localTenDigits)) {
-          fieldErrors.phone = 'Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.'
-        }
+      const valRes = validateInternationalPhone(rawCode, rawPhone)
+      if (!valRes.isValid) {
+        fieldErrors.phone = valRes.error || 'Please enter a valid phone number.'
+      } else {
+        fullPhoneWithCode = valRes.e164Phone
+        canonicalDigits = valRes.msg91Mobile
       }
     }
 
@@ -222,21 +215,21 @@ export async function POST(req: NextRequest) {
     }
     mockDb.state.user_profiles.push(newUserProfile)
 
-    // 2. Customer record (with unique Zoho Meeting room generated)
+    // 2. Customer record (with unique Google Meet room generated)
     const cleanNameSafe = fullName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'patient'
-    const zohoMeetingKey = `fitveda-${cleanNameSafe}-${Math.floor(100 + Math.random() * 900)}`
-    const defaultZohoUrl = `https://meet.zoho.com/${zohoMeetingKey}`
+    const meetCode = GoogleMeetService.generateStandardMeetCode(`${cleanNameSafe}${Date.now()}`)
+    const defaultMeetUrl = `https://meet.google.com/${meetCode}`
 
     const newCustomer = {
       id: customerId,
       user_id: userId,
       membership_status: 'inactive',
       membership_plan_id: null,
-      zoho_meeting_url: defaultZohoUrl,
-      zoho_meeting_key: zohoMeetingKey,
-      google_meet_url: defaultZohoUrl,
-      meeting_url: defaultZohoUrl,
-      meeting_provider: 'zoho_meeting',
+      google_meet_url: defaultMeetUrl,
+      meeting_url: defaultMeetUrl,
+      meeting_id: `gm-${meetCode}`,
+      meeting_provider: 'google_meet',
+      google_meet_created_at: new Date().toISOString(),
       is_active: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
         full_description: s.full_description || s.description || s.short_description || '',
         description: s.description || s.short_description || s.full_description || '',
         specialist_designation: s.specialist_designation || 'Certified Specialist Doctor',
-        consultation_type: s.consultation_type || 'Online Video (Zoho Meeting)',
+        consultation_type: s.consultation_type || 'Online Video (Google Meet)',
         currency: s.currency || 'INR',
       }
     })
@@ -217,7 +217,7 @@ export async function POST(req: NextRequest) {
       specialist_designation: String(body.specialist_designation || 'Certified Specialist Doctor').trim(),
       icon: String(body.icon || matchedCat?.icon || '🩺').trim() || '🩺',
       image_url: String(body.image_url || '').trim(),
-      consultation_type: String(body.consultation_type || 'Online Video (Zoho Meeting)').trim(),
+      consultation_type: String(body.consultation_type || 'Online Video (Google Meet)').trim(),
       price: priceNum,
       currency: String(body.currency || 'INR').trim().toUpperCase() || 'INR',
       duration_min: durationMin,

@@ -60,7 +60,7 @@ export default async function ProfessionalTrainingPage() {
       <main className="app-main">
         <div className="page-header flex justify-between items-center" style={{ flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 className="text-headline-md">Live Training &amp; Zoho Meeting</h1>
+            <h1 className="text-headline-md">Live Training &amp; Google Meet</h1>
             <p className="text-body-md text-muted">Sessions and video calls conducted for {proName}</p>
           </div>
           <Link href="/professional/training/new" className="btn btn-primary">+ New Session</Link>
@@ -89,14 +89,14 @@ export default async function ProfessionalTrainingPage() {
                   <th>Customer / Patient</th>
                   <th>Date &amp; Time</th>
                   <th>Session Status</th>
-                  <th>Zoho Meeting Link</th>
+                  <th>Google Meet Link</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {sessions.length ? sessions.map(s => {
                   const name = s.customers?.user_profiles?.full_name ?? 'Patient'
-                  const meetUrl = s.meeting_url || (s.customers as any)?.zoho_meeting_url || 'https://meet.zoho.com/fitveda-priya-sharma'
+                  const meetUrl = s.meeting_url || (s.customers as any)?.google_meet_url || (s.customers as any)?.zoho_meeting_url || 'https://meet.google.com/fit-veda-live'
                   return (
                     <tr key={s.id}>
                       <td><span className="text-body-sm" style={{ fontWeight: 600 }}>{name}</span></td>
@@ -112,7 +112,7 @@ export default async function ProfessionalTrainingPage() {
                           className="btn btn-ghost btn-sm"
                           style={{ color: '#0d9488', fontWeight: 600 }}
                         >
-                          📹 Join Zoho Room
+                          📹 Join Google Meet Room
                         </a>
                       </td>
                       <td>

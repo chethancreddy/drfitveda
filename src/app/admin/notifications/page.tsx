@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import AdminSidebar from '@/components/admin/AdminSidebar'
+import WhatsAppAlertManager from '@/components/admin/WhatsAppAlertManager'
 
 interface WhatsAppNotification {
   id: string
@@ -116,6 +117,7 @@ export default function AdminWhatsAppNotificationsPage() {
   const [runningScheduler, setRunningScheduler] = useState(false)
   const [retryingId, setRetryingId] = useState<string | null>(null)
   const [selectedRecord, setSelectedRecord] = useState<WhatsAppNotification | null>(null)
+  const [activeTab, setActiveTab] = useState<'manager' | 'logs'>('manager')
   const [toast, setToast] = useState('')
 
   // Filters
@@ -258,25 +260,70 @@ export default function AdminWhatsAppNotificationsPage() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              className="btn btn-outline btn-sm"
-              onClick={() => fetchNotifications(true)}
-              disabled={loading}
-            >
-              🔄 Refresh Logs
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={handleRunScheduler}
-              disabled={runningScheduler}
-            >
-              {runningScheduler ? 'Running Scheduler…' : '⚡ Run 15m Reminder Scheduler Now'}
-            </button>
+            {activeTab === 'logs' && (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() => fetchNotifications(true)}
+                  disabled={loading}
+                >
+                  🔄 Refresh Logs
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={handleRunScheduler}
+                  disabled={runningScheduler}
+                >
+                  {runningScheduler ? 'Running Scheduler…' : '⚡ Run 15m Reminder Scheduler Now'}
+                </button>
+              </>
+            )}
           </div>
         </div>
 
+        {/* Tab Switcher */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            borderBottom: '2px solid var(--color-border)',
+            marginBottom: 20,
+          }}
+        >
+          <button
+            type="button"
+            className={`btn btn-sm ${activeTab === 'manager' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{
+              borderRadius: '6px 6px 0 0',
+              fontWeight: 700,
+              fontSize: 13,
+              padding: '8px 16px',
+            }}
+            onClick={() => setActiveTab('manager')}
+          >
+            📢 WhatsApp Alert Manager
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm ${activeTab === 'logs' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{
+              borderRadius: '6px 6px 0 0',
+              fontWeight: 700,
+              fontSize: 13,
+              padding: '8px 16px',
+            }}
+            onClick={() => setActiveTab('logs')}
+          >
+            ⏰ 15m Reminders &amp; Dispatch Logs ({stats.totalNotifications})
+          </button>
+        </div>
+
+        {activeTab === 'manager' ? (
+          <WhatsAppAlertManager />
+        ) : (
+          <>
         {/* Top Delivery Status KPIs */}
         <div className="grid-4" style={{ marginBottom: 'var(--space-md)' }}>
           <div className="stat-card">
@@ -787,6 +834,8 @@ export default function AdminWhatsAppNotificationsPage() {
               </div>
             </div>
           </div>
+        )}
+          </>
         )}
 
         {toast && (

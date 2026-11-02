@@ -3,29 +3,8 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-
-// Popular country codes supported with flags (matches DrFitVeda standard)
-const POPULAR_COUNTRY_CODES = [
-  { code: '+91', flag: '🇮🇳', name: 'India (+91)' },
-  { code: '+971', flag: '🇦🇪', name: 'UAE (+971)' },
-  { code: '+1', flag: '🇺🇸', name: 'USA/CA (+1)' },
-  { code: '+44', flag: '🇬🇧', name: 'UK (+44)' },
-  { code: '+65', flag: '🇸🇬', name: 'Singapore (+65)' },
-  { code: '+61', flag: '🇦🇺', name: 'Australia (+61)' },
-  { code: '+966', flag: '🇸🇦', name: 'Saudi Arabia (+966)' },
-  { code: '+974', flag: '🇶🇦', name: 'Qatar (+974)' },
-  { code: '+965', flag: '🇰🇼', name: 'Kuwait (+965)' },
-  { code: '+968', flag: '🇴🇲', name: 'Oman (+968)' },
-  { code: '+973', flag: '🇧🇭', name: 'Bahrain (+973)' },
-  { code: '+60', flag: '🇲🇾', name: 'Malaysia (+60)' },
-  { code: '+49', flag: '🇩🇪', name: 'Germany (+49)' },
-  { code: '+33', flag: '🇫🇷', name: 'France (+33)' },
-  { code: '+81', flag: '🇯🇵', name: 'Japan (+81)' },
-  { code: '+27', flag: '🇿🇦', name: 'South Africa (+27)' },
-  { code: '+880', flag: '🇧🇩', name: 'Bangladesh (+880)' },
-  { code: '+977', flag: '🇳🇵', name: 'Nepal (+977)' },
-  { code: '+94', flag: '🇱🇰', name: 'Sri Lanka (+94)' },
-]
+import CountryCodeSelector from '@/components/ui/CountryCodeSelector'
+import { validateInternationalPhone, findCountry, ALL_COUNTRY_CODES } from '@/lib/country-codes'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -124,20 +103,10 @@ export default function RegisterPage() {
       newErrors.email = 'Please enter a valid Email ID (e.g. name@example.com).'
     }
 
-    // 6. Phone Number
-    const ph = formData.phone.trim().replace(/\D/g, '')
-    if (!ph) {
-      newErrors.phone = 'Phone Number is required.'
-    } else if (countryCode === '+91') {
-      if (ph.length !== 10) {
-        newErrors.phone = 'Please enter a valid 10-digit Indian mobile number.'
-      } else if (!/^[6-9]/.test(ph)) {
-        newErrors.phone = 'Indian mobile numbers must start with 6, 7, 8, or 9.'
-      }
-    } else {
-      if (ph.length < 6 || ph.length > 15) {
-        newErrors.phone = 'Please enter a valid mobile number (6 to 15 digits).'
-      }
+    // 6. Phone Number (International Validation)
+    const phoneVal = validateInternationalPhone(countryCode, formData.phone)
+    if (!phoneVal.isValid) {
+      newErrors.phone = phoneVal.error || 'Please enter a valid phone number.'
     }
 
     setErrors(newErrors)
@@ -506,39 +475,22 @@ export default function RegisterPage() {
               >
                 WhatsApp / Phone Number <span style={{ color: '#ef4444' }}>*</span>
               </label>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <select
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <CountryCodeSelector
                   value={countryCode}
-                  onChange={e => setCountryCode(e.target.value)}
-                  style={{
-                    padding: '9px 8px',
-                    borderRadius: 8,
-                    border: '1px solid #cbd5e1',
-                    background: '#f8fafc',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    width: 110,
-                    flexShrink: 0,
-                    outline: 'none',
-                  }}
-                  title="Select Country Code"
-                >
-                  {POPULAR_COUNTRY_CODES.map(c => (
-                    <option key={c.code} value={c.code}>
-                      {c.flag} {c.code}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(code) => setCountryCode(code)}
+                />
                 <input
                   id="phone"
                   type="tel"
                   required
-                  placeholder={countryCode === '+91' ? '98765 43210' : 'Mobile number'}
+                  placeholder={findCountry(countryCode)?.format || 'Mobile number'}
                   value={formData.phone}
                   onChange={e => handleChange('phone', e.target.value)}
                   style={{
                     flex: 1,
-                    padding: '9px 12px',
+                    height: 42,
+                    padding: '0 12px',
                     borderRadius: 8,
                     border: `1px solid ${errors.phone ? '#ef4444' : '#cbd5e1'}`,
                     outline: 'none',

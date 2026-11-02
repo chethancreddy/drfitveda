@@ -104,7 +104,7 @@ export default async function ProfessionalDashboard() {
 
         <div className="card" style={{ marginBottom: 'var(--space-md)' }}>
           <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-sm)' }}>
-            <h2 className="text-headline-sm">Live Zoho Meeting Consultations &amp; Training</h2>
+            <h2 className="text-headline-sm">Live Google Meet Consultations &amp; Training</h2>
             <Link href="/professional/training/new" className="btn btn-primary btn-sm">+ Schedule Session</Link>
           </div>
           <div className="table-wrapper">
@@ -114,7 +114,7 @@ export default async function ProfessionalDashboard() {
                   <th>Patient / Customer</th>
                   <th>Date &amp; Time</th>
                   <th>Session Status</th>
-                  <th>Zoho Meeting Link</th>
+                  <th>Google Meet Link</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -130,7 +130,7 @@ export default async function ProfessionalDashboard() {
                       <td><span className={`badge badge-${sc(s.status)}`} style={{ textTransform: 'capitalize' }}>{s.status}</span></td>
                       <td>
                         <a
-                          href={s.meeting_url || 'https://meeting.zoho.com/join?key=fit-veda-priya'}
+                          href={s.meeting_url || 'https://meet.google.com/fit-veda-live'}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn btn-ghost btn-sm"

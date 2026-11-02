@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
 import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 import { syncSessionRemindersForAppointment } from '@/lib/services/whatsapp-notification.service'
+import { GoogleMeetService } from '@/lib/services/google-meet.service'
 
 // ============================================================
 // GET /api/appointments — List appointments
@@ -119,7 +120,7 @@ export async function POST(request: Request) {
       scheduled_at,
       duration_min = 30,
       notes = '',
-      meeting_url = 'https://meeting.zoho.com/join?key=drf-veda-live'
+      meeting_url = '',
     } = body
 
     if (!scheduled_at) {
@@ -149,7 +150,7 @@ export async function POST(request: Request) {
         service_category: svc.category,
         service_price: Number(svc.price),
         service_currency: svc.currency || 'INR',
-        consultation_type: svc.consultation_type || consultation_type || 'Online Video (Zoho Meeting)',
+        consultation_type: svc.consultation_type || consultation_type || 'Online Video (Google Meet)',
       }
       if (!notes && svc.name) {
         notes = `Consultation service: ${svc.name}`
@@ -220,6 +221,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'professional_id is required' }, { status: 400 })
     }
 
+    // Resolve or generate unique Google Meet link for this consultation
+    let resolvedMeetUrl = meeting_url
+    let resolvedMeetId = ''
+    let eventId: string | null = null
+
+    if (!resolvedMeetUrl || resolvedMeetUrl.includes('zoho.com')) {
+      const custRecord = (mockDb.state.customers || []).find((c: any) => c.id === customer_id)
+      const userProfiles = mockDb.state.user_profiles || []
+      const up = userProfiles.find((u: any) => u.id === custRecord?.user_id)
+      const customerName = up?.full_name || custRecord?.full_name || 'Customer'
+      const customerEmail = up?.email || custRecord?.email
+
+      const meetResult = await GoogleMeetService.getOrCreateCustomerMeeting({
+        customerId: customer_id,
+        customerName,
+        customerEmail,
+        scheduledAt: scheduled_at,
+        durationMin,
+      })
+      resolvedMeetUrl = meetResult.meeting_url
+      resolvedMeetId = meetResult.meeting_id
+      eventId = meetResult.calendar_event_id || null
+    }
+
     const { data: appt, error } = await (supabase as any)
       .from('appointments')
       .insert({
@@ -229,7 +254,10 @@ export async function POST(request: Request) {
         duration_min,
         status: 'scheduled',
         notes,
-        meeting_url,
+        meeting_url: resolvedMeetUrl,
+        meeting_provider: 'google_meet',
+        meeting_id: resolvedMeetId || undefined,
+        google_calendar_event_id: eventId || undefined,
         ...serviceSnapshot,
       })
       .select()

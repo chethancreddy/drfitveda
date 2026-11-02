@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     const now = new Date().toISOString()
     const { data: custRecord } = await (svc as any)
       .from('customers')
-      .select('is_active, is_archived, membership_status, zoho_meeting_url, google_meet_url, meeting_url')
+      .select('is_active, is_archived, membership_status, google_meet_url, zoho_meeting_url, meeting_url')
       .eq('id', customer_id)
       .single()
 
@@ -61,10 +61,10 @@ export async function POST(req: NextRequest) {
     }
 
     const meetingUrl =
-      custRecord?.zoho_meeting_url ||
       custRecord?.google_meet_url ||
+      custRecord?.zoho_meeting_url ||
       custRecord?.meeting_url ||
-      'https://meet.zoho.com/drfitveda-live'
+      'https://meet.google.com/fit-veda-live'
 
     const { data: session, error } = await (svc as any)
       .from('training_sessions')

@@ -71,10 +71,6 @@ export default function HomePage() {
                   <Link href="/login" style={{fontSize:13,fontWeight:700,color:'var(--color-tertiary)',textDecoration:'underline'}}>
                     Patient Sign In →
                   </Link>
-                  <span style={{color:'rgba(255,255,255,0.3)'}}>•</span>
-                  <Link href="/login?portal=professional" style={{fontSize:13,fontWeight:700,color:'#6ee7b7',textDecoration:'underline'}}>
-                    🩺 Doctor &amp; Trainer Login →
-                  </Link>
                 </div>
 
                 {/* Trust Badges */}

@@ -61,9 +61,9 @@ export default async function ProfessionalConsultPage() {
       <main className="app-main">
         <div className="page-header flex justify-between items-center" style={{ flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 className="text-headline-md">Doctor Consultations &amp; Zoho Meeting</h1>
+            <h1 className="text-headline-md">Doctor Consultations &amp; Google Meet</h1>
             <p className="text-body-md text-muted">
-              Live one-on-one naturopathy and clinical diagnostics conducted via Zoho Meeting.
+              Live one-on-one naturopathy and clinical diagnostics conducted via Google Meet (join in browser without app download).
             </p>
           </div>
           <Link href="/professional/customers" className="btn btn-secondary btn-sm">
@@ -83,7 +83,7 @@ export default async function ProfessionalConsultPage() {
                 const dateObj = new Date(a.scheduled_at)
                 const patientName = a.customers?.user_profiles?.full_name ?? 'Patient'
                 const phone = a.customers?.user_profiles?.phone
-                const meetUrl = a.meeting_url || a.customers?.zoho_meeting_url || 'https://meet.zoho.com/fitveda-priya-sharma'
+                const meetUrl = a.meeting_url || a.customers?.google_meet_url || a.customers?.zoho_meeting_url || 'https://meet.google.com/fit-veda-live'
 
                 return (
                   <div key={a.id} className="card" style={{ padding: 'var(--space-md)' }}>
@@ -104,7 +104,7 @@ export default async function ProfessionalConsultPage() {
                           className="btn btn-primary btn-sm"
                           style={{ fontWeight: 700 }}
                         >
-                          📹 Join Zoho Meeting Now
+                          📹 Join Google Meet Now
                         </a>
                       </div>
                     </div>

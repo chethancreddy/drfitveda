@@ -44,7 +44,7 @@ export default function TermsPage() {
 
       <Section title="4. Live sessions and recordings">
         <ul style={{ paddingLeft: 18, margin: 0 }}>
-          <li>Live training and consultations are held on a secure third-party video platform (Zoho Meeting).</li>
+          <li>Live training and consultations are held on a secure third-party video platform (Google Meet).</li>
           <li>Where recording is part of your plan, we ask for your consent before it is used. You can ask us to stop recording future sessions; this may limit replay features.</li>
           <li>Only the most recent active recording is kept; earlier recordings are deleted after a grace period (see Privacy Policy).</li>
           <li>You may not record, copy or share sessions or other users&apos; content without permission.</li>

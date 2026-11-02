@@ -108,7 +108,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
         ? 'active'
         : 'inactive'
 
-    const newMeetingUrl = body.zoho_meeting_url || body.google_meet_url || body.meeting_url
+    const newMeetingUrl = body.google_meet_url || body.zoho_meeting_url || body.meeting_url
 
     // 1. Update core fields first
     if (body.membership_plan_id !== undefined) {
@@ -118,12 +118,12 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
       customer.membership_expires_at = body.membership_expires_at
     }
     if (newMeetingUrl !== undefined) {
-      customer.zoho_meeting_url = newMeetingUrl
       customer.google_meet_url = newMeetingUrl
+      customer.zoho_meeting_url = newMeetingUrl
       customer.meeting_url = newMeetingUrl
-      customer.meeting_provider = newMeetingUrl?.includes('zoho.com')
-        ? 'zoho_meeting'
-        : customer.meeting_provider || 'zoho_meeting'
+      customer.meeting_provider = newMeetingUrl?.includes('meet.google.com')
+        ? 'google_meet'
+        : (newMeetingUrl?.includes('zoho.com') ? 'zoho_meeting' : 'google_meet')
     }
 
     // 2. Handle Restore from Archive
@@ -226,9 +226,10 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 
 export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
   try {
-    const auth = await verifyAdminAccess(req, ['admin', 'super_admin', 'operations_manager'])
+    // Strictly Admin-only operation — operations team and care staff are blocked
+    const auth = await verifyAdminAccess(req, ['admin', 'super_admin'])
     if (!auth.authorized) {
-      return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: auth.status })
+      return NextResponse.json({ error: auth.error || 'Unauthorized. Only Admin can delete customers.' }, { status: auth.status })
     }
 
     const resolvedParams = await Promise.resolve(context.params)
@@ -285,23 +286,64 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
       })
     }
 
-    // Soft Delete / Archive — preserve all linked appointments, memberships, orders, and clinical records
+    // Soft Delete / Controlled Archive Workflow:
+    // 1. Synchronize & suspend customer membership(s)
     syncCustomerStatusAndMemberships(customer, false)
+    customer.is_active = false
     customer.is_archived = true
     customer.deleted_at = new Date().toISOString()
+    customer.updated_at = new Date().toISOString()
     customers[idx] = customer
 
-    // Deactivate active assignments for this archived customer without deleting historical assignments
-    if (Array.isArray(mockDb.state.professional_assignments)) {
-      for (const pa of mockDb.state.professional_assignments) {
-        if (pa.customer_id === customer.id && pa.is_active) {
-          pa.is_active = false
-          pa.updated_at = new Date().toISOString()
+    // 2. Automatically cancel all upcoming/scheduled appointments & sessions
+    let cancelledApptsCount = 0
+    if (Array.isArray(mockDb.state.appointments)) {
+      for (const appt of mockDb.state.appointments) {
+        if (appt.customer_id === customer.id && ['scheduled', 'confirmed', 'pending'].includes(appt.status)) {
+          appt.status = 'cancelled'
+          appt.cancellation_reason = 'Customer deleted by admin'
+          appt.cancelled_at = new Date().toISOString()
+          appt.updated_at = new Date().toISOString()
+          cancelledApptsCount++
+        }
+      }
+    }
+    if (Array.isArray(mockDb.state.training_sessions)) {
+      for (const sess of mockDb.state.training_sessions) {
+        if (sess.customer_id === customer.id && ['scheduled', 'confirmed', 'pending'].includes(sess.status)) {
+          sess.status = 'cancelled'
+          sess.cancellation_reason = 'Customer deleted by admin'
+          sess.updated_at = new Date().toISOString()
+          cancelledApptsCount++
         }
       }
     }
 
-    await savePersistedState(['customers', 'user_profiles', 'professional_assignments'])
+    // 3. Deactivate active care team assignments
+    let deactivatedAssignCount = 0
+    if (Array.isArray(mockDb.state.professional_assignments)) {
+      for (const pa of mockDb.state.professional_assignments) {
+        if (pa.customer_id === customer.id && pa.is_active) {
+          pa.is_active = false
+          pa.deactivated_at = new Date().toISOString()
+          pa.updated_at = new Date().toISOString()
+          deactivatedAssignCount++
+        }
+      }
+    }
+
+    // 4. Revoke user account / customer portal access immediately
+    const userProfiles = mockDb.state.user_profiles || []
+    const upIdx = userProfiles.findIndex((up: any) => up.id === customer.user_id)
+    if (upIdx !== -1) {
+      userProfiles[upIdx].is_active = false
+      userProfiles[upIdx].is_archived = true
+      userProfiles[upIdx].deleted_at = new Date().toISOString()
+      userProfiles[upIdx].updated_at = new Date().toISOString()
+    }
+
+    // 5. Safely persist state without touching orders/payouts/invoices
+    await savePersistedState(['customers', 'user_profiles', 'professional_assignments', 'appointments', 'training_sessions'])
 
     await recordAdminAuditLog({
       actorId: auth.userId,
@@ -312,7 +354,7 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
       previousStatus: prevStatus,
       newStatus: 'archived',
       actionType: 'archive',
-      detail: `Customer "${recordName}" (${customer.id}) soft-deleted/archived to preserve linked clinical and membership history.`,
+      detail: `Customer "${recordName}" (${customer.id}) deleted/archived by admin. Cancelled ${cancelledApptsCount} upcoming appointment(s), deactivated ${deactivatedAssignCount} assignment(s), revoked portal login, and preserved financial records.`,
     })
 
     return NextResponse.json({
@@ -320,7 +362,9 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
       deleted: false,
       archived: true,
       customer,
-      message: `Customer "${recordName}" archived safely. Historical records remain intact.`,
+      cancelledAppointments: cancelledApptsCount,
+      deactivatedAssignments: deactivatedAssignCount,
+      message: `Customer "${recordName}" removed safely. ${cancelledApptsCount} upcoming appointment(s) cancelled, care assignments deactivated, and financial history preserved.`,
     })
   } catch {
     return NextResponse.json({ error: 'Failed to delete or archive customer' }, { status: 400 })

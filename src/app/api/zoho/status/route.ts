@@ -1,11 +1,16 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
+import { loadPersistedState } from '@/lib/persistent-store'
 
+// Backward-compatible endpoint: Reports active Google Meet provider status
 export async function GET(request: Request) {
   try {
+    await loadPersistedState()
     const supabase = await createServerSupabaseClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -24,14 +29,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
     }
 
-    const meetingUrl = customer.zoho_meeting_url || customer.meeting_url || null
+    const meetingUrl = customer.google_meet_url || customer.meeting_url || customer.zoho_meeting_url || null
 
     return NextResponse.json({
       success: true,
       meeting_url: meetingUrl,
-      provider: meetingUrl?.includes('zoho.com') ? 'zoho_meeting' : 'custom',
-      meeting_key: customer.zoho_meeting_key || null,
-      created_at: customer.zoho_meeting_created_at || customer.created_at,
+      provider: 'google_meet',
+      meeting_key: customer.meeting_id || customer.zoho_meeting_key || null,
+      created_at: customer.google_meet_created_at || customer.zoho_meeting_created_at || customer.created_at,
+      historical_zoho_url: customer.historical_zoho_url || null,
       is_active: Boolean(meetingUrl),
     })
   } catch (err: any) {

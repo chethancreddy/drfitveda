@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => ({}))
-    const { identifier, email, phone, phone_or_email, mobile, otp, action, channel } = body
+    const { identifier, email, phone, phone_or_email, mobile, otp, action, channel, country_code } = body
     const rawInput = String(identifier || email || phone || phone_or_email || mobile || '').trim()
 
     // Determine preferred delivery channel: 'whatsapp' | 'email'
@@ -47,8 +47,8 @@ export async function POST(req: NextRequest) {
       targetChannel = 'email'
     }
 
-    // 2. Validate & Normalize
-    const norm = normalizeIdentifier(rawInput, targetChannel)
+    // 2. Validate & Normalize (with international calling code support)
+    const norm = normalizeIdentifier(rawInput, targetChannel, country_code)
     if (!norm.isValid) {
       return NextResponse.json(
         { error: norm.error || 'Please enter a valid registered email address or mobile number.' },
@@ -180,6 +180,44 @@ export async function POST(req: NextRequest) {
 
       // ─── USER IDENTIFICATION & ACCOUNT MAPPING ─────────────────
       await loadPersistedState()
+
+      // Block login if user profile or customer record has been deactivated or archived
+      const uProfiles = mockDb.state.user_profiles || []
+      const allCustomers = mockDb.state.customers || []
+      const matchedDeactivatedProfile = uProfiles.find((up: any) => {
+        const emailMatch = norm.type === 'email' && up.email?.toLowerCase() === norm.normalized.toLowerCase()
+        const phoneMatch =
+          norm.type === 'phone' &&
+          up.phone &&
+          (up.phone.replace(/\D/g, '') === norm.normalized ||
+            up.phone.replace(/\D/g, '').endsWith(norm.normalized.slice(-10)))
+        return (emailMatch || phoneMatch) && (up.is_active === false || up.is_archived === true)
+      })
+
+      const matchedDeactivatedCustomer = allCustomers.find((c: any) => {
+        const up = uProfiles.find((u: any) => u.id === c.user_id)
+        const emailMatch =
+          norm.type === 'email' &&
+          (c.email?.toLowerCase() === norm.normalized.toLowerCase() ||
+            up?.email?.toLowerCase() === norm.normalized.toLowerCase())
+        const phoneMatch =
+          norm.type === 'phone' &&
+          ((c.phone &&
+            (c.phone.replace(/\D/g, '') === norm.normalized ||
+              c.phone.replace(/\D/g, '').endsWith(norm.normalized.slice(-10)))) ||
+            (up?.phone &&
+              (up.phone.replace(/\D/g, '') === norm.normalized ||
+                up.phone.replace(/\D/g, '').endsWith(norm.normalized.slice(-10)))))
+        return (emailMatch || phoneMatch) && (c.is_active === false || c.is_archived === true)
+      })
+
+      if (matchedDeactivatedProfile || matchedDeactivatedCustomer) {
+        return NextResponse.json(
+          { error: 'This account has been deactivated or removed. Please contact DrFitVeda administration.' },
+          { status: 403 }
+        )
+      }
+
       let targetUser: any = resolveAccountByIdentifier(norm.normalized)
 
       // Auto-provision new customer ONLY if no Admin, Doctor, Trainer, Team Member, or Customer matched

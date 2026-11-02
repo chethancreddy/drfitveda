@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { syncSessionRemindersForTrainingSession } from '@/lib/services/whatsapp-notification.service'
+import { GoogleMeetService } from '@/lib/services/google-meet.service'
 
 export async function PATCH(
   req: NextRequest,
@@ -67,6 +68,15 @@ export async function PATCH(
 
     if (updatedSession) {
       await syncSessionRemindersForTrainingSession(updatedSession)
+
+      if (status === 'completed' || status === 'cancelled') {
+        await GoogleMeetService.cleanupMeeting({
+          sessionId: updatedSession.id,
+          customerId: updatedSession.customer_id,
+          action: status as 'completed' | 'cancelled',
+          reason: `Session marked ${status}`,
+        })
+      }
     }
 
     await (svc as any).from('audit_logs').insert({

@@ -65,11 +65,6 @@ export default function PublicFooter() {
               </Link>
             </div>
             <div style={{marginBottom:8}}>
-              <Link href="/login?portal=professional" className="text-body-sm" style={{color:'#6ee7b7',textDecoration:'none',fontWeight:600}}>
-                🩺 Doctor &amp; Trainer Portal Login
-              </Link>
-            </div>
-            <div style={{marginBottom:8}}>
               <Link href="/contact" className="text-body-sm" style={{color:'rgba(255,255,255,0.7)',textDecoration:'none'}}>
                 Contact Medical Support
               </Link>

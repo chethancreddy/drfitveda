@@ -143,27 +143,26 @@ export default function AdminCustomersPage() {
   }, [customers, statusFilter, searchQuery])
 
   function handleNameChange(name: string) {
-    const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '')
+    const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 4) || 'care'
     setFormData(prev => ({
       ...prev,
       full_name: name,
       google_meet_url:
         prev.google_meet_url &&
-        !prev.google_meet_url.includes('fitveda-') &&
-        !prev.google_meet_url.includes('meet.zoho.com')
+        prev.google_meet_url.includes('meet.google.com')
           ? prev.google_meet_url
-          : `https://meet.zoho.com/fitveda-${slug || 'customer'}-${Math.floor(100 + Math.random() * 900)}`,
+          : `https://meet.google.com/dfv-${slug}-${Math.floor(100 + Math.random() * 900)}`,
     }))
   }
 
-  function autoGenerateZohoLink() {
-    const slug = (formData.full_name || 'customer').toLowerCase().replace(/[^a-z0-9]/g, '')
-    const generated = `https://meet.zoho.com/fitveda-${slug}-${Math.floor(100 + Math.random() * 900)}`
+  function autoGenerateGoogleMeetLink() {
+    const slug = (formData.full_name || 'care').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 4) || 'care'
+    const generated = `https://meet.google.com/dfv-${slug}-${Math.floor(100 + Math.random() * 900)}`
     setFormData(prev => ({
       ...prev,
       google_meet_url: generated,
     }))
-    showToast('✓ Generated unique Zoho Meeting room link!')
+    showToast('✓ Generated unique Google Meet room link!')
   }
 
   async function handleOnboardSubmit(e: React.FormEvent) {
@@ -177,8 +176,8 @@ export default function AdminCustomersPage() {
     try {
       const payload = {
         ...formData,
-        zoho_meeting_url: formData.google_meet_url,
         meeting_url: formData.google_meet_url,
+        google_meet_url: formData.google_meet_url,
       }
       const res = await fetch('/api/customers', {
         method: 'POST',
@@ -186,7 +185,7 @@ export default function AdminCustomersPage() {
         body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error('Onboarding failed')
-      showToast('✓ Customer onboarded with Zoho Meeting assigned successfully!')
+      showToast('✓ Customer onboarded with Google Meet assigned successfully!')
       setShowOnboardModal(false)
       setFormData({
         full_name: '',
@@ -309,7 +308,7 @@ export default function AdminCustomersPage() {
           <div>
             <h1 className="text-headline-md">Customers</h1>
             <p className="text-body-md text-muted">
-              Manage patient profiles, memberships, dedicated Zoho Meeting rooms, and care teams
+              Manage patient profiles, memberships, dedicated Google Meet rooms, and care teams
             </p>
           </div>
           <button className="btn btn-primary btn-sm" onClick={() => setShowOnboardModal(true)}>
@@ -369,7 +368,7 @@ export default function AdminCustomersPage() {
                   <tr>
                     <th>Customer Name</th>
                     <th>Membership Plan &amp; Status</th>
-                    <th>Dedicated Zoho Meeting Link</th>
+                    <th>Dedicated Google Meet Link</th>
                     <th>Assigned Care Team</th>
                     <th>Account Status</th>
                     <th style={{ textAlign: 'right' }}>Actions</th>
@@ -381,7 +380,7 @@ export default function AdminCustomersPage() {
                       const doc = c.assigned_professionals?.find(p => p.role.includes('doctor'))
                       const trn = c.assigned_professionals?.find(p => p.role.includes('trainer'))
                       const meetLink =
-                        c.zoho_meeting_url || c.google_meet_url || 'https://meet.zoho.com/fitveda-priya'
+                        c.google_meet_url || c.meeting_url || c.zoho_meeting_url || 'https://meet.google.com/fit-veda-live'
 
                       return (
                         <tr key={c.id} style={{ opacity: c.is_active && !c.is_archived ? 1 : 0.72 }}>
@@ -614,7 +613,7 @@ export default function AdminCustomersPage() {
                 </div>
 
                 <label className="form-field">
-                  <span className="form-label">Dedicated Zoho Meeting URL</span>
+                  <span className="form-label">Dedicated Google Meet URL</span>
                   <input
                     className="form-input"
                     value={editingCustomer.google_meet_url || ''}
@@ -814,14 +813,14 @@ export default function AdminCustomersPage() {
                         gap: 6,
                       }}
                     >
-                      <span>🟢 2. Dedicated Zoho Meeting Room Link</span>
+                      <span>🟢 2. Dedicated Google Meet Room Link</span>
                       <span className="badge badge-success" style={{ fontSize: 10, padding: '2px 6px' }}>
-                        Zoho Active
+                        Google Meet Active
                       </span>
                     </div>
                     <button
                       type="button"
-                      onClick={autoGenerateZohoLink}
+                      onClick={autoGenerateGoogleMeetLink}
                       className="btn btn-secondary btn-sm"
                       style={{
                         fontSize: 12,
@@ -837,10 +836,10 @@ export default function AdminCustomersPage() {
                     </button>
                   </div>
                   <label className="form-field">
-                    <span className="form-label">Unique Zoho Meeting URL for this Customer</span>
+                    <span className="form-label">Unique Google Meet URL for this Customer</span>
                     <input
                       className="form-input"
-                      placeholder="https://meet.zoho.com/fitveda-priya-sharma-123"
+                      placeholder="https://meet.google.com/dfv-priy-123"
                       value={formData.google_meet_url}
                       onChange={e => setFormData(p => ({ ...p, google_meet_url: e.target.value }))}
                       style={{ fontFamily: 'monospace', fontSize: 13, background: '#ffffff' }}

@@ -13,7 +13,7 @@ const CMS_SECTIONS = [
   { icon: '💳', title: 'Membership Plans', desc: 'Edit plan pricing, session counts, session frequency, and benefits. All changes reflect instantly on the public page.', href: '/admin/memberships', label: 'Manage Plans' },
   { icon: '🩺', title: 'Consultation Services', desc: 'Create and manage standalone specialist consultation services (Doctor, Nutrition, Yoga, PCOD/PCOS, Women\'s Health, General Wellness) including pricing, duration, and visibility.', href: '/admin/consultations', label: 'Manage Services' },
   { icon: '💰', title: 'Compensation Rules', desc: 'Configure how earnings are split between doctors, trainers, and the platform per payout component.', href: '/admin/finance', label: 'Edit Rules' },
-  { icon: '🎥', title: 'Recording Settings', desc: 'Configure Zoho Meeting recording link handling and training session retention policies.', href: '/admin/training', label: 'Recording Settings' },
+  { icon: '🎥', title: 'Recording Settings', desc: 'Configure Google Meet recording link handling and training session retention policies.', href: '/admin/training', label: 'Recording Settings' },
 ]
 
 export default async function AdminCMSPage() {

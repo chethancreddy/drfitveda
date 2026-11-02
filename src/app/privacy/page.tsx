@@ -74,7 +74,7 @@ export default function PrivacyPage() {
           <li><strong>Your assigned care team</strong> (doctor, trainer, nutritionist, yoga professional) — access is limited by role to data needed for your care.</li>
           <li><strong>Platform administrators</strong> — limited operational and support access, logged.</li>
           <li><strong>Supabase</strong> — database, authentication and file storage (hosting region: [CONFIRM]).</li>
-          <li><strong>Zoho Meeting</strong> — video sessions and live consultations; your name and email are used to provision meeting rooms and join links.</li>
+          <li><strong>Google Meet</strong> — video sessions and live consultations; your name and email are used to provision meeting rooms and join links.</li>
           <li><strong>Razorpay</strong> — payment processing, if/when checkout is enabled; <strong>Resend</strong> — transactional email, if/when enabled. Both are configured in the codebase but not yet active. [CONFIRM]</li>
           <li><strong>Hosting provider</strong> (Vercel configuration present) — serves the website.</li>
           <li>Authorities, courts or professional regulators where legally required.</li>

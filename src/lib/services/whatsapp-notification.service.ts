@@ -451,10 +451,10 @@ async function resolveCustomerDetails(customerId: string): Promise<{
   const fullName = userProfile?.full_name || customer?.full_name || 'Customer'
   const phone = userProfile?.phone || customer?.phone || ''
   const meetingLink =
-    customer?.zoho_meeting_url ||
     customer?.google_meet_url ||
     customer?.meeting_url ||
-    'https://meet.zoho.com/drfitveda-live'
+    customer?.zoho_meeting_url ||
+    'https://meet.google.com/fit-veda-live'
   const timezone = customer?.timezone || userProfile?.timezone || DEFAULT_TIMEZONE
 
   return { customer, userProfile, fullName, phone, meetingLink, timezone }
@@ -802,7 +802,7 @@ export async function triggerCustomerAssignmentNotifications(params: {
   let sessionTime = params.assignedSlot || '07:00 AM - 08:00 AM IST'
   let sessionScheduledAt: string | null = null
   let upcomingApptRef: any = null
-  let consultationType = 'Online Video (Zoho Meeting)'
+  let consultationType = 'Online Video (Google Meet)'
 
   if (isDoc) {
     const appts: any[] = mockDb.state.appointments || []
@@ -1016,7 +1016,7 @@ export async function syncCustomerAppointmentStatusNotification(
   const consultationType =
     appointment.consultation_type ||
     appointment.service_name ||
-    'Online Video (Zoho Meeting)'
+    'Online Video (Google Meet)'
 
   if (action === 'updated') {
     const templateVars = [
@@ -1202,7 +1202,7 @@ export async function syncSessionRemindersForAppointment(
     ? 'Live Personal Training Session'
     : 'Doctor Wellness Consultation'
   const meetingLink =
-    appointment.meeting_url || custInfo.meetingLink || 'https://meet.zoho.com/drfitveda-live'
+    appointment.meeting_url || custInfo.meetingLink || 'https://meet.google.com/fit-veda-live'
   const nowIso = new Date().toISOString()
 
   const scheduled: WhatsAppNotificationRecord[] = []
@@ -1399,7 +1399,7 @@ export async function syncSessionRemindersForTrainingSession(
   const { dateStr, timeStr } = formatDateTimeInTimeZone(scheduledAtIso, tz)
   const sessionType = session.session_type || 'Live 1-on-1 Personal Training'
   const meetingLink =
-    session.meeting_url || custInfo.meetingLink || 'https://meet.zoho.com/drfitveda-live'
+    session.meeting_url || custInfo.meetingLink || 'https://meet.google.com/fit-veda-live'
   const nowIso = new Date().toISOString()
 
   const scheduled: WhatsAppNotificationRecord[] = []

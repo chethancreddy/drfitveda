@@ -4,6 +4,7 @@ import {
   syncSessionRemindersForAppointment,
   syncCustomerAppointmentStatusNotification,
 } from '@/lib/services/whatsapp-notification.service'
+import { GoogleMeetService } from '@/lib/services/google-meet.service'
 
 // ============================================================
 // GET /api/appointments/[id] — Get appointment details
@@ -105,6 +106,19 @@ export async function PATCH(
 
         if (status === 'cancelled') {
           await syncCustomerAppointmentStatusNotification(updatedAppt, 'cancelled')
+          await GoogleMeetService.cleanupMeeting({
+            appointmentId: updatedAppt.id,
+            customerId: updatedAppt.customer_id,
+            action: 'cancelled',
+            reason: 'Appointment cancelled',
+          })
+        } else if (status === 'completed') {
+          await GoogleMeetService.cleanupMeeting({
+            appointmentId: updatedAppt.id,
+            customerId: updatedAppt.customer_id,
+            action: 'completed',
+            reason: 'Consultation completed',
+          })
         } else if (scheduled_at || professional_id) {
           await syncCustomerAppointmentStatusNotification(updatedAppt, 'updated')
         }

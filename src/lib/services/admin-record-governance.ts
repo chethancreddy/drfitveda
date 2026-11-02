@@ -30,6 +30,15 @@ export interface DependencyCheckResult {
   }[]
   recommendedAction: 'permanent_delete' | 'soft_delete' | 'blocked_requires_reassignment'
   consequenceWarning: string
+  customerSummary?: {
+    customerName: string
+    customerId: string
+    phone: string
+    membershipsCount: number
+    appointmentsCount: number
+    upcomingAppointmentsCount: number
+    assignmentsCount: number
+  }
 }
 
 export interface AuditLogInput {
@@ -342,6 +351,10 @@ export async function inspectRecordDependencies(
     if (!cust) return null
     const up = userProfiles.find((u: any) => u.id === cust.user_id)
     const name = up?.full_name || cust.full_name || cust.id
+    const rawPhone = up?.phone || cust.phone || ''
+    const maskedPhone = rawPhone.length > 5
+      ? `${rawPhone.slice(0, 4)}••••${rawPhone.slice(-3)}`
+      : rawPhone || 'Not provided'
 
     const custAppts = appointments.filter((a: any) => a.customer_id === cust.id)
     const custSessions = trainingSessions.filter((s: any) => s.customer_id === cust.id)
@@ -353,6 +366,10 @@ export async function inspectRecordDependencies(
     const hasMembershipHistory =
       !!cust.membership_plan_id ||
       (Array.isArray(cust.memberships_history) && cust.memberships_history.length > 0)
+
+    const upcomingCount =
+      custAppts.filter((a: any) => ['scheduled', 'confirmed', 'pending'].includes(a.status)).length +
+      custSessions.filter((s: any) => ['scheduled', 'confirmed', 'pending'].includes(s.status)).length
 
     const linkedRecords = [
       { label: 'Consultations & Appointments', count: custAppts.length },
@@ -373,8 +390,17 @@ export async function inspectRecordDependencies(
       blockingReasons: [],
       linkedRecords,
       recommendedAction: hasDependencies ? 'soft_delete' : 'permanent_delete',
+      customerSummary: {
+        customerName: name,
+        customerId: cust.id,
+        phone: maskedPhone,
+        membershipsCount: hasMembershipHistory ? 1 : 0,
+        appointmentsCount: custAppts.length + custSessions.length,
+        upcomingAppointmentsCount: upcomingCount,
+        assignmentsCount: custAssigns.length,
+      },
       consequenceWarning: hasDependencies
-        ? `This customer has linked historical records (${linkedRecords.map(l => `${l.count} ${l.label}`).join(', ')}). It will be safely Archived (Soft Deleted), deactivating their membership and login while preserving all clinical and financial history.`
+        ? `This customer has linked records (${linkedRecords.map(l => `${l.count} ${l.label}`).join(', ')}). Deletion will automatically cancel upcoming appointments, suspend active memberships, deactivate care assignments, and revoke portal login while preserving all financial and billing history.`
         : 'This customer record has no linked appointments, memberships, or payments and will be permanently deleted.',
     }
   }

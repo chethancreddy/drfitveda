@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
         ...a,
         customer_name: userProfile?.full_name || a.customer_id,
         customer_phone: userProfile?.phone || '',
-        customer_meet_url: cust?.google_meet_url || (cust as any)?.zoho_meeting_url || 'https://meeting.zoho.com/join?key=fit-veda-priya',
+        customer_meet_url: cust?.google_meet_url || cust?.meeting_url || (cust as any)?.zoho_meeting_url || 'https://meet.google.com/fit-veda-live',
         professional_name: pro?.full_name || 'Assigned Professional',
         professional_role: pro?.role || a.role,
         professional_slots: pro?.working_slots || [],
@@ -164,7 +164,9 @@ export async function POST(req: NextRequest) {
         duration_min: 45,
         status: 'scheduled',
         notes: notes || 'Assigned via Care Dispatch',
-        consultation_type: consultation_type || 'Doctor Video Consultation (Zoho Meeting)',
+        consultation_type: consultation_type || 'Doctor Video Consultation (Google Meet)',
+        meeting_url: (mockDb.state.customers || []).find((c: any) => c.id === customer_id)?.google_meet_url || 'https://meet.google.com/fit-veda-live',
+        meeting_provider: 'google_meet',
         created_at: new Date().toISOString(),
       }
       mockDb.state.appointments.push(confirmedAppt)
