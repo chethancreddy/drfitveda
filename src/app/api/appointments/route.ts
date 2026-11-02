@@ -238,7 +238,7 @@ export async function POST(request: Request) {
         customerName,
         customerEmail,
         scheduledAt: scheduled_at,
-        durationMin,
+        durationMin: duration_min,
       })
       resolvedMeetUrl = meetResult.meeting_url
       resolvedMeetId = meetResult.meeting_id

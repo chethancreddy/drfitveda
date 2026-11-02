@@ -16,6 +16,7 @@ interface Customer {
   membership_expires_at?: string | null
   google_meet_url: string
   zoho_meeting_url?: string
+  meeting_url?: string
   is_active: boolean
   is_archived?: boolean
   deleted_at?: string | null

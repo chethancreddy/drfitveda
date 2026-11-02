@@ -15,6 +15,7 @@ import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
 export interface GoogleMeetResult {
   success: boolean
   meeting_url: string
+  browser_join_url?: string
   meeting_id: string
   meeting_code: string
   calendar_event_id?: string
