@@ -329,7 +329,17 @@ export async function savePersistedState(keys: string | string[]): Promise<boole
     // Also mirror core settings keys directly in website_settings for external readers
     if (uniqueKeys.includes('settings') && mockDb.state.settings) {
       const s = mockDb.state.settings
-      const mirroredKeys = ['site_name', 'site_tagline', 'contact_email', 'contact_phone', 'address']
+      const mirroredKeys = [
+        'site_name',
+        'site_tagline',
+        'contact_email',
+        'contact_phone',
+        'address',
+        'google_meet_client_id',
+        'google_meet_client_secret',
+        'google_meet_refresh_token',
+        'google_calendar_id',
+      ]
       for (const mk of mirroredKeys) {
         if (s[mk] !== undefined) {
           rowsToUpsert.push({

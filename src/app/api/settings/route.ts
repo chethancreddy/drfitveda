@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { mockDb } from '@/lib/mock-db'
 import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
+import { GoogleMeetService } from '@/lib/services/google-meet.service'
 
 export async function GET(req: NextRequest) {
   try {
     await loadPersistedState()
-    const settings = mockDb.state.settings || {
+    const googleMeetStatus = GoogleMeetService.getConfigurationStatus()
+    const settings = {
       platform_name: 'Dr Fit Veda',
       tagline: 'Naturopathy · Clinical Nutrition · Yoga · Certified Fitness',
       contact_email: 'support@drfitveda.com',
@@ -17,6 +19,13 @@ export async function GET(req: NextRequest) {
       google_meet_super_plan_overwrite: true,
       google_meet_auto_notify: true,
       google_meet_default_url: 'https://meet.google.com/fit-veda-live',
+      google_meet_client_id: GoogleMeetService.clientId || '',
+      google_meet_client_secret: GoogleMeetService.clientSecret ? '••••••••••••••••' : '',
+      google_meet_refresh_token: GoogleMeetService.refreshToken ? '••••••••••••••••' : '',
+      google_calendar_id: GoogleMeetService.calendarId || 'primary',
+      ...(mockDb.state.settings || {}),
+      google_meet_configured: googleMeetStatus.configured,
+      google_meet_status_details: googleMeetStatus,
     }
     const professional_roles = mockDb.state.professional_roles || []
     return NextResponse.json({ settings, professional_roles })

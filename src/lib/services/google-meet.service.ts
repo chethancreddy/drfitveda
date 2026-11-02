@@ -65,6 +65,7 @@ export class GoogleMeetService {
     return (
       this.getEnv('GOOGLE_MEET_CLIENT_ID') ||
       this.getEnv('GOOGLE_CLIENT_ID') ||
+      (mockDb.state?.settings as any)?.google_meet_client_id ||
       (mockDb.state?.website_settings as any)?.google_meet_client_id ||
       null
     )
@@ -74,6 +75,7 @@ export class GoogleMeetService {
     return (
       this.getEnv('GOOGLE_MEET_CLIENT_SECRET') ||
       this.getEnv('GOOGLE_CLIENT_SECRET') ||
+      (mockDb.state?.settings as any)?.google_meet_client_secret ||
       (mockDb.state?.website_settings as any)?.google_meet_client_secret ||
       null
     )
@@ -83,6 +85,7 @@ export class GoogleMeetService {
     return (
       this.getEnv('GOOGLE_MEET_REFRESH_TOKEN') ||
       this.getEnv('GOOGLE_REFRESH_TOKEN') ||
+      (mockDb.state?.settings as any)?.google_meet_refresh_token ||
       (mockDb.state?.website_settings as any)?.google_meet_refresh_token ||
       null
     )
@@ -91,6 +94,7 @@ export class GoogleMeetService {
   public static get calendarId(): string {
     return (
       this.getEnv('GOOGLE_CALENDAR_ID') ||
+      (mockDb.state?.settings as any)?.google_calendar_id ||
       (mockDb.state?.website_settings as any)?.google_calendar_id ||
       'primary'
     )
@@ -204,11 +208,13 @@ export class GoogleMeetService {
       }
 
       if (data.refresh_token) {
-        // Persist refresh token in website_settings so it survives across serverless cold starts
+        // Persist refresh token in settings and website_settings so it survives across serverless cold starts
         await loadPersistedState()
+        if (!mockDb.state.settings) mockDb.state.settings = {} as any
+        ;(mockDb.state.settings as any).google_meet_refresh_token = data.refresh_token
         if (!mockDb.state.website_settings) mockDb.state.website_settings = {} as any
         ;(mockDb.state.website_settings as any).google_meet_refresh_token = data.refresh_token
-        await savePersistedState('website_settings')
+        await savePersistedState(['settings', 'website_settings'])
 
         // Also persist directly into .env.local if file exists
         try {

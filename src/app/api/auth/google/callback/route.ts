@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleMeetService } from '@/lib/services/google-meet.service'
+import { loadPersistedState } from '@/lib/persistent-store'
 
 export async function GET(req: NextRequest) {
+  await loadPersistedState()
   const { searchParams } = new URL(req.url)
   const code = searchParams.get('code')
   const error = searchParams.get('error')

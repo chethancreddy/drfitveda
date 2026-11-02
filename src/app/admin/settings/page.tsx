@@ -16,6 +16,11 @@ interface PlatformSettings {
   google_meet_super_plan_overwrite: boolean
   google_meet_auto_notify: boolean
   google_meet_default_url: string
+  google_meet_client_id?: string
+  google_meet_client_secret?: string
+  google_meet_refresh_token?: string
+  google_calendar_id?: string
+  google_meet_configured?: boolean
 }
 
 export interface ProfessionalRole {
@@ -82,6 +87,7 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [migratingMeetings, setMigratingMeetings] = useState(false)
   const [toast, setToast] = useState('')
+  const [googleMeetNotice, setGoogleMeetNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   async function handleMigrateZohoMeetings() {
     setMigratingMeetings(true)
@@ -104,6 +110,20 @@ export default function AdminSettingsPage() {
     loadSettings()
     loadRoles()
     loadAdminProfile()
+
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search)
+      const gError = sp.get('google_meet_error')
+      const gStatus = sp.get('google_meet_status')
+      if (gError) {
+        setGoogleMeetNotice({ type: 'error', message: decodeURIComponent(gError) })
+      } else if (gStatus === 'connected') {
+        setGoogleMeetNotice({
+          type: 'success',
+          message: '✓ Google Calendar & Meet connected successfully! Live video conference links will now be generated automatically.',
+        })
+      }
+    }
   }, [])
 
   async function loadSettings() {
@@ -611,6 +631,32 @@ export default function AdminSettingsPage() {
 
             {/* 3. Google Meet Integration */}
             <div className="card" style={{ padding: 'var(--space-lg)' }}>
+              {googleMeetNotice && (
+                <div style={{
+                  padding: '12px 16px',
+                  marginBottom: 16,
+                  borderRadius: 'var(--radius-sm)',
+                  background: googleMeetNotice.type === 'error' ? '#fef2f2' : '#f0fdf4',
+                  border: `1px solid ${googleMeetNotice.type === 'error' ? '#f87171' : '#4ade80'}`,
+                  color: googleMeetNotice.type === 'error' ? '#991b1b' : '#166534',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  flexWrap: 'wrap',
+                }}>
+                  <div style={{ fontSize: 13, fontWeight: 500 }}>
+                    {googleMeetNotice.type === 'error' ? '⚠️ ' : '✅ '}
+                    {googleMeetNotice.message}
+                  </div>
+                  {googleMeetNotice.type === 'error' && (
+                    <button className="btn btn-sm btn-outline" onClick={() => openEdit('google_meet')} style={{ flexShrink: 0 }}>
+                      ⚙️ Configure Credentials
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-md)', flexWrap: 'wrap', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 24 }}>📹</span>
@@ -635,15 +681,47 @@ export default function AdminSettingsPage() {
                     style={{ borderColor: '#16a34a', color: '#166534' }}
                     title="Connect Google Account for Google Calendar API Conferencing"
                   >
-                    ⚡ Connect Google Calendar
+                    {settings.google_meet_configured || settings.google_meet_refresh_token
+                      ? '✓ Reconnect Google Calendar'
+                      : '⚡ Connect Google Calendar'}
                   </a>
                   <button className="btn btn-primary btn-sm" onClick={() => openEdit('google_meet')}>
-                    ✏️ Edit Video Policies
+                    ✏️ Configure API &amp; Policies
                   </button>
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
+                <div style={{ padding: '12px 14px', background: 'var(--color-neutral)', borderRadius: 'var(--radius-sm)' }}>
+                  <div className="text-label-md text-muted">OAuth Client ID</div>
+                  <div className="text-body-md" style={{ fontWeight: 600, marginTop: 2, wordBreak: 'break-all' }}>
+                    {settings.google_meet_client_id ? (
+                      <span className="badge badge-success">✓ Configured</span>
+                    ) : (
+                      <span className="badge badge-danger">⚠️ Not Set (Required)</span>
+                    )}
+                  </div>
+                  <div className="text-caption text-muted" style={{ marginTop: 4 }}>
+                    {settings.google_meet_client_id
+                      ? `${settings.google_meet_client_id.slice(0, 18)}...apps.googleusercontent.com`
+                      : 'Add Client ID in Settings or Vercel Env'}
+                  </div>
+                </div>
+
+                <div style={{ padding: '12px 14px', background: 'var(--color-neutral)', borderRadius: 'var(--radius-sm)' }}>
+                  <div className="text-label-md text-muted">Google Calendar Authorization</div>
+                  <div className="text-body-md" style={{ fontWeight: 600, marginTop: 2 }}>
+                    {settings.google_meet_configured || settings.google_meet_refresh_token ? (
+                      <span className="badge badge-success">✓ Connected (Live Meet Active)</span>
+                    ) : (
+                      <span className="badge badge-neutral">⚡ Not Connected (Click Connect)</span>
+                    )}
+                  </div>
+                  <div className="text-caption text-muted" style={{ marginTop: 4 }}>
+                    Official Google Calendar API v3 Conference
+                  </div>
+                </div>
+
                 <div style={{ padding: '12px 14px', background: 'var(--color-neutral)', borderRadius: 'var(--radius-sm)' }}>
                   <div className="text-label-md text-muted">Video Platform Provider</div>
                   <div className="text-body-md" style={{ fontWeight: 700, color: 'var(--color-primary)', marginTop: 2 }}>
@@ -653,6 +731,7 @@ export default function AdminSettingsPage() {
                     ✓ Browser-optimized (No mandatory app download)
                   </div>
                 </div>
+
                 <div style={{ padding: '12px 14px', background: 'var(--color-neutral)', borderRadius: 'var(--radius-sm)' }}>
                   <div className="text-label-md text-muted">Super Plan Overwrite Access</div>
                   <div className="text-body-md" style={{ marginTop: 2 }}>
@@ -661,6 +740,7 @@ export default function AdminSettingsPage() {
                     </span>
                   </div>
                 </div>
+
                 <div style={{ padding: '12px 14px', background: 'var(--color-neutral)', borderRadius: 'var(--radius-sm)' }}>
                   <div className="text-label-md text-muted">Auto-Notify on Recording Upload</div>
                   <div className="text-body-md" style={{ marginTop: 2 }}>
@@ -669,12 +749,14 @@ export default function AdminSettingsPage() {
                     </span>
                   </div>
                 </div>
+
                 <div style={{ padding: '12px 14px', background: 'var(--color-neutral)', borderRadius: 'var(--radius-sm)' }}>
                   <div className="text-label-md text-muted">Default Meeting Link Provider</div>
                   <div className="text-body-md text-primary" style={{ marginTop: 2, wordBreak: 'break-all', fontWeight: 600 }}>
                     {settings.google_meet_default_url || 'https://meet.google.com'}
                   </div>
                 </div>
+
                 <div style={{ padding: '12px 14px', background: 'var(--color-neutral)', borderRadius: 'var(--radius-sm)', gridColumn: '1 / -1' }}>
                   <div className="text-label-md text-muted">Recording Policy &amp; Delivery Flow</div>
                   <div className="text-body-sm" style={{ marginTop: 4, lineHeight: 1.5 }}>
@@ -943,33 +1025,87 @@ export default function AdminSettingsPage() {
           </div>
         )}
 
-        {/* Edit Modal: Zoho Meeting Integration */}
+        {/* Edit Modal: Google Meet Integration & API Credentials */}
         {editingSection === 'google_meet' && (
           <div style={{
             position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000,
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
           }}>
-            <div className="card" style={{ width: '100%', maxWidth: 580, padding: 'var(--space-lg)' }}>
+            <div className="card" style={{ width: '100%', maxWidth: 620, maxHeight: '90vh', overflowY: 'auto', padding: 'var(--space-lg)' }}>
               <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-md)' }}>
-                <h2 className="text-headline-sm">Edit Zoho Meeting / Video Integration</h2>
+                <div>
+                  <h2 className="text-headline-sm" style={{ margin: 0 }}>Google Meet Integration &amp; API Credentials</h2>
+                  <p className="text-caption text-muted">Configure Google Cloud OAuth credentials and live consultation policies</p>
+                </div>
                 <button className="btn btn-icon btn-ghost" onClick={() => setEditingSection(null)}>✕</button>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>🔗 Google Cloud Console Setup:</div>
+                  <div className="text-caption text-muted" style={{ lineHeight: 1.5 }}>
+                    1. Authorized Redirect URI in Google Cloud Console must be:
+                    <br />
+                    <code style={{ background: '#fff', padding: '2px 6px', borderRadius: 4, border: '1px solid #cbd5e1', fontWeight: 600 }}>
+                      https://drfitveda.com/api/auth/google/callback
+                    </code>
+                    <br />
+                    2. After saving Client ID &amp; Secret below, click <strong>&ldquo;⚡ Connect Google Calendar&rdquo;</strong> to authorize.
+                  </div>
+                </div>
+
                 <label className="form-field">
-                  <span className="form-label">Live Video Platform</span>
+                  <span className="form-label">Google OAuth 2.0 Client ID *</span>
                   <input
                     className="form-input"
-                    value={formData.google_meet_platform ?? ''}
-                    onChange={e => setFormData(p => ({ ...p, google_meet_platform: e.target.value }))}
+                    placeholder="e.g. 939596236496-...apps.googleusercontent.com"
+                    value={formData.google_meet_client_id ?? ''}
+                    onChange={e => setFormData(p => ({ ...p, google_meet_client_id: e.target.value.trim() }))}
                   />
+                  <span className="text-caption text-muted" style={{ marginTop: 2 }}>
+                    From Google Cloud Console &gt; APIs &amp; Services &gt; Credentials &gt; OAuth 2.0 Client IDs
+                  </span>
                 </label>
+
+                <label className="form-field">
+                  <span className="form-label">Google OAuth 2.0 Client Secret *</span>
+                  <input
+                    className="form-input"
+                    type="password"
+                    placeholder="GOCSPX-..."
+                    value={formData.google_meet_client_secret ?? ''}
+                    onChange={e => setFormData(p => ({ ...p, google_meet_client_secret: e.target.value.trim() }))}
+                  />
+                  <span className="text-caption text-muted" style={{ marginTop: 2 }}>
+                    Client secret is stored securely and never exposed to customers or specialists.
+                  </span>
+                </label>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <label className="form-field">
+                    <span className="form-label">Live Video Platform Name</span>
+                    <input
+                      className="form-input"
+                      value={formData.google_meet_platform ?? ''}
+                      onChange={e => setFormData(p => ({ ...p, google_meet_platform: e.target.value }))}
+                    />
+                  </label>
+                  <label className="form-field">
+                    <span className="form-label">Calendar ID</span>
+                    <input
+                      className="form-input"
+                      placeholder="primary"
+                      value={formData.google_calendar_id ?? 'primary'}
+                      onChange={e => setFormData(p => ({ ...p, google_calendar_id: e.target.value }))}
+                    />
+                  </label>
+                </div>
 
                 <label className="form-field">
                   <span className="form-label">Default Meeting Provider URL</span>
                   <input
                     className="form-input"
-                    placeholder="https://meeting.zoho.com"
+                    placeholder="https://meet.google.com"
                     value={formData.google_meet_default_url ?? ''}
                     onChange={e => setFormData(p => ({ ...p, google_meet_default_url: e.target.value }))}
                   />
@@ -979,12 +1115,12 @@ export default function AdminSettingsPage() {
                   <span className="form-label">Recording Policy Description</span>
                   <textarea
                     className="form-input"
-                    rows={3}
+                    rows={2}
                     value={formData.google_meet_recording_policy ?? ''}
                     onChange={e => setFormData(p => ({ ...p, google_meet_recording_policy: e.target.value }))}
                   />
-                  <span className="text-caption text-muted" style={{ marginTop: 4 }}>
-                    Shown to professionals and customers regarding how session recordings are handled.
+                  <span className="text-caption text-muted" style={{ marginTop: 2 }}>
+                    Shown to professionals and customers regarding consultation session delivery.
                   </span>
                 </label>
 
