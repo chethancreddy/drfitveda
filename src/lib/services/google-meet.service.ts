@@ -323,9 +323,9 @@ export class GoogleMeetService {
     const duration = params.durationMin || 45
     const endIso = new Date(new Date(startIso).getTime() + duration * 60000).toISOString()
 
-    const attendees: Array<{ email: string }> = []
-    if (params.customerEmail) attendees.push({ email: params.customerEmail })
-    if (params.professionalEmail) attendees.push({ email: params.professionalEmail })
+    const attendees: Array<{ email: string; responseStatus?: string }> = []
+    if (params.customerEmail) attendees.push({ email: params.customerEmail, responseStatus: 'accepted' })
+    if (params.professionalEmail) attendees.push({ email: params.professionalEmail, responseStatus: 'accepted' })
 
     const eventPayload = {
       summary: params.summary,
@@ -339,6 +339,10 @@ export class GoogleMeetService {
         timeZone: 'Asia/Kolkata',
       },
       attendees,
+      guestsCanSeeOtherGuests: true,
+      guestsCanInviteOthers: false,
+      guestsCanModify: false,
+      visibility: 'default',
       conferenceData: {
         createRequest: {
           requestId: params.requestId,
@@ -423,6 +427,8 @@ export class GoogleMeetService {
     customerId: string
     customerName?: string
     customerEmail?: string
+    professionalId?: string
+    professionalEmail?: string
     appointmentId?: string
     scheduledAt?: string
     durationMin?: number
@@ -432,6 +438,7 @@ export class GoogleMeetService {
       customerId,
       customerName,
       customerEmail,
+      professionalId,
       appointmentId,
       scheduledAt,
       durationMin = 45,
@@ -443,6 +450,13 @@ export class GoogleMeetService {
     const customers = mockDb.state.customers || []
     const customer = customers.find((c: any) => c.id === customerId || c.user_id === customerId)
     const effectiveName = customerName || customer?.full_name || 'Customer'
+
+    let effectiveProEmail = params.professionalEmail
+    if (!effectiveProEmail && professionalId) {
+      const pros = mockDb.state.professionals || []
+      const matchedPro = pros.find((p: any) => p.id === professionalId || p.user_id === professionalId)
+      if (matchedPro?.email) effectiveProEmail = matchedPro.email
+    }
 
     // 1. Idempotency Check: if customer already has an active Google Meet URL and not forceNew, reuse it
     if (customer && !forceNew) {
@@ -483,6 +497,7 @@ export class GoogleMeetService {
         startTime: scheduledAt || new Date(Date.now() + 3600000).toISOString(),
         durationMin,
         customerEmail,
+        professionalEmail: effectiveProEmail,
         requestId,
       })
 

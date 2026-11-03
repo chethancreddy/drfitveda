@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [unregisteredNotice, setUnregisteredNotice] = useState<string | null>(null)
 
   // Safe internal redirect resolver respecting post-login return targets
   const getSafeRedirectUrl = (defaultUrl: string) => {
@@ -117,10 +118,12 @@ export default function LoginPage() {
         setCountryCode(matched.dialCode)
         const remainder = trimmed.slice(matched.dialCode.length).replace(/[\s\-]/g, '')
         setWhatsappMobile(remainder)
+        setUnregisteredNotice(null)
         return
       }
     }
     setWhatsappMobile(val)
+    setUnregisteredNotice(null)
   }
 
   // Reset Password Modal State
@@ -176,6 +179,7 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
     setSuccessMsg(null)
+    setUnregisteredNotice(null)
 
     try {
       const res = await fetch('/api/auth/login-otp', {
@@ -190,7 +194,16 @@ export default function LoginPage() {
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to send WhatsApp verification code.')
+      if (!res.ok) {
+        if (data.code === 'NOT_REGISTERED' || data.notRegistered) {
+          setUnregisteredNotice(
+            data.error || 'Your mobile number is not registered with DrFitVeda. Please create an account to continue.'
+          )
+          setError(null)
+          return
+        }
+        throw new Error(data.error || 'Failed to send WhatsApp verification code.')
+      }
 
       setWhatsappSent(true)
       setWhatsappFullPhone(validation.fullPhone)
@@ -272,7 +285,17 @@ export default function LoginPage() {
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Invalid verification code.')
+      if (!res.ok) {
+        if (data.code === 'NOT_REGISTERED' || data.notRegistered) {
+          setUnregisteredNotice(
+            data.error || 'Your mobile number is not registered with DrFitVeda. Please create an account to continue.'
+          )
+          setError(null)
+          setLoading(false)
+          return
+        }
+        throw new Error(data.error || 'Invalid verification code.')
+      }
 
       setSuccessMsg('WhatsApp verification successful! Accessing your portal…')
       window.location.href = getSafeRedirectUrl(data.redirectTo || '/customer')
@@ -294,6 +317,7 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
     setSuccessMsg(null)
+    setUnregisteredNotice(null)
 
     try {
       const res = await fetch('/api/auth/login-otp', {
@@ -307,7 +331,16 @@ export default function LoginPage() {
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to send Email OTP')
+      if (!res.ok) {
+        if (data.code === 'NOT_REGISTERED' || data.notRegistered) {
+          setUnregisteredNotice(
+            data.error || 'Your email address is not registered with DrFitVeda. Please create an account to continue.'
+          )
+          setError(null)
+          return
+        }
+        throw new Error(data.error || 'Failed to send Email OTP')
+      }
 
       setEmailSent(true)
       setEmailDisplay(data.display || cleanInput)
@@ -379,7 +412,17 @@ export default function LoginPage() {
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Invalid verification code.')
+      if (!res.ok) {
+        if (data.code === 'NOT_REGISTERED' || data.notRegistered) {
+          setUnregisteredNotice(
+            data.error || 'Your mobile number is not registered with DrFitVeda. Please create an account to continue.'
+          )
+          setError(null)
+          setLoading(false)
+          return
+        }
+        throw new Error(data.error || 'Invalid verification code.')
+      }
 
       setSuccessMsg('Email verification successful! Accessing your portal…')
       window.location.href = getSafeRedirectUrl(data.redirectTo || '/customer')
@@ -680,6 +723,51 @@ export default function LoginPage() {
               <span>🔑</span> Password
             </button>
           </div>
+
+          {/* Unregistered Account Callout Banner */}
+          {unregisteredNotice && (
+            <div
+              style={{
+                padding: '14px 16px',
+                background: '#fffbeb',
+                border: '1.5px solid #f59e0b',
+                color: '#92400e',
+                borderRadius: 8,
+                marginBottom: 'var(--space-md)',
+                fontSize: 13.5,
+                lineHeight: 1.5,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <span style={{ fontSize: 20 }}>⚠️</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, color: '#78350f', marginBottom: 8 }}>
+                    {unregisteredNotice}
+                  </div>
+                  <div>
+                    <Link
+                      href="/register"
+                      className="btn btn-primary btn-sm"
+                      style={{
+                        background: '#059669',
+                        borderColor: '#047857',
+                        color: 'white',
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '8px 14px',
+                        borderRadius: 6,
+                      }}
+                    >
+                      <span>✨</span> Create an Account →
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Feedback Alerts */}
           {error && (

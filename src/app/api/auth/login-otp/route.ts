@@ -11,7 +11,7 @@ import { msg91EmailService } from '@/lib/services/msg91-email.service'
 import { msg91WhatsAppService } from '@/lib/services/msg91-whatsapp.service'
 import { mockDb } from '@/lib/mock-db'
 import { loadPersistedState, savePersistedState } from '@/lib/persistent-store'
-import { resolveAccountByIdentifier, getDashboardForRole } from '@/lib/auth-resolver'
+import { resolveAccountByIdentifier, getDashboardForRole, normalizePhoneForMatch } from '@/lib/auth-resolver'
 
 // ============================================================
 // POST /api/auth/login-otp — MSG91 OTP Authentication Engine
@@ -53,6 +53,62 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: norm.error || 'Please enter a valid registered email address or mobile number.' },
         { status: 400 }
+      )
+    }
+
+    // ─── ACCOUNT REGISTRATION VALIDATION ─────────────────────────
+    // Only registered users can sign in. Unregistered identifiers are blocked
+    // from initiating or verifying OTP logins.
+    await loadPersistedState()
+    const existingAccount = resolveAccountByIdentifier(norm.normalized)
+
+    // Check if account has been deactivated or archived
+    if (existingAccount) {
+      const uProfiles = mockDb.state.user_profiles || []
+      const matchedDeactivated = uProfiles.find(
+        (up: any) => up.id === existingAccount.id && (up.is_active === false || up.is_archived === true)
+      )
+      if (matchedDeactivated) {
+        return NextResponse.json(
+          { error: 'This account has been deactivated or removed. Please contact DrFitVeda administration.' },
+          { status: 403 }
+        )
+      }
+    } else {
+      // Identifier is NOT registered
+      // Check if there is an uncompleted pending registration
+      const pendingRegs = Array.isArray(mockDb.state.pending_registrations) ? mockDb.state.pending_registrations : []
+      const pending = pendingRegs.find((p: any) => {
+        if (norm.type === 'phone') {
+          return p.canonical_phone === norm.normalized || normalizePhoneForMatch(p.phone) === norm.normalized
+        }
+        return p.email?.toLowerCase() === norm.normalized.toLowerCase()
+      })
+
+      if (pending) {
+        return NextResponse.json(
+          {
+            error: 'Your account registration is pending verification. Please complete verification on the signup page.',
+            code: 'PENDING_VERIFICATION',
+            pendingVerification: true,
+            registrationId: pending.id,
+          },
+          { status: 403 }
+        )
+      }
+
+      const notRegisteredMsg =
+        norm.type === 'phone'
+          ? 'Your mobile number is not registered with DrFitVeda. Please create an account to continue.'
+          : 'Your email address is not registered with DrFitVeda. Please create an account to continue.'
+
+      return NextResponse.json(
+        {
+          error: notRegisteredMsg,
+          code: 'NOT_REGISTERED',
+          notRegistered: true,
+        },
+        { status: 404 }
       )
     }
 
@@ -220,41 +276,21 @@ export async function POST(req: NextRequest) {
 
       let targetUser: any = resolveAccountByIdentifier(norm.normalized)
 
-      // Auto-provision new customer ONLY if no Admin, Doctor, Trainer, Team Member, or Customer matched
+      // Only registered customers can sign in. Do NOT auto-provision unregistered accounts.
       if (!targetUser) {
-        const newUserId = `u-otp-${Date.now()}`
-        const newEmail = norm.type === 'email' ? norm.normalized : `${norm.normalized}@users.drfitveda.com`
-        const newPhone = norm.type === 'phone' ? (norm.e164Phone || '') : ''
+        const notRegisteredMsg =
+          norm.type === 'phone'
+            ? 'Your mobile number is not registered with DrFitVeda. Please create an account to continue.'
+            : 'Your email address is not registered with DrFitVeda. Please create an account to continue.'
 
-        targetUser = {
-          id: newUserId,
-          role: 'customer',
-          full_name: 'Customer',
-          email: newEmail,
-          phone: newPhone,
-        }
-
-        if (!mockDb.state.user_profiles) mockDb.state.user_profiles = []
-        mockDb.state.user_profiles.push({
-          id: newUserId,
-          role: 'customer',
-          full_name: 'Customer',
-          email: newEmail,
-          phone: newPhone,
-          is_active: true,
-          created_at: new Date().toISOString(),
-        })
-
-        if (!mockDb.state.customers) mockDb.state.customers = []
-        mockDb.state.customers.push({
-          id: `c-otp-${Date.now()}`,
-          user_id: newUserId,
-          membership_status: 'inactive',
-          is_active: true,
-          created_at: new Date().toISOString(),
-        })
-
-        await savePersistedState(['user_profiles', 'customers'])
+        return NextResponse.json(
+          {
+            error: notRegisteredMsg,
+            code: 'NOT_REGISTERED',
+            notRegistered: true,
+          },
+          { status: 404 }
+        )
       } else if (targetUser.source === 'professionals') {
         // Persist reconciled user_profiles so the professional's profile stays in sync in Supabase
         await savePersistedState(['user_profiles', 'professionals'])

@@ -83,6 +83,57 @@ export default function AdminAssignmentsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'archived'>('all')
   const [dispatchFilter, setDispatchFilter] = useState<'all' | 'assigned' | 'unassigned'>('all')
   const [unassignedList, setUnassignedList] = useState<Assignment[]>([])
+  const [dateSlots, setDateSlots] = useState<{
+    free_slots: string[]
+    booked_slots: string[]
+    is_date_blocked?: boolean
+    status?: string
+  } | null>(null)
+  const [loadingSlots, setLoadingSlots] = useState(false)
+
+  // Re-fetch date-specific availability whenever professional or appointment_date changes
+  useEffect(() => {
+    if (!editingAssignment?.professional_id) {
+      setDateSlots(null)
+      return
+    }
+
+    const proId = editingAssignment.professional_id
+    const date = editingAssignment.appointment_date || new Date().toISOString().split('T')[0]
+
+    let active = true
+    setLoadingSlots(true)
+
+    fetch(`/api/professionals/slots?professional_id=${encodeURIComponent(proId)}&date=${encodeURIComponent(date)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!active) return
+        if (data.success && Array.isArray(data.professionals) && data.professionals.length > 0) {
+          const proData = data.professionals[0]
+          setDateSlots({
+            free_slots: proData.free_slots || [],
+            booked_slots: proData.booked_slots || [],
+            is_date_blocked: proData.is_date_blocked,
+            status: proData.status,
+          })
+          // Auto-select first free slot if none selected or if selected slot is now booked on this date
+          if (
+            proData.free_slots?.length > 0 &&
+            (!editingAssignment.assigned_slot || proData.booked_slots?.includes(editingAssignment.assigned_slot))
+          ) {
+            setEditingAssignment(p => (p ? { ...p, assigned_slot: proData.free_slots[0] } : p))
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setLoadingSlots(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [editingAssignment?.professional_id, editingAssignment?.appointment_date])
 
   useEffect(() => {
     loadAllData()
@@ -125,6 +176,7 @@ export default function AdminAssignmentsPage() {
       role: defaultDoctor?.role || 'doctor',
       professional_id: defaultDoctor?.id || '',
       assigned_slot: defaultDoctor?.free_slots?.[0] || '07:00 AM - 08:00 AM',
+      appointment_date: new Date().toISOString().split('T')[0],
       assigned_by_coordinator_id: coordinators[0]?.id || 'tm-001',
       assigned_by_name: coordinators[0]?.full_name || 'Care Operations Manager',
       notes: 'Initial slot dispatch by Care Team',
@@ -139,6 +191,7 @@ export default function AdminAssignmentsPage() {
       role: defaultDoctor?.role || 'doctor',
       professional_id: defaultDoctor?.id || '',
       assigned_slot: defaultDoctor?.free_slots?.[0] || '07:00 AM - 08:00 AM',
+      appointment_date: new Date().toISOString().split('T')[0],
       assigned_by_coordinator_id: coordinators[0]?.id || 'tm-001',
       assigned_by_name: coordinators[0]?.full_name || 'Care Operations Manager',
       notes: 'Smart slot dispatch for unassigned patient',
@@ -800,49 +853,100 @@ export default function AdminAssignmentsPage() {
                   </select>
                 </label>
 
-                {selectedProfessional && (
-                  <div style={{ background: '#f1f5f9', padding: 12, borderRadius: 6 }}>
-                    <span className="text-body-sm" style={{ fontWeight: 700, display: 'block', marginBottom: 6, color: '#0f172a' }}>
-                      4. Choose Dedicated Free Time Slot for Customer *
-                    </span>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                      {(selectedProfessional.free_slots || selectedProfessional.working_slots).map(slot => (
-                        <button
-                          key={slot}
-                          type="button"
-                          onClick={() => setEditingAssignment(p => ({ ...p, assigned_slot: slot }))}
-                          style={{
-                            padding: '8px 10px',
-                            borderRadius: 6,
-                            border: editingAssignment.assigned_slot === slot ? '2px solid #0d9488' : '1px solid #cbd5e1',
-                            background: editingAssignment.assigned_slot === slot ? '#ccfbf1' : 'white',
-                            color: editingAssignment.assigned_slot === slot ? '#0f766e' : '#1e293b',
-                            fontWeight: editingAssignment.assigned_slot === slot ? 700 : 500,
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            fontSize: 12,
-                          }}
-                        >
-                          ⏰ {slot}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 <label className="form-field">
-                  <span className="form-label">5. Confirmed Appointment Date (Optional — Triggers Immediate Customer WhatsApp Confirmation)</span>
+                  <span className="form-label">4. Confirmed Appointment Date *</span>
                   <input
                     type="date"
+                    required
                     className="form-input"
-                    value={editingAssignment.appointment_date ?? ''}
+                    value={editingAssignment.appointment_date ?? new Date().toISOString().split('T')[0]}
                     onChange={e => setEditingAssignment(p => ({ ...p, appointment_date: e.target.value }))}
                     min={new Date().toISOString().split('T')[0]}
                   />
                   <span className="text-caption text-muted">
-                    Setting an appointment date confirms the consultation session and sends the WhatsApp appointment details to the customer.
+                    Time slots below dynamically adjust based on this date&apos;s working hours and bookings.
                   </span>
                 </label>
+
+                {selectedProfessional && (
+                  <div style={{ background: '#f8fafc', padding: 14, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <span className="text-body-sm" style={{ fontWeight: 700, color: '#0f172a' }}>
+                        5. Choose Dedicated Free Time Slot for Customer *
+                      </span>
+                      {loadingSlots && <span style={{ fontSize: 11, color: '#0d9488' }}>Checking live availability…</span>}
+                    </div>
+
+                    {dateSlots?.is_date_blocked ? (
+                      <div style={{ padding: '10px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, color: '#991b1b', fontSize: 12.5 }}>
+                        ⚠️ {selectedProfessional.full_name} is marked as <strong>Leave / Unavailable</strong> on this date. Please select another appointment date.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
+                        {/* 1. Free Slots */}
+                        {(dateSlots?.free_slots || selectedProfessional.free_slots || []).map(slot => (
+                          <button
+                            key={slot}
+                            type="button"
+                            onClick={() => setEditingAssignment(p => ({ ...p, assigned_slot: slot }))}
+                            style={{
+                              padding: '8px 10px',
+                              borderRadius: 6,
+                              border: editingAssignment.assigned_slot === slot ? '2px solid #0d9488' : '1px solid #cbd5e1',
+                              background: editingAssignment.assigned_slot === slot ? '#ccfbf1' : 'white',
+                              color: editingAssignment.assigned_slot === slot ? '#0f766e' : '#1e293b',
+                              fontWeight: editingAssignment.assigned_slot === slot ? 700 : 500,
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              fontSize: 12,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                            }}
+                          >
+                            <span>⏰ {slot}</span>
+                            {editingAssignment.assigned_slot === slot && <span>✓</span>}
+                          </button>
+                        ))}
+
+                        {/* 2. Already Booked Slots (Double Booking Prevention) */}
+                        {(dateSlots?.booked_slots || []).map(slot => (
+                          <button
+                            key={`booked-${slot}`}
+                            type="button"
+                            disabled
+                            title="This slot is already booked for another customer"
+                            style={{
+                              padding: '8px 10px',
+                              borderRadius: 6,
+                              border: '1px dashed #cbd5e1',
+                              background: '#f1f5f9',
+                              color: '#94a3b8',
+                              fontWeight: 500,
+                              cursor: 'not-allowed',
+                              textAlign: 'left',
+                              fontSize: 12,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              textDecoration: 'line-through',
+                            }}
+                          >
+                            <span>⏰ {slot}</span>
+                            <span style={{ fontSize: 10, color: '#ef4444', textDecoration: 'none' }}>(Booked)</span>
+                          </button>
+                        ))}
+
+                        {(!dateSlots?.free_slots || dateSlots.free_slots.length === 0) &&
+                          (!dateSlots?.booked_slots || dateSlots.booked_slots.length === 0) && (
+                            <div style={{ color: '#64748b', fontSize: 12, gridColumn: '1 / -1' }}>
+                              No slots configured for this day. Check professional availability settings.
+                            </div>
+                          )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <label className="form-field">
                   <span className="form-label">6. Authorizing Staff / Care Coordinator *</span>
