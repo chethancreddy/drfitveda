@@ -269,14 +269,54 @@ export function syncRuntimeReferences() {
     })
   }
 
+  if (mockDb.state.settings) {
+    const defaultUrl = (mockDb.state.settings as any).google_meet_default_url
+    if (!defaultUrl || defaultUrl === 'https://meet.google.com/fit-veda-live' || defaultUrl === 'https://meet.google.com') {
+      ;(mockDb.state.settings as any).google_meet_default_url = 'https://meet.google.com/new'
+    }
+  }
+
+  if (Array.isArray(mockDb.state.customers)) {
+    mockDb.state.customers = mockDb.state.customers.map((c: any) => {
+      const meetUrl = String(c.google_meet_url || c.meeting_url || '')
+      if (meetUrl.includes('fit-veda-live') || meetUrl.includes('dfv-') || !meetUrl || meetUrl === 'https://meet.google.com') {
+        return {
+          ...c,
+          google_meet_url: 'https://meet.google.com/new',
+          meeting_url: 'https://meet.google.com/new',
+          meeting_provider: 'google_meet',
+        }
+      }
+      return c
+    })
+  }
+
   if (Array.isArray(mockDb.state.appointments)) {
     mockDb.state.appointments = mockDb.state.appointments.map((a: any) => {
       if (/zoho/i.test(a.consultation_type || '')) hadZohoToClean = true
+      const meetUrl = String(a.meeting_url || '')
+      const safeMeetUrl = (meetUrl.includes('fit-veda-live') || meetUrl.includes('dfv-') || !meetUrl || meetUrl === 'https://meet.google.com')
+        ? 'https://meet.google.com/new'
+        : meetUrl
       return {
         ...a,
+        meeting_url: safeMeetUrl,
         consultation_type: (a.consultation_type || 'Online Video (Google Meet)')
           .replace(/zoho meeting/gi, 'Google Meet')
           .replace(/zoho/gi, 'Google Meet'),
+      }
+    })
+  }
+
+  if (Array.isArray(mockDb.state.training_sessions)) {
+    mockDb.state.training_sessions = mockDb.state.training_sessions.map((ts: any) => {
+      const meetUrl = String(ts.meeting_url || '')
+      const safeMeetUrl = (meetUrl.includes('fit-veda-live') || meetUrl.includes('dfv-') || !meetUrl || meetUrl === 'https://meet.google.com')
+        ? 'https://meet.google.com/new'
+        : meetUrl
+      return {
+        ...ts,
+        meeting_url: safeMeetUrl,
       }
     })
   }

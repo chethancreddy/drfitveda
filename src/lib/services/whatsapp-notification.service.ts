@@ -454,7 +454,7 @@ async function resolveCustomerDetails(customerId: string): Promise<{
     customer?.google_meet_url ||
     customer?.meeting_url ||
     customer?.zoho_meeting_url ||
-    'https://meet.google.com/fit-veda-live'
+    'https://meet.google.com/new'
   const timezone = customer?.timezone || userProfile?.timezone || DEFAULT_TIMEZONE
 
   return { customer, userProfile, fullName, phone, meetingLink, timezone }
@@ -1202,7 +1202,7 @@ export async function syncSessionRemindersForAppointment(
     ? 'Live Personal Training Session'
     : 'Doctor Wellness Consultation'
   const meetingLink =
-    appointment.meeting_url || custInfo.meetingLink || 'https://meet.google.com/fit-veda-live'
+    appointment.meeting_url || custInfo.meetingLink || 'https://meet.google.com/new'
   const nowIso = new Date().toISOString()
 
   const scheduled: WhatsAppNotificationRecord[] = []
@@ -1399,7 +1399,7 @@ export async function syncSessionRemindersForTrainingSession(
   const { dateStr, timeStr } = formatDateTimeInTimeZone(scheduledAtIso, tz)
   const sessionType = session.session_type || 'Live 1-on-1 Personal Training'
   const meetingLink =
-    session.meeting_url || custInfo.meetingLink || 'https://meet.google.com/fit-veda-live'
+    session.meeting_url || custInfo.meetingLink || 'https://meet.google.com/new'
   const nowIso = new Date().toISOString()
 
   const scheduled: WhatsAppNotificationRecord[] = []

@@ -58,6 +58,8 @@ async function run() {
     'appointments',
     'homepage_settings',
     'normal_programs',
+    'vitality_roadmap_steps',
+    'settings',
   ])
   console.log('Save result to Supabase:', saved ? 'SUCCESS' : 'FAILED')
 }

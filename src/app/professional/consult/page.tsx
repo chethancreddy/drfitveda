@@ -83,7 +83,7 @@ export default async function ProfessionalConsultPage() {
                 const dateObj = new Date(a.scheduled_at)
                 const patientName = a.customers?.user_profiles?.full_name ?? 'Patient'
                 const phone = a.customers?.user_profiles?.phone
-                const meetUrl = a.meeting_url || a.customers?.google_meet_url || a.customers?.zoho_meeting_url || 'https://meet.google.com/fit-veda-live'
+                const meetUrl = a.meeting_url || a.customers?.google_meet_url || a.customers?.zoho_meeting_url || 'https://meet.google.com/new'
 
                 return (
                   <div key={a.id} className="card" style={{ padding: 'var(--space-md)' }}>

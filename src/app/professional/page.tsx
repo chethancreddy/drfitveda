@@ -130,7 +130,7 @@ export default async function ProfessionalDashboard() {
                       <td><span className={`badge badge-${sc(s.status)}`} style={{ textTransform: 'capitalize' }}>{s.status}</span></td>
                       <td>
                         <a
-                          href={s.meeting_url || 'https://meet.google.com/fit-veda-live'}
+                          href={s.meeting_url || 'https://meet.google.com/new'}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn btn-ghost btn-sm"

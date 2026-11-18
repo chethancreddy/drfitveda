@@ -100,6 +100,28 @@ export class GoogleMeetService {
     )
   }
 
+  /**
+   * Safe, functional Google Meet fallback URL.
+   * If an Admin specifies a real Google Meet room (e.g. meet.google.com/abc-defg-hij), uses that.
+   * Otherwise returns https://meet.google.com/new to prevent "Check your meeting code" errors.
+   */
+  public static get defaultMeetingUrl(): string {
+    const fromSettings =
+      (mockDb.state?.settings as any)?.google_meet_default_url ||
+      (mockDb.state?.website_settings as any)?.google_meet_default_url
+    if (
+      fromSettings &&
+      typeof fromSettings === 'string' &&
+      fromSettings.includes('meet.google.com') &&
+      !fromSettings.includes('fit-veda-live') &&
+      !fromSettings.includes('dfv-') &&
+      fromSettings.trim() !== 'https://meet.google.com'
+    ) {
+      return fromSettings.trim()
+    }
+    return 'https://meet.google.com/new'
+  }
+
   public static get redirectUri(): string {
     const baseUrl =
       this.getEnv('APP_BASE_URL') ||
@@ -458,10 +480,16 @@ export class GoogleMeetService {
       if (matchedPro?.email) effectiveProEmail = matchedPro.email
     }
 
-    // 1. Idempotency Check: if customer already has an active Google Meet URL and not forceNew, reuse it
+    // 1. Idempotency Check: if customer already has an active, valid Google Meet URL and not forceNew, reuse it
     if (customer && !forceNew) {
       const existing = customer.google_meet_url || customer.meeting_url
-      if (existing && existing.includes('meet.google.com')) {
+      if (
+        existing &&
+        existing.includes('meet.google.com') &&
+        !existing.includes('fit-veda-live') &&
+        !existing.includes('dfv-') &&
+        existing.trim() !== 'https://meet.google.com'
+      ) {
         const code = existing.replace(/^https?:\/\/meet\.google\.com\//, '').split('?')[0]
         return {
           success: true,
@@ -509,12 +537,12 @@ export class GoogleMeetService {
       }
     }
 
-    // 3. Fallback: If Google Cloud API credentials are not yet saved by Admin,
-    // generate standard 3-4-3 compliant Google Meet URL structure
+    // 3. Fallback: If Google Cloud API credentials are not yet saved by Admin or API fails,
+    // use configured default meeting room or direct new Google Meet room (never generate invalid random codes that give 404 or "check your meeting code")
     if (!generatedMeetUrl) {
-      const slugSeed = `${effectiveName.replace(/[^a-z0-9]/gi, '').toLowerCase()}${String(customerId).replace(/\D/g, '')}`
-      generatedMeetCode = this.generateStandardMeetCode(slugSeed)
-      generatedMeetUrl = `https://meet.google.com/${generatedMeetCode}`
+      const fallbackUrl = this.defaultMeetingUrl
+      generatedMeetUrl = fallbackUrl
+      generatedMeetCode = fallbackUrl.replace(/^https?:\/\/meet\.google\.com\//, '').split('?')[0] || 'live'
       syncStatus = 'pending_google_sync'
     }
 

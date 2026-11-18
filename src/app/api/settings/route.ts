@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
       google_meet_recording_policy: 'Admin/trainer shares Google Meet recording link after session completion',
       google_meet_super_plan_overwrite: true,
       google_meet_auto_notify: true,
-      google_meet_default_url: 'https://meet.google.com/fit-veda-live',
+      google_meet_default_url: 'https://meet.google.com/new',
       google_meet_client_id: GoogleMeetService.clientId || '',
       google_meet_client_secret: GoogleMeetService.clientSecret ? '••••••••••••••••' : '',
       google_meet_refresh_token: GoogleMeetService.refreshToken ? '••••••••••••••••' : '',

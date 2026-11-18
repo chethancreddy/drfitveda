@@ -82,7 +82,7 @@ export default async function ProfessionalCustomersPage() {
                     const name = cust?.user_profiles?.full_name ?? 'Patient'
                     const phone = cust?.user_profiles?.phone
                     const profile = cust?.customer_profiles?.[0] || cust?.customer_profiles || {}
-                    const meetUrl = cust?.google_meet_url || cust?.zoho_meeting_url || 'https://meet.google.com/fit-veda-live'
+                    const meetUrl = cust?.google_meet_url || cust?.zoho_meeting_url || 'https://meet.google.com/new'
 
                     return (
                       <tr key={a.id}>

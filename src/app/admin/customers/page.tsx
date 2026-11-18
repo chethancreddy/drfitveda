@@ -381,7 +381,7 @@ export default function AdminCustomersPage() {
                       const doc = c.assigned_professionals?.find(p => p.role.includes('doctor'))
                       const trn = c.assigned_professionals?.find(p => p.role.includes('trainer'))
                       const meetLink =
-                        c.google_meet_url || c.meeting_url || c.zoho_meeting_url || 'https://meet.google.com/fit-veda-live'
+                        c.google_meet_url || c.meeting_url || c.zoho_meeting_url || 'https://meet.google.com/new'
 
                       return (
                         <tr key={c.id} style={{ opacity: c.is_active && !c.is_archived ? 1 : 0.72 }}>

@@ -300,12 +300,12 @@ export default async function ProfessionalCustomerDetailPage({
                 Dedicated Patient Video Consultation &amp; Live Training Room (Google Meet)
               </div>
               <div style={{ fontSize: 12, color: '#047857', wordBreak: 'break-all' }}>
-                {customer.google_meet_url || customer.zoho_meeting_url || 'https://meet.google.com/fit-veda-live'}
+                {customer.google_meet_url || customer.zoho_meeting_url || 'https://meet.google.com/new'}
               </div>
             </div>
           </div>
           <a
-            href={customer.google_meet_url || customer.zoho_meeting_url || 'https://meet.google.com/fit-veda-live'}
+            href={customer.google_meet_url || customer.zoho_meeting_url || 'https://meet.google.com/new'}
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-primary btn-sm"

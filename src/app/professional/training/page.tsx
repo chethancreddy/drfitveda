@@ -96,7 +96,7 @@ export default async function ProfessionalTrainingPage() {
               <tbody>
                 {sessions.length ? sessions.map(s => {
                   const name = s.customers?.user_profiles?.full_name ?? 'Patient'
-                  const meetUrl = s.meeting_url || (s.customers as any)?.google_meet_url || (s.customers as any)?.zoho_meeting_url || 'https://meet.google.com/fit-veda-live'
+                  const meetUrl = s.meeting_url || (s.customers as any)?.google_meet_url || (s.customers as any)?.zoho_meeting_url || 'https://meet.google.com/new'
                   return (
                     <tr key={s.id}>
                       <td><span className="text-body-sm" style={{ fontWeight: 600 }}>{name}</span></td>

@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       custRecord?.google_meet_url ||
       custRecord?.zoho_meeting_url ||
       custRecord?.meeting_url ||
-      'https://meet.google.com/fit-veda-live'
+      'https://meet.google.com/new'
 
     const { data: session, error } = await (svc as any)
       .from('training_sessions')

@@ -52,7 +52,7 @@ export default async function ProfessionalSessionDetailPage({ params }: { params
 
   const recording = session.training_recordings?.[0] ?? null
   const customerName = session.customers?.user_profiles?.full_name ?? '—'
-  const meetUrl = session.meeting_url || 'https://meet.google.com/fit-veda-live'
+  const meetUrl = session.meeting_url || 'https://meet.google.com/new'
 
   return (
     <div className="app-layout">
