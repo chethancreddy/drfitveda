@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import AdminSidebar from '@/components/admin/AdminSidebar'
 import AdminRecordDeleteModal from '@/components/admin/AdminRecordDeleteModal'
+import AdminPriorityBookingManager from '@/components/admin/AdminPriorityBookingManager'
 
 export interface ConsultationCategory {
   id: string
@@ -1201,6 +1202,9 @@ export default function AdminConsultationServicesPage() {
         )}
 
         {/* Toast Notification */}
+        {/* Priority Consultations & Bookings Manager */}
+        <AdminPriorityBookingManager />
+
         {toast && (
           <div
             style={{

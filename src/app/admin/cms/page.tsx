@@ -6,6 +6,10 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import AdminSidebar from '@/components/admin/AdminSidebar'
 import AdminBiomarkersManager from '@/components/admin/AdminBiomarkersManager'
 import AdminWebsiteContentManager from '@/components/admin/AdminWebsiteContentManager'
+import AdminHomepageCmsManager from '@/components/admin/AdminHomepageCmsManager'
+import AdminProgramsCmsManager from '@/components/admin/AdminProgramsCmsManager'
+import AdminRoadmapCmsManager from '@/components/admin/AdminRoadmapCmsManager'
+import AdminPriorityBookingManager from '@/components/admin/AdminPriorityBookingManager'
 
 export const metadata: Metadata = { title: 'CMS — Admin' }
 
@@ -50,6 +54,18 @@ export default async function AdminCMSPage() {
             </div>
           ))}
         </div>
+
+        {/* Homepage CMS Manager */}
+        <AdminHomepageCmsManager />
+
+        {/* Normal Programs CMS Manager */}
+        <AdminProgramsCmsManager />
+
+        {/* 7-Step Roadmap to Vitality CMS Manager */}
+        <AdminRoadmapCmsManager />
+
+        {/* Priority Consultation & Bookings Manager */}
+        <AdminPriorityBookingManager />
 
         {/* Website Content, Banners, Pages & FAQs CMS Manager */}
         <AdminWebsiteContentManager />

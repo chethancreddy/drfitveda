@@ -5,12 +5,10 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const NAV_LINKS = [
-  { href: '/programs',        label: 'Programs',       key: 'programs' },
-  { href: '/how-it-works',    label: 'How It Works',   key: 'how-it-works' },
-  { href: '/yoga',            label: 'Yoga',           key: 'yoga' },
-  { href: '/nutrition',       label: 'Nutrition',      key: 'nutrition' },
-  { href: '/womens-wellness', label: "Women's Health", key: 'womens-wellness' },
-  { href: '/about',           label: 'About',          key: 'about' },
+  { href: '/programs',     label: 'Programs',     key: 'programs' },
+  { href: '/how-it-works', label: 'How It Works', key: 'how-it-works' },
+  { href: '/memberships',  label: 'Memberships',  key: 'memberships' },
+  { href: '/about',        label: 'About',        key: 'about' },
 ]
 
 export default function PublicHeader({ active }: { active?: string }) {
@@ -39,16 +37,19 @@ export default function PublicHeader({ active }: { active?: string }) {
 
         {/* Desktop Navigation */}
         <nav className="flex items-center gap-xs hide-mobile" aria-label="Primary navigation">
-          {NAV_LINKS.map(n => (
-            <Link
-              key={n.key}
-              href={n.href}
-              className={`btn btn-ghost btn-sm ${active === n.key || pathname === n.href ? 'text-primary' : ''}`}
-              style={active === n.key || pathname === n.href ? { fontWeight: 600 } : {}}
-            >
-              {n.label}
-            </Link>
-          ))}
+          {NAV_LINKS.map(n => {
+            const isSelected = active === n.key || pathname === n.href || (n.key === 'programs' && pathname.startsWith('/programs'))
+            return (
+              <Link
+                key={n.key}
+                href={n.href}
+                className={`btn btn-ghost btn-sm ${isSelected ? 'text-primary' : ''}`}
+                style={isSelected ? { fontWeight: 600 } : {}}
+              >
+                {n.label}
+              </Link>
+            )
+          })}
         </nav>
 
         {/* Desktop & Mobile Action Buttons */}
@@ -161,7 +162,7 @@ export default function PublicHeader({ active }: { active?: string }) {
                     gap: 12,
                     padding: '12px 14px',
                     borderRadius: 12,
-                    background: '#f8fafc',
+                    background: '#FDFAF6',
                     border: '1.5px solid var(--color-primary)',
                     textDecoration: 'none',
                     color: 'var(--color-on-surface)',
@@ -169,10 +170,10 @@ export default function PublicHeader({ active }: { active?: string }) {
                 >
                   <span style={{ fontSize: 22 }}>👤</span>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-on-surface)' }}>
                       Patient Sign In
                     </div>
-                    <div style={{ fontSize: 11.5, color: '#64748b', lineHeight: 1.3 }}>
+                    <div style={{ fontSize: 11.5, color: 'var(--color-muted)', lineHeight: 1.3 }}>
                       Daily plans, doctor reviews &amp; live training
                     </div>
                   </div>
@@ -189,9 +190,9 @@ export default function PublicHeader({ active }: { active?: string }) {
                   gap: 6,
                   padding: '9px 12px',
                   borderRadius: 10,
-                  background: '#ecfdf5',
-                  border: '1px solid #a7f3d0',
-                  color: '#047857',
+                  background: 'var(--color-neutral, #F6F1E8)',
+                  border: '1px solid var(--color-border, #D9CDBF)',
+                  color: 'var(--color-secondary, #453421)',
                   fontWeight: 700,
                   fontSize: 13,
                   textDecoration: 'none',
@@ -214,17 +215,20 @@ export default function PublicHeader({ active }: { active?: string }) {
               >
                 <span>🏠</span> Home
               </Link>
-              {NAV_LINKS.map(n => (
-                <Link
-                  key={n.key}
-                  href={n.href}
-                  onClick={() => setMenuOpen(false)}
-                  className={`sidebar-item ${active === n.key || pathname === n.href ? 'active' : ''}`}
-                  style={{ minHeight: 44, fontSize: 15 }}
-                >
-                  <span>•</span> {n.label}
-                </Link>
-              ))}
+              {NAV_LINKS.map(n => {
+                const isSelected = active === n.key || pathname === n.href || (n.key === 'programs' && pathname.startsWith('/programs'))
+                return (
+                  <Link
+                    key={n.key}
+                    href={n.href}
+                    onClick={() => setMenuOpen(false)}
+                    className={`sidebar-item ${isSelected ? 'active' : ''}`}
+                    style={{ minHeight: 44, fontSize: 15 }}
+                  >
+                    <span>•</span> {n.label}
+                  </Link>
+                )
+              })}
               <Link
                 href="/memberships"
                 onClick={() => setMenuOpen(false)}

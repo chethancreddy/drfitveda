@@ -121,14 +121,29 @@ export async function POST(request: Request) {
       duration_min = 30,
       notes = '',
       meeting_url = '',
+      booking_type = 'standard',
+      requested_date = '',
+      requested_time = '',
     } = body
 
-    if (!scheduled_at) {
-      return NextResponse.json({ error: 'scheduled_at is required' }, { status: 400 })
+    if (!scheduled_at && !requested_date) {
+      return NextResponse.json({ error: 'scheduled_at or requested_date is required' }, { status: 400 })
+    }
+
+    const isPriority = booking_type === 'priority'
+
+    // If requested_date & requested_time provided, build scheduled_at if missing
+    if (!scheduled_at && requested_date) {
+      const timePart = requested_time || '10:00'
+      scheduled_at = new Date(`${requested_date}T${timePart}:00`).toISOString()
     }
 
     // Validate & snapshot consultation service if consultation_service_id is provided
     let serviceSnapshot: Record<string, any> = {}
+    let basePrice = 0
+    let prioritySurcharge = 0
+    let totalPrice = 0
+
     if (consultation_service_id) {
       const svc = (mockDb.state.consultation_services as any[])?.find(
         (s: any) => s.id === consultation_service_id || s.key === consultation_service_id
@@ -143,21 +158,36 @@ export async function POST(request: Request) {
         )
       }
       duration_min = Number(svc.duration_min || duration_min || 30)
+      basePrice = Number(svc.price || 0)
+      const surchargePct = Number(mockDb.state.settings?.priority_consultation_surcharge_percent ?? 40)
+      prioritySurcharge = isPriority ? Math.round(basePrice * (surchargePct / 100)) : 0
+      totalPrice = basePrice + prioritySurcharge
+
       serviceSnapshot = {
         consultation_service_id: svc.id,
         service_key: svc.key,
         service_name: svc.name,
         service_category: svc.category,
-        service_price: Number(svc.price),
+        service_price: basePrice,
         service_currency: svc.currency || 'INR',
         consultation_type: svc.consultation_type || consultation_type || 'Online Video (Google Meet)',
+        booking_type: isPriority ? 'priority' : 'standard',
+        priority_surcharge: prioritySurcharge,
+        total_price: totalPrice,
+        requested_date: requested_date || (scheduled_at ? scheduled_at.split('T')[0] : ''),
+        requested_time: requested_time || '',
       }
       if (!notes && svc.name) {
-        notes = `Consultation service: ${svc.name}`
+        notes = isPriority
+          ? `[Priority Booking Request - Flexible Scheduling] ${svc.name}`
+          : `Consultation service: ${svc.name}`
       }
     } else if (consultation_type) {
       serviceSnapshot = {
         consultation_type,
+        booking_type: isPriority ? 'priority' : 'standard',
+        requested_date: requested_date || (scheduled_at ? scheduled_at.split('T')[0] : ''),
+        requested_time: requested_time || '',
       }
     }
 
@@ -245,6 +275,8 @@ export async function POST(request: Request) {
       eventId = meetResult.calendar_event_id || null
     }
 
+    const initialStatus = isPriority ? 'pending_confirmation' : 'scheduled'
+
     const { data: appt, error } = await (supabase as any)
       .from('appointments')
       .insert({
@@ -252,12 +284,17 @@ export async function POST(request: Request) {
         professional_id,
         scheduled_at,
         duration_min,
-        status: 'scheduled',
+        status: initialStatus,
         notes,
         meeting_url: resolvedMeetUrl,
         meeting_provider: 'google_meet',
         meeting_id: resolvedMeetId || undefined,
         google_calendar_event_id: eventId || undefined,
+        booking_type: isPriority ? 'priority' : 'standard',
+        priority_surcharge: prioritySurcharge,
+        total_price: totalPrice,
+        requested_date: requested_date || (scheduled_at ? scheduled_at.split('T')[0] : ''),
+        requested_time: requested_time || '',
         ...serviceSnapshot,
       })
       .select()
@@ -270,10 +307,15 @@ export async function POST(request: Request) {
     await savePersistedState('appointments')
 
     // Create notification for customer
+    const notifTitle = isPriority ? 'Priority Consultation Requested' : 'Consultation Scheduled'
+    const notifBody = isPriority
+      ? `Your requested priority appointment for ${requested_date || scheduled_at.split('T')[0]} at ${requested_time || 'requested time'} has been received and is pending confirmation by our clinical team.`
+      : `Your consultation is scheduled for ${new Date(scheduled_at).toLocaleDateString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}.`
+
     await (supabase as any).from('notifications').insert({
       user_id: user.id,
-      title: 'Consultation Scheduled',
-      body: `Your consultation is scheduled for ${new Date(scheduled_at).toLocaleDateString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}.`,
+      title: notifTitle,
+      body: notifBody,
       type: 'appointment',
       action_url: '/customer/consult'
     })

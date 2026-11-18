@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
         specialist_designation: s.specialist_designation || 'Certified Specialist Doctor',
         consultation_type: (s.consultation_type || 'Online Video (Google Meet)').replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet'),
         currency: s.currency || 'INR',
+        slug: s.key || s.id || String(s.name || '').toLowerCase().replace(/[^a-z0-9]/g, '_'),
       }
     })
 

@@ -2,13 +2,22 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import PublicHeader from '@/components/public/PublicHeader'
 import PublicFooter from '@/components/public/PublicFooter'
+import { mockDb, VitalityRoadmapStep } from '@/lib/mock-db'
+import { loadPersistedState } from '@/lib/persistent-store'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export const metadata: Metadata = {
   title: 'How It Works — The Transformation Story | Dr Fit Veda',
   description: 'Discover our 7-step doctor-guided wellness journey from initial clinical assessment to lasting lifestyle transformation.',
 }
 
-export default function HowItWorksPage() {
+export default async function HowItWorksPage() {
+  await loadPersistedState()
+  const steps: VitalityRoadmapStep[] = (mockDb.state.vitality_roadmap_steps ?? STEPS)
+    .filter((s: VitalityRoadmapStep) => s.is_active !== false)
+    .sort((a: VitalityRoadmapStep, b: VitalityRoadmapStep) => (a.display_order ?? 99) - (b.display_order ?? 99))
   return (
     <div style={{minHeight:'100vh',display:'flex',flexDirection:'column'}}>
       <PublicHeader active="how-it-works" />
@@ -47,7 +56,7 @@ export default function HowItWorksPage() {
             </div>
 
             <div style={{display:'flex',flexDirection:'column',gap:'var(--space-lg)'}}>
-              {STEPS.map((s, idx) => (
+              {steps.map((s, idx) => (
                 <div
                   key={s.step}
                   className="card"

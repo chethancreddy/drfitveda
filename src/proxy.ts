@@ -42,6 +42,8 @@ function isPublicRoute(pathname: string): boolean {
     pathname.startsWith('/_next') ||
     pathname.startsWith('/images') ||
     pathname.startsWith('/icons') ||
+    pathname.startsWith('/consultations') ||
+    pathname.startsWith('/programs') ||
     pathname.includes('.') || // any static file with extension like .json, .ico, .png, etc.
     PUBLIC_ROUTES.includes(pathname)
   ) {
