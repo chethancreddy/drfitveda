@@ -49,11 +49,11 @@ export async function GET(req: NextRequest) {
         ...s,
         category_label: cat?.name || s.category_label || s.category,
         icon: s.icon || cat?.icon || '🩺',
-        short_description: s.short_description || s.description || '',
-        full_description: s.full_description || s.description || s.short_description || '',
-        description: s.description || s.short_description || s.full_description || '',
+        short_description: (s.short_description || s.description || '').replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet'),
+        full_description: (s.full_description || s.description || s.short_description || '').replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet'),
+        description: (s.description || s.short_description || s.full_description || '').replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet'),
         specialist_designation: s.specialist_designation || 'Certified Specialist Doctor',
-        consultation_type: s.consultation_type || 'Online Video (Google Meet)',
+        consultation_type: (s.consultation_type || 'Online Video (Google Meet)').replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet'),
         currency: s.currency || 'INR',
       }
     })
@@ -217,7 +217,10 @@ export async function POST(req: NextRequest) {
       specialist_designation: String(body.specialist_designation || 'Certified Specialist Doctor').trim(),
       icon: String(body.icon || matchedCat?.icon || '🩺').trim() || '🩺',
       image_url: String(body.image_url || '').trim(),
-      consultation_type: String(body.consultation_type || 'Online Video (Google Meet)').trim(),
+      consultation_type: String(body.consultation_type || 'Online Video (Google Meet)')
+        .replace(/zoho meeting/gi, 'Google Meet')
+        .replace(/zoho/gi, 'Google Meet')
+        .trim(),
       price: priceNum,
       currency: String(body.currency || 'INR').trim().toUpperCase() || 'INR',
       duration_min: durationMin,

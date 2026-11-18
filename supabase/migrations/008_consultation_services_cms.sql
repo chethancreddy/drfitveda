@@ -13,7 +13,7 @@ ALTER TABLE public.consultation_services
   ADD COLUMN IF NOT EXISTS specialist_designation  TEXT DEFAULT 'Specialist Doctor',
   ADD COLUMN IF NOT EXISTS icon                    TEXT DEFAULT '🩺',
   ADD COLUMN IF NOT EXISTS image_url               TEXT,
-  ADD COLUMN IF NOT EXISTS consultation_type       TEXT DEFAULT 'Online Video (Zoho Meeting)',
+  ADD COLUMN IF NOT EXISTS consultation_type       TEXT DEFAULT 'Online Video (Google Meet)',
   ADD COLUMN IF NOT EXISTS currency                TEXT NOT NULL DEFAULT 'INR',
   ADD COLUMN IF NOT EXISTS is_archived             BOOLEAN NOT NULL DEFAULT FALSE;
 

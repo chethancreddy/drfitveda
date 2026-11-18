@@ -267,7 +267,7 @@ export default async function MembershipsPage() {
                     <div style={{ fontSize: 36 }}>{c.icon || CONSULT_ICON[c.category] || '🩺'}</div>
                     {c.consultation_type && (
                       <span className="badge badge-neutral" style={{ fontSize: 10.5 }}>
-                        📹 {c.consultation_type}
+                        📹 {(c.consultation_type || '').replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet')}
                       </span>
                     )}
                   </div>
@@ -279,7 +279,7 @@ export default async function MembershipsPage() {
                       </div>
                     )}
                     <p className="text-body-sm text-muted" style={{ lineHeight: 1.55 }}>
-                      {c.short_description || c.description}
+                      {(c.short_description || c.description || '').replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet')}
                     </p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 12, borderTop: '1px dashed var(--color-border)' }}>

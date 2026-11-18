@@ -118,7 +118,22 @@ export default function AdminConsultationServicesPage() {
       })
       const data = await res.json()
       if (Array.isArray(data.consultation_services)) {
-        setServices(data.consultation_services)
+        const cleaned = data.consultation_services.map((s: any) => ({
+          ...s,
+          consultation_type: (s.consultation_type || 'Online Video (Google Meet)')
+            .replace(/zoho meeting/gi, 'Google Meet')
+            .replace(/zoho/gi, 'Google Meet'),
+          short_description: (s.short_description || s.description || '')
+            .replace(/zoho meeting/gi, 'Google Meet')
+            .replace(/zoho/gi, 'Google Meet'),
+          full_description: (s.full_description || s.description || s.short_description || '')
+            .replace(/zoho meeting/gi, 'Google Meet')
+            .replace(/zoho/gi, 'Google Meet'),
+          description: (s.description || s.short_description || s.full_description || '')
+            .replace(/zoho meeting/gi, 'Google Meet')
+            .replace(/zoho/gi, 'Google Meet'),
+        }))
+        setServices(cleaned)
       }
       if (Array.isArray(data.consultation_categories) && data.consultation_categories.length > 0) {
         setCategories(data.consultation_categories)
@@ -167,12 +182,15 @@ export default function AdminConsultationServicesPage() {
 
   function openEditServiceModal(svc: ConsultationService) {
     setFormError(null)
+    const cleanType = (svc.consultation_type || 'Online Video (Google Meet)')
+      .replace(/zoho meeting/gi, 'Google Meet')
+      .replace(/zoho/gi, 'Google Meet')
     setEditingService({
       ...svc,
-      short_description: svc.short_description || svc.description || '',
-      full_description: svc.full_description || svc.description || '',
+      short_description: (svc.short_description || svc.description || '').replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet'),
+      full_description: (svc.full_description || svc.description || '').replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet'),
       specialist_designation: svc.specialist_designation || 'Preventive Medicine & Lifestyle Physician',
-      consultation_type: svc.consultation_type || 'Online Video (Google Meet)',
+      consultation_type: cleanType,
       currency: svc.currency || 'INR',
       icon: svc.icon || categoryMap[svc.category]?.icon || '🩺',
     })
@@ -564,12 +582,12 @@ export default function AdminConsultationServicesPage() {
 
                         {svc.specialist_designation && (
                           <div style={{ fontSize: 12.5, fontWeight: 600, color: '#0d9488', marginBottom: 6 }}>
-                            👨‍⚕️ {svc.specialist_designation} • 📹 {svc.consultation_type || 'Online Video (Google Meet)'}
+                            👨‍⚕️ {svc.specialist_designation} • 📹 {(svc.consultation_type || 'Online Video (Google Meet)').replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet')}
                           </div>
                         )}
 
                         <p className="text-body-sm text-muted" style={{ lineHeight: 1.55, marginBottom: 10 }}>
-                          {svc.short_description || svc.description}
+                          {(svc.short_description || svc.description || '').replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet')}
                         </p>
 
                         <div
@@ -1070,11 +1088,11 @@ export default function AdminConsultationServicesPage() {
                     </div>
                   )}
                   <p className="text-body-sm text-muted" style={{ lineHeight: 1.55 }}>
-                    {previewService.short_description || previewService.description}
+                    {(previewService.short_description || previewService.description || '').replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet')}
                   </p>
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--color-muted)' }}>
-                  📹 {previewService.consultation_type || 'Online Video (Google Meet)'}
+                  📹 {(previewService.consultation_type || 'Online Video (Google Meet)').replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet')}
                 </div>
                 <div
                   style={{

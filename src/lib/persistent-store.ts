@@ -226,21 +226,63 @@ export function syncRuntimeReferences() {
     other: '🏥',
   }
 
+  let hadZohoToClean = false
   if (Array.isArray(mockDb.state.consultation_services)) {
-    mockDb.state.consultation_services = mockDb.state.consultation_services.map((s: any, idx: number) => ({
-      ...s,
-      short_description: s.short_description || s.description || '',
-      full_description: s.full_description || s.description || s.short_description || '',
-      description: s.description || s.full_description || s.short_description || '',
-      specialist_designation: s.specialist_designation || 'Certified Specialist Doctor',
-      icon: s.icon || categoryIconMap[s.category] || '🩺',
-      image_url: s.image_url || '',
-      consultation_type: s.consultation_type || 'Online Video (Google Meet)',
-      currency: s.currency || 'INR',
-      is_active: s.is_active !== undefined ? Boolean(s.is_active) : true,
-      is_archived: Boolean(s.is_archived),
-      display_order: s.display_order !== undefined ? Number(s.display_order) : idx + 1,
-    }))
+    mockDb.state.consultation_services = mockDb.state.consultation_services.map((s: any, idx: number) => {
+      const origType = String(s.consultation_type || '')
+      const origDesc = String(s.description || '')
+      const origShort = String(s.short_description || '')
+      const origFull = String(s.full_description || '')
+      if (/zoho/i.test(origType) || /zoho/i.test(origDesc) || /zoho/i.test(origShort) || /zoho/i.test(origFull)) {
+        hadZohoToClean = true
+      }
+      return {
+        ...s,
+        short_description: (s.short_description || s.description || '').replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet'),
+        full_description: (s.full_description || s.description || s.short_description || '').replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet'),
+        description: (s.description || s.full_description || s.short_description || '').replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet'),
+        specialist_designation: s.specialist_designation || 'Certified Specialist Doctor',
+        icon: s.icon || categoryIconMap[s.category] || '🩺',
+        image_url: s.image_url || '',
+        consultation_type: (s.consultation_type || 'Online Video (Google Meet)').replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet'),
+        currency: s.currency || 'INR',
+        is_active: s.is_active !== undefined ? Boolean(s.is_active) : true,
+        is_archived: Boolean(s.is_archived),
+        display_order: s.display_order !== undefined ? Number(s.display_order) : idx + 1,
+      }
+    })
+  }
+
+  if (Array.isArray(mockDb.state.memberships)) {
+    mockDb.state.memberships = mockDb.state.memberships.map((m: any) => {
+      const origBenefits = Array.isArray(m.benefits) ? m.benefits.join(' ') : ''
+      if (/zoho/i.test(origBenefits) || /zoho/i.test(m.session_frequency || '')) {
+        hadZohoToClean = true
+      }
+      return {
+        ...m,
+        session_frequency: (m.session_frequency || '').replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet'),
+        benefits: Array.isArray(m.benefits)
+          ? m.benefits.map((b: string) => b.replace(/zoho meeting/gi, 'Google Meet').replace(/zoho/gi, 'Google Meet'))
+          : [],
+      }
+    })
+  }
+
+  if (Array.isArray(mockDb.state.appointments)) {
+    mockDb.state.appointments = mockDb.state.appointments.map((a: any) => {
+      if (/zoho/i.test(a.consultation_type || '')) hadZohoToClean = true
+      return {
+        ...a,
+        consultation_type: (a.consultation_type || 'Online Video (Google Meet)')
+          .replace(/zoho meeting/gi, 'Google Meet')
+          .replace(/zoho/gi, 'Google Meet'),
+      }
+    })
+  }
+
+  if (hadZohoToClean) {
+    savePersistedState(['consultation_services', 'memberships', 'appointments']).catch(() => {})
   }
 }
 

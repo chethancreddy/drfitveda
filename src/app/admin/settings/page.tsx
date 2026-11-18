@@ -662,7 +662,7 @@ export default function AdminSettingsPage() {
                   <span style={{ fontSize: 24 }}>📹</span>
                   <div>
                     <h2 className="text-headline-sm" style={{ margin: 0 }}>Google Meet Integration &amp; Video Platform</h2>
-                    <p className="text-caption text-muted">Official browser-based consultation conferencing replacing Zoho Meeting (Zero app download required)</p>
+                    <p className="text-caption text-muted">Official browser-based consultation conferencing via Google Meet (Zero app download required)</p>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -673,7 +673,7 @@ export default function AdminSettingsPage() {
                     onClick={handleMigrateZohoMeetings}
                     disabled={migratingMeetings}
                   >
-                    {migratingMeetings ? 'Migrating…' : '🔄 Migrate Upcoming Zoho Meetings'}
+                    {migratingMeetings ? 'Syncing…' : '🔄 Sync & Refresh Google Meet Links'}
                   </button>
                   <a
                     href="/api/auth/google/connect"

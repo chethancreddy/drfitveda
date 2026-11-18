@@ -539,7 +539,7 @@ export default function AdminCustomersPage() {
                 <div>
                   <h2 className="text-headline-sm">Edit Customer &amp; Membership</h2>
                   <p className="text-caption text-muted">
-                    Update profile details, Zoho Meeting link, account status, or manually adjust membership status
+                    Update profile details, Google Meet link, account status, or manually adjust membership status
                   </p>
                 </div>
                 <button className="btn btn-icon btn-ghost" onClick={() => setEditingCustomer(null)}>
@@ -731,7 +731,7 @@ export default function AdminCustomersPage() {
                 <div>
                   <h2 className="text-headline-sm">Onboard New Customer</h2>
                   <p className="text-caption text-muted">
-                    Setup patient profile, dedicated Zoho Meeting room, care team, and plan
+                    Setup patient profile, dedicated Google Meet room, care team, and plan
                   </p>
                 </div>
                 <button className="btn btn-icon btn-ghost" onClick={() => setShowOnboardModal(false)}>

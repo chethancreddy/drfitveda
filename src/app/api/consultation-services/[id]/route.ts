@@ -158,10 +158,14 @@ export async function PUT(
           : existing.specialist_designation || 'Certified Specialist Doctor',
       icon: body.icon !== undefined ? String(body.icon).trim() : existing.icon || '🩺',
       image_url: body.image_url !== undefined ? String(body.image_url).trim() : existing.image_url || '',
-      consultation_type:
+      consultation_type: String(
         body.consultation_type !== undefined
-          ? String(body.consultation_type).trim()
-          : existing.consultation_type || 'Online Video (Google Meet)',
+          ? body.consultation_type
+          : existing.consultation_type || 'Online Video (Google Meet)'
+      )
+        .replace(/zoho meeting/gi, 'Google Meet')
+        .replace(/zoho/gi, 'Google Meet')
+        .trim(),
       price: body.price !== undefined ? Number(body.price) : existing.price,
       currency:
         body.currency !== undefined
