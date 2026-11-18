@@ -54,7 +54,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           id: `notif-${Date.now()}`,
           user_id: appt.customer_id,
           title: 'Priority Appointment Confirmed! 🎉',
-          body: `Your priority consultation for ${new Date(scheduledAt).toLocaleDateString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })} has been confirmed. Join via Google Meet: ${appt.meeting_url}`,
+          body: `Your priority consultation for ${new Date(scheduledAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })} has been confirmed. Join via Google Meet: ${appt.meeting_url}`,
           type: 'appointment',
           action_url: '/customer/consult',
           created_at: new Date().toISOString(),

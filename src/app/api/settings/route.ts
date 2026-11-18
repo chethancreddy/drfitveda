@@ -38,7 +38,7 @@ export async function PUT(req: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
-    
+
     let role = (user as any)?.user_metadata?.role || (user as any)?.role
     if (!role) {
       const cookie = req.cookies.get('drf_session')?.value
@@ -50,7 +50,7 @@ export async function PUT(req: NextRequest) {
           try {
             const parsed = JSON.parse(cookie)
             role = parsed.role
-          } catch {}
+          } catch { }
         }
       }
     }

@@ -30,6 +30,23 @@ interface AppointmentRecord {
   }
 }
 
+function formatDateTime(dateStr?: string | null): string {
+  if (!dateStr) return '—'
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return String(dateStr)
+    return d.toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return String(dateStr)
+  }
+}
+
 export default function AdminPriorityBookingManager() {
   const [appointments, setAppointments] = useState<AppointmentRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -300,23 +317,26 @@ export default function AdminPriorityBookingManager() {
             <tbody>
               {filteredAppointments.map(appt => {
                 const isPriority = appt.booking_type === 'priority'
-                const basePrice = appt.service_price || 999
-                const surcharge = appt.priority_surcharge || (isPriority ? Math.round(basePrice * 0.40) : 0)
-                const totalPrice = appt.total_price || (basePrice + surcharge)
-                const customerName = appt.customers?.user_profiles?.full_name || 'Patient'
+                const basePrice = Number(appt.service_price) || 999
+                const surcharge = Number(appt.priority_surcharge) || (isPriority ? Math.round(basePrice * 0.40) : 0)
+                const totalPrice = Number(appt.total_price) || (basePrice + surcharge)
+                const customerProfile = Array.isArray(appt.customers)
+                  ? appt.customers[0]?.user_profiles
+                  : appt.customers?.user_profiles
+                const customerName = customerProfile?.full_name || 'Patient'
 
                 return (
-                  <tr key={appt.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  <tr key={appt.id || Math.random().toString()} style={{ borderBottom: '1px solid var(--color-border)' }}>
                     {/* Ref / Customer */}
                     <td style={{ padding: '12px 12px' }}>
                       <strong style={{ display: 'block', color: 'var(--color-foreground)' }}>{customerName}</strong>
-                      <span style={{ fontSize: 11, color: 'var(--color-muted)' }}>ID: #{appt.id.slice(0, 8)}</span>
+                      <span style={{ fontSize: 11, color: 'var(--color-muted)' }}>ID: #{String(appt.id || '').slice(0, 8)}</span>
                     </td>
 
                     {/* Consultation */}
                     <td style={{ padding: '12px 12px' }}>
                       <span style={{ fontWeight: 600 }}>{appt.service_name || 'Consultation'}</span>
-                      <div style={{ fontSize: 11.5, color: '#0d9488' }}>⏱️ {appt.duration_min} mins • Google Meet</div>
+                      <div style={{ fontSize: 11.5, color: '#0d9488' }}>⏱️ {appt.duration_min || 30} mins • Google Meet</div>
                     </td>
 
                     {/* Booking Type */}
@@ -350,11 +370,11 @@ export default function AdminPriorityBookingManager() {
                     <td style={{ padding: '12px 12px' }}>
                       {isPriority && (
                         <div style={{ fontSize: 11.5, color: '#b45309', marginBottom: 2 }}>
-                          Req: {appt.requested_date || appt.scheduled_at?.split('T')[0]} {appt.requested_time}
+                          Req: {appt.requested_date || (appt.scheduled_at ? String(appt.scheduled_at).split('T')[0] : '—')} {appt.requested_time || ''}
                         </div>
                       )}
                       <div style={{ fontSize: 12 }}>
-                        Conf: {new Date(appt.scheduled_at).toLocaleDateString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}
+                        Conf: {formatDateTime(appt.scheduled_at)}
                       </div>
                     </td>
 
@@ -384,7 +404,7 @@ export default function AdminPriorityBookingManager() {
                               : '#0369a1',
                         }}
                       >
-                        {appt.status.replace('_', ' ').toUpperCase()}
+                        {String(appt.status || 'pending').replace('_', ' ').toUpperCase()}
                       </span>
                     </td>
 

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 import AdminSidebar from '@/components/admin/AdminSidebar'
@@ -10,6 +11,7 @@ import AdminHomepageCmsManager from '@/components/admin/AdminHomepageCmsManager'
 import AdminProgramsCmsManager from '@/components/admin/AdminProgramsCmsManager'
 import AdminRoadmapCmsManager from '@/components/admin/AdminRoadmapCmsManager'
 import AdminPriorityBookingManager from '@/components/admin/AdminPriorityBookingManager'
+import AdminErrorBoundary from '@/components/admin/AdminErrorBoundary'
 
 export const metadata: Metadata = { title: 'CMS — Admin' }
 
@@ -21,13 +23,28 @@ const CMS_SECTIONS = [
 ]
 
 export default async function AdminCMSPage() {
-  const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const cookieStore = await cookies()
+  const drfCookie = cookieStore.get('drf_session')?.value
+  let role: string | null = null
 
-  const role = (user as any)?.user_metadata?.role || (user as any)?.role
-  if (!['admin', 'super_admin'].includes(role)) {
-    redirect('/login')
+  if (drfCookie) {
+    try {
+      const parsed = JSON.parse(decodeURIComponent(drfCookie))
+      if (parsed.is_active !== false && parsed.is_archived !== true) {
+        role = parsed.role
+      }
+    } catch {}
+  }
+
+  if (!role) {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) redirect('/login?redirectTo=/admin/cms')
+    role = (user as any)?.user_metadata?.role || (user as any)?.role
+  }
+
+  if (!role || !['admin', 'super_admin', 'operations_manager', 'staff'].includes(role)) {
+    redirect('/login?redirectTo=/admin/cms')
   }
 
   return (
@@ -56,22 +73,34 @@ export default async function AdminCMSPage() {
         </div>
 
         {/* Homepage CMS Manager */}
-        <AdminHomepageCmsManager />
+        <AdminErrorBoundary fallbackTitle="Homepage CMS Manager">
+          <AdminHomepageCmsManager />
+        </AdminErrorBoundary>
 
         {/* Normal Programs CMS Manager */}
-        <AdminProgramsCmsManager />
+        <AdminErrorBoundary fallbackTitle="Normal Programs CMS Manager">
+          <AdminProgramsCmsManager />
+        </AdminErrorBoundary>
 
         {/* 7-Step Roadmap to Vitality CMS Manager */}
-        <AdminRoadmapCmsManager />
+        <AdminErrorBoundary fallbackTitle="7-Step Roadmap CMS Manager">
+          <AdminRoadmapCmsManager />
+        </AdminErrorBoundary>
 
         {/* Priority Consultation & Bookings Manager */}
-        <AdminPriorityBookingManager />
+        <AdminErrorBoundary fallbackTitle="Priority Consultation & Bookings Manager">
+          <AdminPriorityBookingManager />
+        </AdminErrorBoundary>
 
         {/* Website Content, Banners, Pages & FAQs CMS Manager */}
-        <AdminWebsiteContentManager />
+        <AdminErrorBoundary fallbackTitle="Website Content CMS Manager">
+          <AdminWebsiteContentManager />
+        </AdminErrorBoundary>
 
         {/* Clinical Biomarkers & Lab Parameters CMS Manager */}
-        <AdminBiomarkersManager />
+        <AdminErrorBoundary fallbackTitle="Biomarkers CMS Manager">
+          <AdminBiomarkersManager />
+        </AdminErrorBoundary>
       </main>
     </div>
   )

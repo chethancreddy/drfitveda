@@ -310,7 +310,7 @@ export async function POST(request: Request) {
     const notifTitle = isPriority ? 'Priority Consultation Requested' : 'Consultation Scheduled'
     const notifBody = isPriority
       ? `Your requested priority appointment for ${requested_date || scheduled_at.split('T')[0]} at ${requested_time || 'requested time'} has been received and is pending confirmation by our clinical team.`
-      : `Your consultation is scheduled for ${new Date(scheduled_at).toLocaleDateString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}.`
+      : `Your consultation is scheduled for ${new Date(scheduled_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}.`
 
     await (supabase as any).from('notifications').insert({
       user_id: user.id,

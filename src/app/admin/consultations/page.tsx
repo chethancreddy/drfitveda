@@ -5,6 +5,7 @@ import Link from 'next/link'
 import AdminSidebar from '@/components/admin/AdminSidebar'
 import AdminRecordDeleteModal from '@/components/admin/AdminRecordDeleteModal'
 import AdminPriorityBookingManager from '@/components/admin/AdminPriorityBookingManager'
+import AdminErrorBoundary from '@/components/admin/AdminErrorBoundary'
 
 export interface ConsultationCategory {
   id: string
@@ -1203,7 +1204,9 @@ export default function AdminConsultationServicesPage() {
 
         {/* Toast Notification */}
         {/* Priority Consultations & Bookings Manager */}
-        <AdminPriorityBookingManager />
+        <AdminErrorBoundary fallbackTitle="Priority Consultations & Bookings Manager">
+          <AdminPriorityBookingManager />
+        </AdminErrorBoundary>
 
         {toast && (
           <div
